@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "strainsage",
+  "compatibility_date": "2025-09-27",
+  "observability": {
+    "enabled": true
+  },
+  "assets": {
+    "directory": "strainsage-cloudflare (1)"
+  },
+  "compatibility_flags": [
+    "nodejs_compat"
+  ]
+}
