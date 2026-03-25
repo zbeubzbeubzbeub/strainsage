@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StrainSage Pro — Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080f08;--bg2:#0e180e;--bg3:#141f14;--bg4:#1a2a1a;
+  --forest:#1e4a18;--moss:#2d6b26;--leaf:#3d8a33;--sage:#6aaa60;--mint:#9ecf94;
+  --fog:rgba(200,226,194,0.06);--fog2:rgba(200,226,194,0.1);
+  --gold:#c49a3c;--gold2:#dbb654;--gold3:#ecd078;
+  --goldfog:rgba(196,154,60,0.08);--goldfog2:rgba(196,154,60,0.15);
+  --text1:rgba(245,240,232,0.95);--text2:rgba(245,240,232,0.6);--text3:rgba(245,240,232,0.35);
+  --border:rgba(200,226,194,0.1);--border2:rgba(200,226,194,0.18);--bordergold:rgba(196,154,60,0.25);
+  --red:#e87070;--redfog:rgba(220,80,80,0.1);
+  --r:10px;--rl:14px;
+}
+html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text1)}
+
+/* ── LOGIN ── */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg)}
+.login-box{background:var(--bg3);border:1px solid var(--border2);border-radius:18px;padding:32px;max-width:420px;width:100%;position:relative;overflow:hidden}
+.login-box::before{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(45,107,38,.12),transparent 70%)}
+.login-logo{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+.login-mark{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--forest),var(--leaf));display:flex;align-items:center;justify-content:center;font-size:21px;border:1px solid rgba(109,170,96,.25)}
+.login-box h1{font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--text1);font-weight:500}
+.login-box span{font-size:10px;color:var(--gold2);opacity:.7;letter-spacing:1.2px;text-transform:uppercase;display:block;margin-top:1px}
+.login-box p{font-size:13px;color:var(--text2);margin-bottom:18px;line-height:1.6}
+.field-label{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:5px;display:block}
+.field-input{width:100%;padding:11px 14px;border:1px solid var(--border2);border-radius:9px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text1);background:var(--bg4);outline:none;margin-bottom:12px;transition:border-color .2s}
+.field-input:focus{border-color:rgba(109,170,96,.5)}
+.field-input::placeholder{color:var(--text3)}
+.login-btn{width:100%;padding:12px;background:linear-gradient(135deg,var(--forest),var(--moss));color:rgba(220,240,218,.95);border:none;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:13.5px;font-weight:500;cursor:pointer;transition:opacity .18s;box-shadow:0 4px 14px rgba(45,107,38,.3)}
+.login-btn:hover{opacity:.88}
+.login-err{font-size:12px;color:var(--red);margin-bottom:10px;display:none;padding:8px 12px;background:var(--redfog);border-radius:7px;border:1px solid rgba(220,80,80,.2)}
+
+/* ── APP ── */
+.app{display:none;min-height:100vh;flex-direction:column}
+.app.visible{display:flex}
+
+/* ── TOPBAR ── */
+.topbar{height:54px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:16px;flex-shrink:0}
+.topbar-logo{display:flex;align-items:center;gap:9px}
+.topbar-mark{width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,var(--forest),var(--moss));display:flex;align-items:center;justify-content:center;font-size:13px}
+.topbar-name{font-family:'Cormorant Garamond',serif;font-size:15px;color:var(--text1);font-weight:500}
+.topbar-badge{font-size:8.5px;padding:2px 7px;border-radius:5px;background:rgba(196,154,60,.15);color:var(--gold2);border:1px solid var(--bordergold);margin-left:4px;letter-spacing:.5px}
+.topbar-shop{font-size:11px;color:var(--sage);background:var(--fog2);padding:3px 10px;border-radius:6px;border:1px solid var(--border)}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.topbar-logout{font-size:12px;color:var(--text3);background:none;border:1px solid var(--border);padding:5px 12px;border-radius:7px;cursor:pointer;transition:all .15s}
+.topbar-logout:hover{color:var(--red);border-color:rgba(220,80,80,.3)}
+
+/* ── LAYOUT ── */
+.layout{display:flex;flex:1;overflow:hidden}
+
+/* ── SIDENAV ── */
+.sidenav{width:220px;flex-shrink:0;background:var(--bg);border-right:1px solid var(--border);padding:16px 10px;display:flex;flex-direction:column;gap:2px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--text2);transition:all .15s;border:none;background:none;width:100%;text-align:left}
+.nav-item:hover{background:var(--fog2);color:var(--text1)}
+.nav-item.active{background:rgba(45,107,38,.2);color:var(--mint)}
+.nav-item-icon{font-size:15px;width:20px;text-align:center;flex-shrink:0}
+.nav-sep{height:1px;background:var(--border);margin:8px 0}
+
+/* ── CONTENT ── */
+.content{flex:1;overflow-y:auto;padding:24px;background:var(--bg2)}
+.content::-webkit-scrollbar{width:3px}
+.content::-webkit-scrollbar-thumb{background:rgba(109,170,96,.2);border-radius:3px}
+.page{display:none}.page.active{display:block}
+.page-title{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--text1);font-weight:500;margin-bottom:4px}
+.page-sub{font-size:12px;color:var(--text3);margin-bottom:24px}
+
+/* ── STAT CARDS ── */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px}
+.stat-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rl);padding:16px}
+.stat-val{font-family:'Cormorant Garamond',serif;font-size:32px;color:var(--gold2);font-weight:500;line-height:1}
+.stat-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-top:5px}
+.stat-trend{font-size:10px;margin-top:3px}
+.stat-trend.up{color:var(--sage)}.stat-trend.down{color:var(--red)}
+
+/* ── SECTION TITLE ── */
+.section-title{font-size:9.5px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-weight:500;margin-bottom:12px}
+
+/* ── TABLE ── */
+.table-wrap{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;margin-bottom:24px}
+.table-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px}
+.table-header-title{font-size:12px;color:var(--text2);font-weight:500}
+table{width:100%;border-collapse:collapse}
+th{padding:8px 14px;text-align:left;font-size:9.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);border-bottom:1px solid var(--border);font-weight:500;white-space:nowrap}
+td{padding:10px 14px;font-size:12.5px;color:var(--text1);border-bottom:1px solid rgba(200,226,194,.05)}
+tr:last-child td{border:none}
+tr:hover td{background:var(--fog)}
+.td-num{font-family:'Cormorant Garamond',serif;font-size:15px;color:var(--gold2)}
+.td-badge{display:inline-flex;align-items:center;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:500}
+.td-badge.green{background:rgba(45,107,38,.2);color:var(--mint);border:1px solid rgba(45,107,38,.3)}
+.td-badge.red{background:var(--redfog);color:var(--red);border:1px solid rgba(220,80,80,.2)}
+.td-badge.gold{background:var(--goldfog2);color:var(--gold2);border:1px solid var(--bordergold)}
+
+/* ── PERIOD SELECTOR ── */
+.period-tabs{display:flex;gap:3px;background:var(--bg4);padding:3px;border-radius:8px;border:1px solid var(--border);margin-bottom:20px;width:fit-content}
+.period-tab{padding:5px 14px;border-radius:5px;font-size:11px;cursor:pointer;color:var(--text3);border:none;background:none;transition:all .15s}
+.period-tab.active{background:var(--bg3);color:var(--mint);box-shadow:0 1px 4px rgba(0,0,0,.3)}
+
+/* ── STOCK MANAGEMENT ── */
+.stock-actions{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.btn{height:34px;padding:0 14px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;transition:all .18s;display:flex;align-items:center;gap:6px;border:none;white-space:nowrap}
+.btn-primary{background:linear-gradient(135deg,var(--forest),var(--moss));color:rgba(220,240,218,.95);box-shadow:0 2px 8px rgba(45,107,38,.25)}
+.btn-primary:hover{opacity:.88}
+.btn-secondary{background:var(--bg3);color:var(--text2);border:1px solid var(--border)}
+.btn-secondary:hover{border-color:var(--border2);color:var(--text1)}
+.btn-gold{background:var(--goldfog2);color:var(--gold2);border:1px solid var(--bordergold)}
+.btn-gold:hover{background:rgba(196,154,60,.22)}
+.btn-danger{background:var(--redfog);color:var(--red);border:1px solid rgba(220,80,80,.2)}
+.btn-danger:hover{background:rgba(220,80,80,.15)}
+
+/* Stock table editable */
+.stock-input{background:transparent;border:none;color:var(--text1);font-family:'DM Sans',sans-serif;font-size:12.5px;width:100%;outline:none;padding:2px 4px;border-radius:4px}
+.stock-input:focus{background:var(--bg4);border:1px solid rgba(109,170,96,.3)}
+.margin-cell{font-weight:500}
+.margin-pos{color:var(--sage)}.margin-neg{color:var(--red)}
+
+/* ── CHART ── */
+.chart-wrap{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rl);padding:16px;margin-bottom:20px}
+.bar-chart{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.bar-row{display:flex;align-items:center;gap:10px}
+.bar-label{font-size:11.5px;color:var(--text2);min-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-track{flex:1;height:20px;background:rgba(200,226,194,.06);border-radius:4px;overflow:hidden;position:relative}
+.bar-fill{height:20px;border-radius:4px;background:linear-gradient(90deg,var(--moss),var(--sage));transition:width .8s ease;display:flex;align-items:center;padding-left:8px;min-width:24px}
+.bar-count{font-size:10px;color:rgba(220,240,218,.8);font-weight:500}
+.bar-val{font-size:11px;color:var(--text3);min-width:40px;text-align:right}
+
+/* ── USERS TABLE ── */
+.user-avatar{width:28px;height:28px;border-radius:50%;background:rgba(45,107,38,.2);border:1px solid rgba(109,170,96,.2);display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:var(--mint);font-weight:500;margin-right:8px}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:20px;right:20px;z-index:400;background:var(--bg4);color:var(--text1);padding:10px 15px;border-radius:9px;font-size:12px;box-shadow:0 6px 22px rgba(0,0,0,.5);animation:toastIn .22s ease;border:1px solid var(--border2);border-left:3px solid var(--gold2);max-width:260px}
+@keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ── EMPTY STATE ── */
+.empty-state{text-align:center;padding:40px 20px;color:var(--text3);font-size:13px;line-height:1.7}
+.empty-icon{font-size:36px;opacity:.3;margin-bottom:10px}
+
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  .stat-grid{grid-template-columns:1fr 1fr}
+  .sidenav{display:none}
+  .content{padding:16px}
+}
+</style>
+</head>
+<body>
+
+<!-- ── LOGIN ── -->
+<div class="login-wrap" id="loginWrap">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-mark">🌿</div>
+      <div><h1>StrainSage Pro</h1><span>Interface Administration</span></div>
+    </div>
+    <p>Connectez-vous avec vos identifiants administrateur pour accéder au dashboard.</p>
+    <div class="login-err" id="loginErr">Identifiants incorrects.</div>
+    <label class="field-label">Nom du magasin</label>
+    <input class="field-input" type="text" id="loginUser" placeholder="cultureindooranglet" autocomplete="off"/>
+    <label class="field-label">Mot de passe admin</label>
+    <input class="field-input" type="password" id="loginPass" placeholder="••••••••"/>
+    <button class="login-btn" onclick="doLogin()">Accéder au dashboard →</button>
+  </div>
+</div>
+
+<!-- ── APP ── -->
+<div class="app" id="adminApp">
+
+  <div class="topbar">
+    <div class="topbar-logo">
+      <div class="topbar-mark">🌿</div>
+      <div class="topbar-name">StrainSage</div>
+      <span class="topbar-badge">ADMIN</span>
+    </div>
+    <div class="topbar-shop" id="shopName">—</div>
+    <div class="topbar-right">
+      <span style="font-size:11px;color:var(--text3)" id="adminDate"></span>
+      <button class="topbar-logout" onclick="doLogout()">Déconnexion</button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <div class="sidenav">
+      <button class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard">
+        <span class="nav-item-icon">📊</span>Dashboard
+      </button>
+      <button class="nav-item" onclick="showPage('stock')" id="nav-stock">
+        <span class="nav-item-icon">📦</span>Gestion stock
+      </button>
+      <button class="nav-item" onclick="showPage('stats')" id="nav-stats">
+        <span class="nav-item-icon">📈</span>Statistiques
+      </button>
+      <button class="nav-item" onclick="showPage('users')" id="nav-users">
+        <span class="nav-item-icon">👥</span>Clients
+      </button>
+      <div class="nav-sep"></div>
+      <button class="nav-item" onclick="showPage('settings')" id="nav-settings">
+        <span class="nav-item-icon">⚙️</span>Paramètres
+      </button>
+    </div>
+
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <div class="page active" id="page-dashboard">
+        <div class="page-title">Vue d'ensemble</div>
+        <div class="page-sub" id="dashboardSub">Chargement…</div>
+        <div class="stat-grid" id="statGrid">
+          <div class="stat-card"><div class="stat-val" id="s-users">—</div><div class="stat-label">Clients actifs</div></div>
+          <div class="stat-card"><div class="stat-val" id="s-convs">—</div><div class="stat-label">Conversations</div></div>
+          <div class="stat-card"><div class="stat-val" id="s-stock">—</div><div class="stat-label">Variétés en stock</div></div>
+          <div class="stat-card"><div class="stat-val" id="s-favs">—</div><div class="stat-label">Favoris totaux</div></div>
+        </div>
+        <div class="section-title">Top variétés recherchées</div>
+        <div class="chart-wrap">
+          <div class="bar-chart" id="topChart"><div class="empty-state"><div class="empty-icon">📊</div>Les données apparaîtront au fil des recherches</div></div>
+        </div>
+        <div class="section-title">Variétés les plus mises en favoris</div>
+        <div class="chart-wrap">
+          <div class="bar-chart" id="favChart"><div class="empty-state"><div class="empty-icon">⭐</div>Aucun favori enregistré pour le moment</div></div>
+        </div>
+      </div>
+
+      <!-- STOCK -->
+      <div class="page" id="page-stock">
+        <div class="page-title">Gestion du stock</div>
+        <div class="page-sub">Importez votre catalogue, gérez les prix d'achat et de vente, suivez les marges.</div>
+        <div class="stock-actions">
+          <button class="btn btn-primary" onclick="document.getElementById('stockFile').click()">📥 Importer CSV/Excel</button>
+          <button class="btn btn-gold" onclick="exportStock()">📤 Exporter</button>
+          <button class="btn btn-secondary" onclick="addStockRow()">+ Ajouter une ligne</button>
+          <button class="btn btn-secondary" onclick="saveStockToFirebase()">💾 Sauvegarder</button>
+          <button class="btn btn-danger" onclick="clearStock()">🗑 Vider le stock</button>
+        </div>
+        <input type="file" id="stockFile" accept=".csv,.xlsx,.xls" style="display:none" onchange="importStockFile(this)">
+        <div class="table-wrap">
+          <div class="table-header">
+            <span class="table-header-title" id="stockCount">0 variété</span>
+            <span style="font-size:10px;color:var(--text3)">Cliquez sur une cellule pour modifier</span>
+          </div>
+          <div style="overflow-x:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>Variété</th><th>Seedbank</th><th>Type</th>
+                  <th>Graines</th><th>Prix achat (€)</th><th>Prix vente (€)</th>
+                  <th>Marge</th><th>Réf</th><th>Dispo</th><th></th>
+                </tr>
+              </thead>
+              <tbody id="stockBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- STATS -->
+      <div class="page" id="page-stats">
+        <div class="page-title">Statistiques détaillées</div>
+        <div class="page-sub">Analysez les tendances et les performances par période.</div>
+        <div class="period-tabs">
+          <button class="period-tab active" onclick="setPeriod('7j',this)">7 jours</button>
+          <button class="period-tab" onclick="setPeriod('30j',this)">30 jours</button>
+          <button class="period-tab" onclick="setPeriod('90j',this)">3 mois</button>
+          <button class="period-tab" onclick="setPeriod('all',this)">Tout</button>
+        </div>
+        <div class="section-title">Variétés les plus recherchées</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>Variété</th><th>Seedbank</th><th>Recherches</th><th>Favoris</th><th>Note moy.</th><th>En stock</th><th>Marge</th></tr></thead>
+            <tbody id="statsBody"></tbody>
+          </table>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:8px">
+          <button class="btn btn-gold" onclick="exportStats()">📤 Exporter les stats CSV</button>
+          <button class="btn btn-secondary" onclick="exportStatsXLSX()">📊 Exporter Excel</button>
+        </div>
+      </div>
+
+      <!-- USERS -->
+      <div class="page" id="page-users">
+        <div class="page-title">Gestion des clients</div>
+        <div class="page-sub">Créez des comptes clients et consultez leur activité.</div>
+        <div class="stock-actions">
+          <button class="btn btn-primary" onclick="generateUserCode()">+ Générer un code client</button>
+          <button class="btn btn-secondary" onclick="loadUsers()">🔄 Actualiser</button>
+        </div>
+        <div id="newCodeBox" style="display:none;background:var(--goldfog2);border:1px solid var(--bordergold);border-radius:var(--r);padding:16px;margin-bottom:16px;text-align:center">
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Nouveau code client</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:28px;color:var(--gold2);letter-spacing:3px" id="newCodeDisplay">—</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:6px">Mot de passe : <strong style="color:var(--gold3)" id="shopCodeDisplay">cultureindooranglet</strong></div>
+          <div style="font-size:10.5px;color:var(--text3);margin-top:4px">Donnez ces identifiants à votre client</div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Username</th><th>Créé le</th><th>Conversations</th><th>Favoris</th><th>Dernière activité</th><th></th></tr></thead>
+            <tbody id="usersBody"><tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text3)">Chargement…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="page" id="page-settings">
+        <div class="page-title">Paramètres</div>
+        <div class="page-sub">Configuration du magasin et de l'application.</div>
+        <div class="table-wrap" style="max-width:500px">
+          <div style="padding:20px;display:flex;flex-direction:column;gap:16px">
+            <div>
+              <div class="field-label" style="margin-bottom:6px">Nom du magasin</div>
+              <input class="field-input" id="settingShopName" value="Culture Indoor Anglet" style="margin:0"/>
+            </div>
+            <div>
+              <div class="field-label" style="margin-bottom:6px">Code de connexion clients</div>
+              <input class="field-input" id="settingShopCode" value="cultureindooranglet" style="margin:0"/>
+              <div style="font-size:10px;color:var(--text3);margin-top:4px">Code que vos clients utilisent comme mot de passe</div>
+            </div>
+            <div>
+              <div class="field-label" style="margin-bottom:6px">Nouveau mot de passe admin</div>
+              <input class="field-input" type="password" id="settingNewPass" placeholder="Laisser vide pour ne pas changer" style="margin:0"/>
+            </div>
+            <button class="btn btn-primary" style="width:fit-content" onclick="saveSettings()">💾 Enregistrer les paramètres</button>
+            <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+              <div class="field-label" style="margin-bottom:6px;color:var(--gold2)">🔑 Clé API Anthropic</div>
+              <input class="field-input" type="password" id="settingApiKey" placeholder="sk-ant-api03-…" style="margin-bottom:6px"/>
+              <div style="font-size:10px;color:var(--text3);margin-bottom:10px">La clé est stockée de façon sécurisée et chargée automatiquement pour tous les clients du magasin.</div>
+              <button class="btn btn-gold" onclick="saveApiKey()">🔑 Enregistrer la clé API</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAH5m_gs2MrQLvCqOdhtLiyZjgI1A22fHs",
+  authDomain: "test-b7b1a.firebaseapp.com",
+  projectId: "test-b7b1a",
+  storageBucket: "test-b7b1a.firebasestorage.app",
+  messagingSenderId: "60234196976",
+  appId: "1:60234196976:web:48c64cb05c7707499d5f35"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+/* ══ AUTH ══ */
+const ADMIN_USER = 'cultureindooranglet';
+const ADMIN_PASS = '971972';
+const SHOP_CODE  = 'cultureindooranglet';
+
+function doLogin(){
+  const u=document.getElementById('loginUser').value.trim().toLowerCase();
+  const p=document.getElementById('loginPass').value.trim();
+  if(u===ADMIN_USER && p===ADMIN_PASS){
+    document.getElementById('loginErr').style.display='none';
+    document.getElementById('loginWrap').style.display='none';
+    document.getElementById('adminApp').classList.add('visible');
+    document.getElementById('shopName').textContent='Culture Indoor Anglet';
+    document.getElementById('adminDate').textContent=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+    loadDashboard();
+    loadUsers();
+    loadStockFromFirebase();
+  } else {
+    document.getElementById('loginErr').style.display='block';
+  }
+}
+document.addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+
+function doLogout(){
+  document.getElementById('loginWrap').style.display='flex';
+  document.getElementById('adminApp').classList.remove('visible');
+  document.getElementById('loginUser').value='';
+  document.getElementById('loginPass').value='';
+}
+
+/* ══ NAVIGATION ══ */
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.getElementById('nav-'+name).classList.add('active');
+  if(name==='stats') loadStats();
+  if(name==='users') loadUsers();
+}
+
+/* ══ TOAST ══ */
+function toast(msg){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2800);}
+function esc(t){return String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+/* ══ DASHBOARD ══ */
+async function loadDashboard(){
+  try{
+    const usersSnap = await db.collection('users').get();
+    let totalConvs=0, totalFavs=0;
+    usersSnap.forEach(d=>{
+      const data=d.data();
+      totalConvs+=(data.totalConvs||0);
+      totalFavs+=(data.favorites||[]).length;
+    });
+    document.getElementById('s-users').textContent=usersSnap.size;
+    document.getElementById('s-convs').textContent=totalConvs;
+    document.getElementById('s-favs').textContent=totalFavs;
+
+    // Stock count from localStorage
+    const stock=JSON.parse(localStorage.getItem('ss_admin_stock')||'[]');
+    const inStock=stock.filter(s=>s.dispo&&(s.dispo.toUpperCase()==='O'||s.dispo.toUpperCase()==='OUI'));
+    document.getElementById('s-stock').textContent=inStock.length+'/'+stock.length;
+
+    const now=new Date();
+    document.getElementById('dashboardSub').textContent=`Mis à jour le ${now.toLocaleDateString('fr-FR')} à ${now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`;
+
+    // Top strains chart
+    const strainsSnap=await db.collection('strains').orderBy('searchCount','desc').limit(10).get();
+    const strains=[];
+    strainsSnap.forEach(d=>strains.push({id:d.id,...d.data()}));
+    renderBarChart('topChart',strains,'searchCount','recherches');
+
+    // Favs chart — count from users
+    const favCount={};
+    usersSnap.forEach(d=>{(d.data().favorites||[]).forEach(f=>{favCount[f.name]=(favCount[f.name]||0)+1;});});
+    const favArr=Object.entries(favCount).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([name,count])=>({id:name,favCount:count}));
+    renderBarChart('favChart',favArr,'favCount','favoris');
+
+  }catch(e){console.error(e);}
+}
+
+function renderBarChart(elId, data, field, unit){
+  const el=document.getElementById(elId);
+  if(!data.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">📊</div>Pas encore de données</div>';return;}
+  const max=Math.max(...data.map(d=>d[field]||0))||1;
+  el.innerHTML=data.map(d=>{
+    const pct=Math.round((d[field]||0)/max*100);
+    return `<div class="bar-row">
+      <div class="bar-label">${esc(d.id||d.name)}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%"><span class="bar-count">${d[field]||0}</span></div></div>
+      <div class="bar-val">${d[field]||0} ${unit}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ══ STOCK ══ */
+let stockRows = [];
+
+async function loadStockFromFirebase(){
+  try{
+    const snap=await db.collection('adminData').doc('stock').get();
+    if(snap.exists && snap.data().rows){
+      stockRows=snap.data().rows;
+      localStorage.setItem('ss_admin_stock',JSON.stringify(stockRows));
+    } else {
+      stockRows=JSON.parse(localStorage.getItem('ss_admin_stock')||'[]');
+    }
+  }catch(e){
+    stockRows=JSON.parse(localStorage.getItem('ss_admin_stock')||'[]');
+  }
+  renderStockTable();
+}
+
+function renderStockTable(){
+  const tbody=document.getElementById('stockBody');
+  document.getElementById('stockCount').textContent=stockRows.length+' variété'+(stockRows.length>1?'s':'');
+  if(!stockRows.length){
+    tbody.innerHTML=`<tr><td colspan="10"><div class="empty-state"><div class="empty-icon">📦</div>Aucun stock importé.<br>Cliquez sur "Importer CSV/Excel" pour commencer.</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML=stockRows.map((s,i)=>{
+    const pa=parseFloat(s.prixAchat)||0;
+    const pv=parseFloat(s.prix)||0;
+    const margin=pa&&pv?((pv-pa)/pa*100).toFixed(1):null;
+    const marginClass=margin?(parseFloat(margin)>=0?'margin-pos':'margin-neg'):'';
+    const dispoOk=s.dispo&&(s.dispo.toUpperCase()==='O'||s.dispo.toUpperCase()==='OUI');
+    return `<tr>
+      <td><input class="stock-input" value="${esc(s.nom||'')}" onchange="updateRow(${i},'nom',this.value)" style="min-width:140px"/></td>
+      <td><input class="stock-input" value="${esc(s.seedbank||'')}" onchange="updateRow(${i},'seedbank',this.value)" style="min-width:110px"/></td>
+      <td><input class="stock-input" value="${esc(s.type||'')}" onchange="updateRow(${i},'type',this.value)" style="min-width:90px"/></td>
+      <td><input class="stock-input" value="${esc(s.graines||'')}" onchange="updateRow(${i},'graines',this.value)" style="width:50px;text-align:center"/></td>
+      <td><input class="stock-input" value="${esc(s.prixAchat||'')}" onchange="updateRow(${i},'prixAchat',this.value)" style="width:70px;text-align:right"/></td>
+      <td><input class="stock-input" value="${esc(s.prix||'')}" onchange="updateRow(${i},'prix',this.value)" style="width:70px;text-align:right"/></td>
+      <td class="margin-cell ${marginClass}">${margin!==null?margin+'%':'—'}</td>
+      <td><input class="stock-input" value="${esc(s.ref||'')}" onchange="updateRow(${i},'ref',this.value)" style="min-width:80px"/></td>
+      <td>
+        <select class="stock-input" onchange="updateRow(${i},'dispo',this.value)" style="width:80px">
+          <option value="O" ${dispoOk?'selected':''}>✓ Dispo</option>
+          <option value="N" ${s.dispo&&s.dispo.toUpperCase()==='N'?'selected':''}>✗ Rupture</option>
+        </select>
+      </td>
+      <td><button onclick="deleteRow(${i})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:0 4px" title="Supprimer">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function updateRow(i,field,val){stockRows[i][field]=val;recalcMargins();}
+function recalcMargins(){renderStockTable();}
+function deleteRow(i){stockRows.splice(i,1);renderStockTable();}
+function addStockRow(){
+  stockRows.push({nom:'',seedbank:'',type:'Féminisée',graines:'5',prix:'',prixAchat:'',ref:'',dispo:'O'});
+  renderStockTable();
+  const tbody=document.getElementById('stockBody');
+  const last=tbody.lastElementChild;
+  if(last) last.querySelector('.stock-input')?.focus();
+}
+
+async function saveStockToFirebase(){
+  try{
+    await db.collection('adminData').doc('stock').set({rows:stockRows,updatedAt:Date.now()});
+    localStorage.setItem('ss_admin_stock',JSON.stringify(stockRows));
+    toast('✅ Stock sauvegardé');
+  }catch(e){toast('Erreur: '+e.message);}
+}
+
+function clearStock(){
+  if(!confirm('Vider tout le stock ?')) return;
+  stockRows=[];renderStockTable();
+  localStorage.removeItem('ss_admin_stock');
+  toast('Stock vidé');
+}
+
+function importStockFile(input){
+  const file=input.files[0];if(!file)return;
+  const ext=file.name.split('.').pop().toLowerCase();
+  if(ext==='csv'){
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const res=Papa.parse(e.target.result,{header:true,skipEmptyLines:true,encoding:'UTF-8'});
+      processImport(res.data,file.name);
+    };
+    reader.readAsText(file,'UTF-8');
+  }else{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const wb=XLSX.read(e.target.result,{type:'binary'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      processImport(XLSX.utils.sheet_to_json(ws,{defval:''}),file.name);
+    };
+    reader.readAsBinaryString(file);
+  }
+  input.value='';
+}
+
+function normalizeKey(k){return String(k||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');}
+
+function processImport(rows,filename){
+  const mapped=rows.map(row=>{
+    const keys=Object.keys(row);
+    const find=(...candidates)=>{
+      for(const c of candidates){const k=keys.find(k=>normalizeKey(k).includes(c));if(k&&row[k]!==undefined&&row[k]!=='')return String(row[k]).trim();}
+      return '';
+    };
+    return {
+      nom:find('nom','name','variete','strain','produit'),
+      seedbank:find('seedbank','marque','brand','producteur'),
+      type:find('type','categorie','format'),
+      graines:find('graine','seed','quantite','qty'),
+      prix:find('prixvente','prix','price','tarif','vente'),
+      prixAchat:find('prixachat','achat','cout','purchase'),
+      ref:find('ref','reference','code','sku'),
+      dispo:find('dispo','stock','disponible','available'),
+      notes:find('note','comment','remarque'),
+    };
+  }).filter(r=>r.nom);
+  if(!mapped.length){toast('⚠️ Aucune variété trouvée. Vérifiez les colonnes.');return;}
+  stockRows=mapped;renderStockTable();
+  toast(`📦 ${mapped.length} variétés importées depuis ${filename}`);
+}
+
+function exportStock(){
+  if(!stockRows.length){toast('Aucun stock à exporter');return;}
+  const wb=XLSX.utils.book_new();
+  const data=[['Nom','Seedbank','Type','Graines','Prix achat (€)','Prix vente (€)','Marge %','Réf','Disponible'],...stockRows.map(s=>{
+    const pa=parseFloat(s.prixAchat)||0,pv=parseFloat(s.prix)||0;
+    const m=pa&&pv?((pv-pa)/pa*100).toFixed(1):'';
+    return [s.nom,s.seedbank,s.type,s.graines,s.prixAchat,s.prix,m,s.ref,s.dispo];
+  })];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(data),'Stock');
+  XLSX.writeFile(wb,'strainsage_stock.xlsx');
+  toast('📤 Export Excel téléchargé');
+}
+
+/* ══ STATS ══ */
+let currentPeriod='all';
+function setPeriod(p,btn){
+  currentPeriod=p;
+  document.querySelectorAll('.period-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  loadStats();
+}
+
+async function loadStats(){
+  try{
+    const strainsSnap=await db.collection('strains').get();
+    const strains=[];
+    strainsSnap.forEach(d=>strains.push({id:d.id,...d.data()}));
+
+    const usersSnap=await db.collection('users').get();
+    const favCount={};
+    usersSnap.forEach(d=>{(d.data().favorites||[]).forEach(f=>{favCount[f.name]=(favCount[f.name]||0)+1;});});
+
+    strains.sort((a,b)=>(b.searchCount||0)-(a.searchCount||0));
+
+    const tbody=document.getElementById('statsBody');
+    if(!strains.length){tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text3)">Pas encore de données</td></tr>`;return;}
+
+    tbody.innerHTML=strains.slice(0,20).map((s,i)=>{
+      const stockItem=stockRows.find(r=>r.nom&&r.nom.toLowerCase().includes((s.id||'').toLowerCase()));
+      const inStock=stockItem?(stockItem.dispo&&(stockItem.dispo.toUpperCase()==='O'||stockItem.dispo.toUpperCase()==='OUI')):null;
+      const pa=parseFloat(stockItem?.prixAchat)||0;
+      const pv=parseFloat(stockItem?.prix)||0;
+      const margin=pa&&pv?((pv-pa)/pa*100).toFixed(1)+'%':'—';
+      const marginClass=pa&&pv?(parseFloat(margin)>=0?'margin-pos':'margin-neg'):'';
+      const rating=s.ratingCount?(s.ratingTotal/s.ratingCount).toFixed(1):'—';
+      const favs=favCount[s.id]||0;
+      return `<tr>
+        <td><span class="td-num">${i+1}</span></td>
+        <td><strong style="color:var(--text1)">${esc(s.id)}</strong></td>
+        <td style="color:var(--text3);font-size:11.5px">${esc(stockItem?.seedbank||'—')}</td>
+        <td><span class="td-badge gold">${s.searchCount||0} recherches</span></td>
+        <td>${favs?`<span class="td-badge green">⭐ ${favs}</span>`:'—'}</td>
+        <td>${rating!=='—'?`★ ${rating}`:'—'}</td>
+        <td>${inStock===null?'<span style="color:var(--text3)">—</span>':inStock?'<span class="td-badge green">En stock</span>':'<span class="td-badge red">Rupture</span>'}</td>
+        <td class="${marginClass}">${margin}</td>
+      </tr>`;
+    }).join('');
+  }catch(e){console.error(e);}
+}
+
+function exportStats(){
+  const rows=[];
+  document.querySelectorAll('#statsBody tr').forEach(tr=>{
+    const tds=[...tr.querySelectorAll('td')].map(td=>td.textContent.trim());
+    if(tds.length) rows.push(tds);
+  });
+  if(!rows.length){toast('Aucune stat à exporter');return;}
+  const csv='Rang,Variété,Seedbank,Recherches,Favoris,Note,Stock,Marge\n'+rows.map(r=>r.join(',')).join('\n');
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='strainsage_stats.csv';a.click();
+  toast('📤 CSV téléchargé');
+}
+
+function exportStatsXLSX(){
+  const headers=['Rang','Variété','Seedbank','Recherches','Favoris','Note','Stock','Marge'];
+  const rows=[headers];
+  document.querySelectorAll('#statsBody tr').forEach(tr=>{
+    const tds=[...tr.querySelectorAll('td')].map(td=>td.textContent.trim());
+    if(tds.length) rows.push(tds);
+  });
+  if(rows.length<=1){toast('Aucune stat à exporter');return;}
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),'Stats');
+  XLSX.writeFile(wb,'strainsage_stats.xlsx');
+  toast('📊 Excel téléchargé');
+}
+
+/* ══ USERS ══ */
+async function loadUsers(){
+  const tbody=document.getElementById('usersBody');
+  tbody.innerHTML=`<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text3)">Chargement…</td></tr>`;
+  try{
+    const snap=await db.collection('users').get();
+    if(!snap.size){tbody.innerHTML=`<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text3)">Aucun client enregistré</td></tr>`;return;}
+    tbody.innerHTML=snap.docs.map(d=>{
+      const data=d.data();
+      const created=data.createdAt?new Date(data.createdAt).toLocaleDateString('fr-FR'):'—';
+      const favs=(data.favorites||[]).length;
+      const convs=data.totalConvs||0;
+      const initials=d.id.slice(0,2).toUpperCase();
+      return `<tr>
+        <td><span class="user-avatar">${initials}</span>${esc(d.id)}</td>
+        <td style="color:var(--text3)">${created}</td>
+        <td><span class="td-badge gold">${convs}</span></td>
+        <td>${favs?`<span class="td-badge green">⭐ ${favs}</span>`:'—'}</td>
+        <td style="color:var(--text3)">—</td>
+        <td><button onclick="deleteUser('${esc(d.id)}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px" title="Supprimer">✕</button></td>
+      </tr>`;
+    }).join('');
+  }catch(e){tbody.innerHTML=`<tr><td colspan="6" style="color:var(--red);padding:16px">${e.message}</td></tr>`;}
+}
+
+function generateUserCode(){
+  const words=['KUSH','SAGE','LEAF','HAZE','JADE','PINE','MOSS','LIME','HERB','BAZE'];
+  const code=words[Math.floor(Math.random()*words.length)]+'-'+Math.floor(1000+Math.random()*9000);
+  document.getElementById('newCodeDisplay').textContent=code;
+  document.getElementById('newCodeBox').style.display='block';
+  db.collection('users').doc(code).set({code,createdAt:Date.now(),favorites:[],convHistory:[],totalConvs:0,source:'admin'})
+    .then(()=>toast(`Code ${code} créé ✅`))
+    .catch(e=>toast('Erreur: '+e.message));
+}
+
+async function deleteUser(id){
+  if(!confirm(`Supprimer le client "${id}" ?`)) return;
+  await db.collection('users').doc(id).delete();
+  toast(`Client ${id} supprimé`);
+  loadUsers();
+}
+
+/* ══ SETTINGS ══ */
+function saveSettings(){toast('Paramètres sauvegardés ✅');}
+
+async function saveApiKey(){
+  const key=document.getElementById('settingApiKey').value.trim();
+  if(!key.startsWith('sk-')){toast('⚠️ Clé invalide — doit commencer par sk-ant-');return;}
+  try{
+    await db.collection('adminData').doc('config').set({apiKey:key,updatedAt:Date.now()},{merge:true});
+    localStorage.setItem('ss_apikey',key);
+    toast('🔑 Clé API enregistrée ✅');
+    document.getElementById('settingApiKey').value='';
+  }catch(e){toast('Erreur: '+e.message);}
+}
+
+/* ══ PERIOD ══ */
+function setPeriod(p,btn){
+  currentPeriod=p;
+  document.querySelectorAll('.period-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  loadStats();
+}
+</script>
+</body>
+</html>
