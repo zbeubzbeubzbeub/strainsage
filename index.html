@@ -314,29 +314,147 @@ let history=[],mode='chat',busy=false,currentId=Date.now();
 let username='',userId='',favorites=[],convHistory=[],stockData=[];
 
 const SYS={
-chat:`Tu es StrainSage Pro, conseiller expert en variétés de cannabis pour "${SHOP_NAME}".
+chat:`Tu es StrainSage Pro, conseiller expert en variétés de cannabis pour "${SHOP_NAME}". Tu es doté d'une mémoire apprenante — tu t'améliores à chaque conversation.
+
+SOURCES DE RÉFÉRENCE (par ordre de fiabilité) :
+1. Sites officiels seedbanks (barneysfarm.com, seedjunky.com, compoundgenetics.com, humboldt-seeds.com, royalqueenseeds.com, dutchpassion.com, etc.)
+2. Bases de données spécialisées (leafly.com, seedfinder.eu, allbud.com)
+3. Growdiaries.com — retours terrain de growers réels du monde entier (ATTENTION : informations subjectives, à croiser avec sources officielles, grande variabilité selon le grower et les conditions)
+4. Forums spécialisés (cannaweed.com, rollitup.org) — utiles pour les tendances mais à filtrer soigneusement
+
 PROCESSUS OBLIGATOIRE à chaque requête :
-1. ANALYSER la demande — critères explicites/implicites, profil terpénique, contexte
-2. CROISER AVEC LE STOCK si disponible — évaluer chaque variété, prioriser le stock disponible
-3. VÉRIFIER — génétique documentée, terpènes réels, seedbank officielle
-4. Si rien ne correspond parfaitement en stock, trouver la plus proche et proposer hors stock
-FORMAT JSON OBLIGATOIRE :
+1. ANALYSER la demande en profondeur — critères explicites/implicites, profil terpénique, génotype recherché, contexte d'usage
+2. CONSULTER LA MÉMOIRE — si des données vérifiées existent en base pour les variétés mentionnées, les utiliser en priorité
+3. CROISER LES SOURCES — confronter tes connaissances avec les données mémorisées, détecter toute contradiction
+4. VÉRIFIER — génétique documentée, terpènes réels mesurés, seedbank officielle d'origine
+5. CROISER AVEC LE STOCK si disponible — prioriser les variétés disponibles
+6. SIGNALER les incertitudes — si une info est contradictoire ou non vérifiable, le dire clairement
+
+GESTION DES CONTRADICTIONS :
+- Si tu détectes une contradiction avec les données mémorisées → analyse les deux versions, détermine laquelle est plus fiable (source officielle > terrain > forum), explique ton choix
+- Une info de seedbank officielle prime sur un retour Growdiaries
+- Plusieurs retours Growdiaries concordants peuvent remettre en question une donnée officielle (ex: temps de floraison réel vs annoncé)
+
+FORMAT JSON OBLIGATOIRE — commence TOUJOURS par :
 [STRAINS_JSON]
-[{"name":"Nom exact","type":"Indica/Sativa/Hybride","thc":"XX-XX%","cbd":"X%","flowering":"XX-XX semaines","yield":"XXX g/m²","genetics":"Parent A × Parent B","seedbank":"Seedbank officielle","photo_url":"URL image officielle ou null","terpenes":[{"name":"Myrcène","pct":38,"note":"Terreux, sédatif"},{"name":"Caryophyllène","pct":26,"note":"Épicé, poivré"},{"name":"Limonène","pct":18,"note":"Citrus, frais"}],"flavor":"Arômes précis","effects":["effet1","effet2"],"why":"Justification détaillée et personnalisée","culture_tips":"Conseils culture","match_tags":["tag1","tag2"]}]
+[{"name":"Nom exact officiel","type":"Indica/Sativa/Hybride","thc":"XX-XX%","cbd":"X%","flowering":"XX-XX semaines","yield":"XXX g/m²","genetics":"Parent A × Parent B","seedbank":"Seedbank officielle d'origine","photo_url":"URL image officielle ou null","terpenes":[{"name":"Myrcène","pct":38,"note":"Terreux, sédatif, dominant"},{"name":"Caryophyllène","pct":26,"note":"Épicé, poivré, anti-inflammatoire"},{"name":"Limonène","pct":18,"note":"Citrus, frais, anti-stress"}],"flavor":"Description précise des arômes","effects":["effet1","effet2","effet3"],"why":"Justification détaillée et personnalisée","culture_tips":"Conseils culture pratiques","confidence":85,"sources":["seedbank officielle","leafly","growdiaries"],"match_tags":["tag1","tag2","tag3"]}]
 [/STRAINS_JSON]
-Style : expert, chaleureux, conversationnel. Tu tutoies.`,
-culture:`Tu es StrainSage Pro MODE CULTURE pour ${SHOP_NAME}. Analyse les contraintes, croise avec le stock, conseille indoor/outdoor/substrat/techniques.
+
+Le champ "confidence" (0-100) indique le niveau de certitude basé sur le recoupement des sources.
+Le champ "sources" liste les types de sources ayant confirmé les données.
+
+Style : expert, chaleureux, conversationnel. Tu tutoies. Tu signales toujours tes sources et ton niveau de certitude.`,
+
+culture:`Tu es StrainSage Pro MODE CULTURE pour ${SHOP_NAME}. Tu utilises ta mémoire apprenante et les retours terrain de Growdiaries pour affiner tes conseils de culture.
+
+SOURCES : seedbanks officielles + growdiaries.com (retours terrain réels, à croiser) + forums spécialisés.
+IMPORTANT sur Growdiaries : les temps de floraison et rendements réels peuvent différer des données officielles — signale ces écarts quand tu les connais.
+
+FORMAT JSON :
 [STRAINS_JSON]
-[{"name":"Nom","type":"...","thc":"XX-XX%","cbd":"X%","flowering":"XX semaines","yield":"XXX g/m²","genetics":"...","seedbank":"...","photo_url":"URL ou null","terpenes":[{"name":"Myrcène","pct":35,"note":"Terreux"}],"flavor":"...","effects":["..."],"why":"Justification culture","culture_tips":"Détail complet","match_tags":["tag1"]}]
+[{"name":"Nom","type":"...","thc":"XX-XX%","cbd":"X%","flowering":"XX-XX semaines","yield":"XXX g/m²","genetics":"...","seedbank":"...","photo_url":"URL ou null","terpenes":[{"name":"Myrcène","pct":35,"note":"Terreux"}],"flavor":"...","effects":["..."],"why":"Justification culture personnalisée","culture_tips":"Conseils détaillés : substrat, technique, nutrition, résistance, difficultés réelles observées sur Growdiaries","confidence":80,"sources":["seedbank","growdiaries"],"match_tags":["tag1"]}]
 [/STRAINS_JSON]`,
-compare:`Tu es StrainSage Pro MODE COMPARAISON pour ${SHOP_NAME}. Compare objectivement 2 variétés.
+
+compare:`Tu es StrainSage Pro MODE COMPARAISON pour ${SHOP_NAME}. Analyse rigoureuse en croisant toutes les sources disponibles.
+
+SOURCES : seedbanks officielles + leafly/seedfinder + growdiaries (retours terrain) + mémoire apprenante.
+
+FORMAT — EXACTEMENT 2 variétés :
 [STRAINS_JSON]
-[{"name":"A","type":"...","thc":"XX-XX%","cbd":"X%","flowering":"XX semaines","yield":"XXX g/m²","genetics":"...","seedbank":"...","photo_url":"URL ou null","terpenes":[{"name":"Myrcène","pct":40,"note":"Terreux"}],"flavor":"...","effects":["..."],"why":"Points forts","culture_tips":"...","match_tags":["..."]},{"name":"B","type":"...","thc":"XX-XX%","cbd":"X%","flowering":"XX semaines","yield":"XXX g/m²","genetics":"...","seedbank":"...","photo_url":"URL ou null","terpenes":[{"name":"Caryophyllène","pct":35,"note":"Épicé"}],"flavor":"...","effects":["..."],"why":"Points forts","culture_tips":"...","match_tags":["..."]}]
+[{"name":"A","type":"...","thc":"XX-XX%","cbd":"X%","flowering":"XX semaines","yield":"XXX g/m²","genetics":"...","seedbank":"...","photo_url":"URL ou null","terpenes":[{"name":"Myrcène","pct":40,"note":"Terreux"}],"flavor":"...","effects":["..."],"why":"Points forts documentés","culture_tips":"...","confidence":85,"sources":["seedbank","leafly"],"match_tags":["..."]},{"name":"B","type":"...","thc":"XX-XX%","cbd":"X%","flowering":"XX semaines","yield":"XXX g/m²","genetics":"...","seedbank":"...","photo_url":"URL ou null","terpenes":[{"name":"Caryophyllène","pct":35,"note":"Épicé"}],"flavor":"...","effects":["..."],"why":"Points forts documentés","culture_tips":"...","confidence":90,"sources":["seedbank","growdiaries"],"match_tags":["..."]}]
 [/STRAINS_JSON]
 [COMPARE_JSON]
-{"winner_thc":"Nom","winner_cbd":"Nom","winner_flower":"Nom","winner_yield":"Nom","verdict":"Recommandation finale justifiée"}
+{"winner_thc":"Nom","winner_cbd":"Nom","winner_flower":"Nom","winner_yield":"Nom","verdict":"Recommandation finale justifiée avec sources"}
 [/COMPARE_JSON]`
 };
+
+/* ══ MÉMOIRE APPRENANTE ══ */
+let knowledgeCache = {}; // Cache local pour éviter trop de lectures Firebase
+
+async function loadStrainKnowledge(strainNames) {
+  const toLoad = strainNames.filter(n => !knowledgeCache[n]);
+  if (!toLoad.length) return;
+  try {
+    for (const name of toLoad) {
+      const snap = await getDoc(doc(db, 'knowledge', name.toLowerCase().replace(/\s+/g, '_')));
+      if (snap.exists()) knowledgeCache[name] = snap.data();
+    }
+  } catch(e) {}
+}
+
+async function saveStrainKnowledge(strain) {
+  if (!strain.name) return;
+  const key = strain.name.toLowerCase().replace(/\s+/g, '_');
+  const existing = knowledgeCache[strain.name];
+  const now = Date.now();
+
+  // Détecter les contradictions
+  const contradictions = [];
+  if (existing) {
+    if (existing.thc && existing.thc !== strain.thc) {
+      contradictions.push(`THC: précédemment ${existing.thc}, maintenant ${strain.thc}`);
+    }
+    if (existing.genetics && existing.genetics !== strain.genetics && strain.genetics && strain.genetics !== 'null') {
+      contradictions.push(`Génétique: précédemment "${existing.genetics}", maintenant "${strain.genetics}"`);
+    }
+    if (existing.flowering && existing.flowering !== strain.flowering) {
+      contradictions.push(`Floraison: précédemment ${existing.flowering}, maintenant ${strain.flowering}`);
+    }
+  }
+
+  const data = {
+    name: strain.name,
+    type: strain.type || existing?.type,
+    thc: strain.thc || existing?.thc,
+    cbd: strain.cbd || existing?.cbd,
+    flowering: strain.flowering || existing?.flowering,
+    yield: strain.yield || existing?.yield,
+    genetics: (strain.genetics && strain.genetics !== 'null') ? strain.genetics : existing?.genetics,
+    seedbank: strain.seedbank || existing?.seedbank,
+    terpenes: strain.terpenes || existing?.terpenes,
+    flavor: strain.flavor || existing?.flavor,
+    effects: strain.effects || existing?.effects,
+    confidence: strain.confidence || existing?.confidence || 70,
+    sources: [...new Set([...(strain.sources || []), ...(existing?.sources || [])])],
+    searchCount: (existing?.searchCount || 0) + 1,
+    lastSeen: now,
+    firstSeen: existing?.firstSeen || now,
+    contradictions: contradictions.length ? [
+      ...(existing?.contradictions || []).slice(-4),
+      { date: new Date().toLocaleDateString('fr-FR'), issues: contradictions }
+    ] : (existing?.contradictions || []),
+    updatedAt: now
+  };
+
+  knowledgeCache[strain.name] = data;
+  try {
+    await setDoc(doc(db, 'knowledge', key), data, { merge: true });
+  } catch(e) {}
+}
+
+function buildKnowledgeCtx(strainNames) {
+  if (!strainNames.length) return '';
+  const known = strainNames.filter(n => knowledgeCache[n]);
+  if (!known.length) return '';
+
+  const lines = known.map(name => {
+    const k = knowledgeCache[name];
+    let line = `• ${name}`;
+    if (k.thc) line += ` — THC: ${k.thc}`;
+    if (k.genetics && k.genetics !== 'null') line += ` — Lignée: ${k.genetics}`;
+    if (k.flowering) line += ` — Floraison: ${k.flowering}`;
+    if (k.confidence) line += ` — Confiance: ${k.confidence}%`;
+    if (k.sources?.length) line += ` — Sources: ${k.sources.join(', ')}`;
+    if (k.searchCount > 1) line += ` — Recherchée ${k.searchCount}x`;
+    if (k.contradictions?.length) {
+      const last = k.contradictions[k.contradictions.length - 1];
+      line += ` ⚠️ Contradiction détectée (${last.date}): ${last.issues.join('; ')}`;
+    }
+    return line;
+  }).join('\n');
+
+  return `\n\n[MÉMOIRE APPRENANTE — données vérifiées et accumulées au fil des conversations]\n${lines}\nSi tu constates une contradiction avec ces données, analyse-la et signale-la clairement.`;
+}
 
 /* LOGIN */
 window.loginUser=async function(){
@@ -439,9 +557,97 @@ function renderWelcome(){const p=document.getElementById('chatPanel');p.innerHTM
 
 async function showStats(){const p=document.getElementById('chatPanel');p.innerHTML='';const sv=document.createElement('div');sv.id='statsView';sv.className='stats-panel';sv.innerHTML=`<div class="stats-header">📊 Mes statistiques</div><div style="color:var(--text3);font-size:13px">Chargement…</div>`;p.appendChild(sv);try{const uSnap=await getDoc(doc(db,'users',userId));const uData=uSnap.data()||{};const strainsSnap=await getDocs(collection(db,'strains'));const strains=[];strainsSnap.forEach(d=>strains.push({id:d.id,...d.data()}));strains.sort((a,b)=>(b.searchCount||0)-(a.searchCount||0));sv.innerHTML=`<div class="stats-header">📊 Mes statistiques</div><div class="stats-grid"><div class="stat-card"><div class="stat-card-val">${uData.totalConvs||0}</div><div class="stat-card-label">Conversations</div></div><div class="stat-card"><div class="stat-card-val">${(uData.favorites||[]).length}</div><div class="stat-card-label">Favoris</div></div><div class="stat-card"><div class="stat-card-val">${(uData.convHistory||[]).length}</div><div class="stat-card-label">Sessions</div></div></div><div class="stats-section-title">Variétés les plus recherchées</div>${strains.slice(0,8).map((s,i)=>`<div class="top-strain-item"><div class="top-strain-rank">${i+1}</div><div class="top-strain-name">${esc(s.name||s.id)}</div>${s.ratingCount?`<div class="top-strain-rating">★ ${(s.ratingTotal/s.ratingCount).toFixed(1)}</div>`:''}<div class="top-strain-count">${s.searchCount||0} recherches</div></div>`).join('')||'<div class="sb-empty">Pas encore de données.</div>'}`;}catch(e){sv.innerHTML+=`<div style="color:#e87070;font-size:12px;margin-top:10px">Erreur : ${e.message}</div>`;}}
 
-function buildCtx(){let ctx='';if(favorites.length)ctx+=`\n\n[FAVORIS DE ${username.toUpperCase()}] Variétés appréciées : ${favorites.map(f=>f.name).join(', ')}. Personnalise les recommandations en conséquence.`;if(stockData.length){const lines=stockData.map(s=>{let l=`- ${s.nom}`;if(s.seedbank)l+=` (${s.seedbank})`;if(s.type)l+=` · ${s.type}`;if(s.prix)l+=` · ${s.prix}€`;if(s.graines)l+=` · ${s.graines}gr`;if(s.ref)l+=` · Réf:${s.ref}`;if(s.dispo)l+=` · ${s.dispo.toUpperCase()==='O'||s.dispo.toUpperCase()==='OUI'?'EN STOCK':'RUPTURE'}`;return l;}).join('\n');ctx+=`\n\n[STOCK ${SHOP_NAME.toUpperCase()}] Priorise ces variétés. Si une correspond, mets-la en avant avec son prix. Si rien ne correspond parfaitement, propose la plus proche puis des alternatives hors stock :\n${lines}`;}return ctx;}
+async function buildCtx(userText) {
+  // Extraire les noms de variétés potentiels du message
+  const commonStrains = ['OG Kush','Sour Diesel','GMO','RS11','Blue Dream','Wedding Cake',
+    'Gelato','Runtz','Zkittlez','White Widow','Northern Lights','AK-47','Jack Herer',
+    'Amnesia','Critical','Cheese','Gorilla Glue','Girl Scout Cookies','Granddaddy Purple',
+    'Purple Haze','Pineapple Express','Strawberry Cough','Super Lemon Haze','Green Crack'];
+  const mentioned = commonStrains.filter(s =>
+    userText.toLowerCase().includes(s.toLowerCase())
+  );
+  if (mentioned.length) await loadStrainKnowledge(mentioned);
 
-window.send=async function(){const inp=document.getElementById('inp'),sbtn=document.getElementById('sbtn');const txt=inp.value.trim();if(!txt||busy)return;const w=document.getElementById('welcome');if(w)w.remove();if(history.length===0)document.getElementById('topTitle').textContent=txt.length>42?txt.slice(0,42)+'…':txt;addMsg('user',esc(txt));history.push({role:'user',content:txt});inp.value='';inp.style.height='auto';busy=true;sbtn.disabled=true;showTyping();try{const res=await fetch('https://strainsage-proxy.theobarege.workers.dev',{method:'POST',headers:{'Content-Type':'application/json',},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,system:(SYS[mode]||SYS.chat)+buildCtx(),messages:history})});if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e?.error?.message||`HTTP ${res.status}`);}const data=await res.json();const reply=(data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('')||'Pas de réponse.';removeTyping();addMsg('ai',renderReply(reply));history.push({role:'assistant',content:reply});await saveConv(history[0].content);const mS=reply.match(/\[STRAINS_JSON\]([\s\S]*?)\[\/STRAINS_JSON\]/);if(mS){try{const ss=JSON.parse(mS[1].trim());for(const s of ss){try{const ref=doc(db,'strains',s.name);const snap=await getDoc(ref);if(snap.exists())await updateDoc(ref,{searchCount:increment(1)});else await setDoc(ref,{name:s.name,searchCount:1,ratingTotal:0,ratingCount:0});}catch(e){}}}catch(e){}}setTimeout(()=>{panel().querySelectorAll('.terp-fill[data-w]').forEach(el=>{const w=el.dataset.w;el.style.width='0%';setTimeout(()=>{el.style.width=w;},80);});},120);}catch(err){removeTyping();addMsg('ai',`<span style="color:#e87070;font-size:13px">⚠️ ${esc(err.message)}</span>`);}busy=false;sbtn.disabled=false;inp.focus();};
+  let ctx = '';
+  if (favorites.length) ctx += `\n\n[FAVORIS DE ${username.toUpperCase()}] Variétés appréciées : ${favorites.map(f=>f.name).join(', ')}. Personnalise les recommandations en conséquence.`;
+
+  if (mentioned.length) ctx += buildKnowledgeCtx(mentioned);
+
+  if (stockData.length) {
+    const lines = stockData.map(s => {
+      let l = `- ${s.nom}`;
+      if (s.seedbank) l += ` (${s.seedbank})`;
+      if (s.type) l += ` · ${s.type}`;
+      if (s.prix) l += ` · ${s.prix}€`;
+      if (s.graines) l += ` · ${s.graines}gr`;
+      if (s.ref) l += ` · Réf:${s.ref}`;
+      if (s.dispo) l += ` · ${s.dispo.toUpperCase()==='O'||s.dispo.toUpperCase()==='OUI'?'EN STOCK':'RUPTURE'}`;
+      return l;
+    }).join('\n');
+    ctx += `\n\n[STOCK ${SHOP_NAME.toUpperCase()}] Priorise ces variétés. Si une correspond, mets-la en avant avec son prix :\n${lines}`;
+  }
+  return ctx;
+}
+
+window.send=async function(){
+  const inp=document.getElementById('inp'),sbtn=document.getElementById('sbtn');
+  const txt=inp.value.trim();
+  if(!txt||busy)return;
+  const w=document.getElementById('welcome');if(w)w.remove();
+  if(history.length===0)document.getElementById('topTitle').textContent=txt.length>42?txt.slice(0,42)+'…':txt;
+  addMsg('user',esc(txt));
+  history.push({role:'user',content:txt});
+  inp.value='';inp.style.height='auto';
+  busy=true;sbtn.disabled=true;showTyping();
+  const ctx = await buildCtx(txt);
+  try{
+    const res=await fetch('https://strainsage-proxy.theobarege.workers.dev',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:2500,
+        system:(SYS[mode]||SYS.chat)+ctx,
+        messages:history
+      })
+    });
+    if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e?.error?.message||`HTTP ${res.status}`);}
+    const data=await res.json();
+    const reply=(data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('')||'Pas de réponse.';
+    removeTyping();
+    addMsg('ai',renderReply(reply));
+    history.push({role:'assistant',content:reply});
+    await saveConv(history[0].content);
+    // Sauvegarder les connaissances + compteurs
+    const mS=reply.match(/\[STRAINS_JSON\]([\s\S]*?)\[\/STRAINS_JSON\]/);
+    if(mS){
+      try{
+        const ss=JSON.parse(mS[1].trim());
+        for(const s of ss){
+          // Sauvegarder dans la mémoire apprenante
+          await saveStrainKnowledge(s);
+          // Compteur de recherches
+          try{
+            const ref=doc(db,'strains',s.name);
+            const snap=await getDoc(ref);
+            if(snap.exists()) await updateDoc(ref,{searchCount:increment(1)});
+            else await setDoc(ref,{name:s.name,searchCount:1,ratingTotal:0,ratingCount:0});
+          }catch(e){}
+        }
+      }catch(e){}
+    }
+    setTimeout(()=>{
+      panel().querySelectorAll('.terp-fill[data-w]').forEach(el=>{
+        const w=el.dataset.w;el.style.width='0%';
+        setTimeout(()=>{el.style.width=w;},80);
+      });
+    },120);
+  }catch(err){
+    removeTyping();
+    addMsg('ai',`<span style="color:#e87070;font-size:13px">⚠️ ${esc(err.message)}</span>`);
+  }
+  busy=false;sbtn.disabled=false;inp.focus();
+};
 </script>
 </body>
 </html>
