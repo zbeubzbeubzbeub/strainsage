@@ -430,12 +430,93 @@ function addMsg(role,html){var w=document.createElement('div');w.className='msg 
 function showTyping(){var w=document.createElement('div');w.className='msg ai';w.id='typ';var av=document.createElement('div');av.className='av ai';av.textContent='🌿';var b=document.createElement('div');b.className='bubble';b.innerHTML='<div class="typing-bub"><span></span><span></span><span></span></div>';w.appendChild(av);w.appendChild(b);panel().appendChild(w);panel().scrollTop=panel().scrollHeight;}
 function removeTyping(){var t=document.getElementById('typ');if(t)t.remove();}
 
+/* BASE DE PHOTOS — variétés connues */
+var STRAIN_PHOTOS = {
+  'OG Kush': 'https://images.leafly.com/flower-images/og-kush.jpg',
+  'Sour Diesel': 'https://images.leafly.com/flower-images/sour-diesel.jpg',
+  'Blue Dream': 'https://images.leafly.com/flower-images/blue-dream.jpg',
+  'White Widow': 'https://images.leafly.com/flower-images/white-widow.jpg',
+  'Northern Lights': 'https://images.leafly.com/flower-images/northern-lights.jpg',
+  'AK-47': 'https://images.leafly.com/flower-images/ak-47.jpg',
+  'Jack Herer': 'https://images.leafly.com/flower-images/jack-herer.jpg',
+  'Granddaddy Purple': 'https://images.leafly.com/flower-images/granddaddy-purple.jpg',
+  'Purple Haze': 'https://images.leafly.com/flower-images/purple-haze.jpg',
+  'Girl Scout Cookies': 'https://images.leafly.com/flower-images/girl-scout-cookies.jpg',
+  'GSC': 'https://images.leafly.com/flower-images/girl-scout-cookies.jpg',
+  'Gorilla Glue': 'https://images.leafly.com/flower-images/gorilla-glue-4.jpg',
+  'GG4': 'https://images.leafly.com/flower-images/gorilla-glue-4.jpg',
+  'Wedding Cake': 'https://images.leafly.com/flower-images/wedding-cake.jpg',
+  'Gelato': 'https://images.leafly.com/flower-images/gelato.jpg',
+  'Gelato 41': 'https://images.leafly.com/flower-images/gelato.jpg',
+  'Runtz': 'https://images.leafly.com/flower-images/runtz.jpg',
+  'White Runtz': 'https://images.leafly.com/flower-images/white-runtz.jpg',
+  'Zkittlez': 'https://images.leafly.com/flower-images/zkittlez.jpg',
+  'Pineapple Express': 'https://images.leafly.com/flower-images/pineapple-express.jpg',
+  'Strawberry Cough': 'https://images.leafly.com/flower-images/strawberry-cough.jpg',
+  'Super Lemon Haze': 'https://images.leafly.com/flower-images/super-lemon-haze.jpg',
+  'Green Crack': 'https://images.leafly.com/flower-images/green-crack.jpg',
+  'Amnesia Haze': 'https://images.leafly.com/flower-images/amnesia-haze.jpg',
+  'Amnesia': 'https://images.leafly.com/flower-images/amnesia-haze.jpg',
+  'Critical': 'https://images.leafly.com/flower-images/critical-mass.jpg',
+  'Critical Mass': 'https://images.leafly.com/flower-images/critical-mass.jpg',
+  'Cheese': 'https://images.leafly.com/flower-images/cheese.jpg',
+  'Blue Cheese': 'https://images.leafly.com/flower-images/blue-cheese.jpg',
+  'Trainwreck': 'https://images.leafly.com/flower-images/trainwreck.jpg',
+  'Durban Poison': 'https://images.leafly.com/flower-images/durban-poison.jpg',
+  'Bruce Banner': 'https://images.leafly.com/flower-images/bruce-banner.jpg',
+  'Chemdawg': 'https://images.leafly.com/flower-images/chemdawg.jpg',
+  'Cherry Pie': 'https://images.leafly.com/flower-images/cherry-pie.jpg',
+  'Do-Si-Dos': 'https://images.leafly.com/flower-images/do-si-dos.jpg',
+  'Dosidos': 'https://images.leafly.com/flower-images/do-si-dos.jpg',
+  'Forbidden Fruit': 'https://images.leafly.com/flower-images/forbidden-fruit.jpg',
+  'Ice Cream Cake': 'https://images.leafly.com/flower-images/ice-cream-cake.jpg',
+  'Mimosa': 'https://images.leafly.com/flower-images/mimosa.jpg',
+  'Papaya': 'https://images.leafly.com/flower-images/papaya.jpg',
+  'Sunset Sherbet': 'https://images.leafly.com/flower-images/sunset-sherbet.jpg',
+  'Sherbet': 'https://images.leafly.com/flower-images/sunset-sherbet.jpg',
+  'Tangie': 'https://images.leafly.com/flower-images/tangie.jpg',
+  'Tropicana Cookies': 'https://images.leafly.com/flower-images/tropicana-cookies.jpg',
+  'Lemon Haze': 'https://images.leafly.com/flower-images/lemon-haze.jpg',
+  'Super Silver Haze': 'https://images.leafly.com/flower-images/super-silver-haze.jpg',
+  'Skywalker OG': 'https://images.leafly.com/flower-images/skywalker-og.jpg',
+  'Bubba Kush': 'https://images.leafly.com/flower-images/bubba-kush.jpg',
+  'Master Kush': 'https://images.leafly.com/flower-images/master-kush.jpg',
+  'Purple Kush': 'https://images.leafly.com/flower-images/purple-kush.jpg',
+  'Hash Plant': 'https://images.leafly.com/flower-images/hash-plant.jpg',
+  'Hindu Kush': 'https://images.leafly.com/flower-images/hindu-kush.jpg',
+  'Blueberry': 'https://images.leafly.com/flower-images/blueberry.jpg',
+  'Blackberry Kush': 'https://images.leafly.com/flower-images/blackberry-kush.jpg',
+  'Banana Kush': 'https://images.leafly.com/flower-images/banana-kush.jpg',
+  'Mango Kush': 'https://images.leafly.com/flower-images/mango-kush.jpg',
+  'Maui Wowie': 'https://images.leafly.com/flower-images/maui-wowie.jpg',
+  'Candyland': 'https://images.leafly.com/flower-images/candyland.jpg',
+  'Birthday Cake': 'https://images.leafly.com/flower-images/birthday-cake.jpg',
+  'Platinum OG': 'https://images.leafly.com/flower-images/platinum-og.jpg',
+  'Fire OG': 'https://images.leafly.com/flower-images/fire-og.jpg'
+};
+
+function getPhotoUrl(name, providedUrl) {
+  // Utiliser l'URL fournie si elle n'est pas null
+  if (providedUrl && providedUrl !== 'null') return providedUrl;
+  // Cherche dans la base locale (exact ou partiel)
+  if (STRAIN_PHOTOS[name]) return STRAIN_PHOTOS[name];
+  var nameLower = name.toLowerCase();
+  var keys = Object.keys(STRAIN_PHOTOS);
+  for (var i = 0; i < keys.length; i++) {
+    if (nameLower.includes(keys[i].toLowerCase()) || keys[i].toLowerCase().includes(nameLower)) {
+      return STRAIN_PHOTOS[keys[i]];
+    }
+  }
+  return null;
+}
+
 function buildPhoto(url,name,sb){
+  var finalUrl = getPhotoUrl(name, url);
   var fb='<div class="sc-photo-fallback"><div class="sc-photo-fallback-icon">🌿</div><div class="sc-photo-fallback-txt">Photo non disponible</div></div>';
   var ov='<div class="sc-photo-overlay"><div class="sc-photo-name">'+esc(name)+'</div></div>';
   var badge=sb&&sb!=='null'?'<div class="sc-photo-sb">'+esc(sb)+'</div>':'';
-  if(!url||url==='null')return '<div class="sc-photo-wrap">'+fb+ov+'</div>';
-  return '<div class="sc-photo-wrap">'+fb+'<img class="sc-photo" src="'+esc(url)+'" alt="'+esc(name)+'" onload="this.classList.add(\'loaded\');this.previousElementSibling.style.display=\'none\'" onerror="this.style.display=\'none\'" loading="lazy">'+ov+badge+'</div>';
+  if(!finalUrl)return '<div class="sc-photo-wrap">'+fb+ov+'</div>';
+  return '<div class="sc-photo-wrap">'+fb+'<img class="sc-photo" src="'+esc(finalUrl)+'" alt="'+esc(name)+'" onload="this.classList.add(\'loaded\');this.previousElementSibling.style.display=\'none\'" onerror="this.style.display=\'none\'" loading="lazy">'+ov+badge+'</div>';
 }
 function buildCmpPhoto(url,name){if(!url||url==='null')return '<div class="cmp-photo">🌿</div>';return '<div class="cmp-photo"><img src="'+esc(url)+'" alt="'+esc(name)+'" onload="this.classList.add(\'loaded\')" onerror="this.parentElement.textContent=\'🌿\'" loading="lazy"></div>';}
 function buildGenetics(g){if(!g||g==='null'||(g.toLowerCase&&g.toLowerCase().includes('inconnu')))return '<div class="sc-genetics"><span class="gen-label">Lignée</span><span class="gen-unknown">Non documentée</span></div>';var fmt=esc(g).replace(/×/g,'<span class="gen-cross">×</span>').replace(/\s+x\s+/gi,'<span class="gen-cross">×</span>');return '<div class="sc-genetics"><span class="gen-label">Lignée</span><span class="gen-val">'+fmt+'</span></div>';}
