@@ -295,16 +295,17 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script>
+window.addEventListener('load', function() {
+
 const SHOP_CODE='cultureindooranglet';
 const SHOP_NAME='Culture Indoor Anglet';
+const PROXY='https://strainsage-proxy.theobarege.workers.dev';
 
 firebase.initializeApp({apiKey:"AIzaSyAH5m_gs2MrQLvCqOdhtLiyZjgI1A22fHs",authDomain:"test-b7b1a.firebaseapp.com",projectId:"test-b7b1a",storageBucket:"test-b7b1a.firebasestorage.app",messagingSenderId:"60234196976",appId:"1:60234196976:web:48c64cb05c7707499d5f35"});
 const db=firebase.firestore();
-
-// Wrappers pour compatibilité avec le code existant
 function doc(db,col,id){return db.collection(col).doc(id);}
 async function getDoc(ref){const snap=await ref.get();return{exists:()=>snap.exists,data:()=>snap.data(),id:snap.id};}
-async function setDoc(ref,data,opts){return opts?.merge?ref.set(data,{merge:true}):ref.set(data);}
+async function setDoc(ref,data,opts){return opts&&opts.merge?ref.set(data,{merge:true}):ref.set(data);}
 async function updateDoc(ref,data){return ref.update(data);}
 async function getDocs(ref){const snap=await ref.get();return{forEach:(fn)=>snap.forEach(fn),size:snap.size,docs:snap.docs};}
 function collection(db,col){return db.collection(col);}
@@ -312,351 +313,282 @@ function increment(n){return firebase.firestore.FieldValue.increment(n);}
 
 let history=[],mode='chat',busy=false,currentId=Date.now();
 let username='',userId='',favorites=[],convHistory=[],stockData=[];
+let knowledgeCache={};
 
 const SYS={
-chat:`Tu es StrainSage Pro, conseiller expert en variétés de cannabis pour "${SHOP_NAME}". Tu es doté d'une mémoire apprenante — tu t'améliores à chaque conversation.
+chat:'Tu es StrainSage Pro, conseiller expert en variétés de cannabis pour "'+SHOP_NAME+'".\n\nSOURCES (par ordre de fiabilité) :\n1. Sites officiels seedbanks (barneysfarm.com, seedjunky.com, compoundgenetics.com, royalqueenseeds.com...)\n2. Bases spécialisées (leafly.com, seedfinder.eu, allbud.com)\n3. Growdiaries.com — retours terrain réels de growers (à croiser avec sources officielles)\n4. Forums (cannaweed.com, rollitup.org) — à filtrer\n\nPROCESSUS :\n1. Analyser la demande en profondeur\n2. Consulter la mémoire si données existantes\n3. Croiser sources, détecter contradictions\n4. Vérifier génétique, terpènes, seedbank officielle\n5. Croiser avec le stock si disponible\n\nFORMAT — commence ta réponse par [STRAINS_JSON] immédiatement, sans aucun texte avant :\n\n[STRAINS_JSON]\n[{"name":"Nom exact","type":"Indica/Sativa/Hybride","thc":"XX-XX%","cbd":"X%","flowering":"XX-XX semaines","yield":"XXX g/m²","genetics":"Parent A × Parent B","seedbank":"Seedbank officielle","photo_url":null,"terpenes":[{"name":"Myrcène","pct":38,"note":"Terreux, sédatif"},{"name":"Caryophyllène","pct":26,"note":"Épicé, poivré"},{"name":"Limonène","pct":18,"note":"Citrus, frais"}],"flavor":"Arômes précis","effects":["effet1","effet2"],"why":"Justification personnalisée","culture_tips":"Conseils pratiques","match_tags":["tag1","tag2"]}]\n[/STRAINS_JSON]\n\nTexte chaleureux APRÈS le bloc JSON. Style : expert, chaleureux. Tu tutoies. 2-3 variétés.',
 
-⚠️ RÈGLE ABSOLUE : Quand tu recommandes des variétés, tu dois TOUJOURS et OBLIGATOIREMENT commencer ta réponse par le bloc [STRAINS_JSON]...[/STRAINS_JSON] AVANT tout texte. Ne jamais afficher le JSON en texte brut. Ne jamais omettre ces balises.
+culture:'Tu es StrainSage Pro MODE CULTURE pour '+SHOP_NAME+'.\nSources : seedbanks officielles + growdiaries.com (retours terrain, à croiser).\n\nFORMAT — commence par [STRAINS_JSON] immédiatement :\n[STRAINS_JSON]\n[{"name":"Nom","type":"...","thc":"XX-XX%","cbd":"X%","flowering":"XX-XX semaines","yield":"XXX g/m²","genetics":"...","seedbank":"...","photo_url":null,"terpenes":[{"name":"Myrcène","pct":35,"note":"Terreux"}],"flavor":"...","effects":["..."],"why":"Justification culture","culture_tips":"Substrat, technique, nutrition, difficultés réelles","match_tags":["tag1"]}]\n[/STRAINS_JSON]',
 
-SOURCES DE RÉFÉRENCE (par ordre de fiabilité) :
-1. Sites officiels seedbanks (barneysfarm.com, seedjunky.com, compoundgenetics.com, humboldt-seeds.com, royalqueenseeds.com, dutchpassion.com, etc.)
-2. Bases de données spécialisées (leafly.com, seedfinder.eu, allbud.com)
-3. Growdiaries.com — retours terrain de growers réels du monde entier (informations subjectives, à croiser avec sources officielles)
-4. Forums spécialisés (cannaweed.com, rollitup.org) — à filtrer soigneusement
-
-PROCESSUS OBLIGATOIRE à chaque requête :
-1. ANALYSER la demande en profondeur
-2. CONSULTER LA MÉMOIRE si des données existent pour les variétés mentionnées
-3. CROISER LES SOURCES — détecter toute contradiction
-4. VÉRIFIER génétique, terpènes réels, seedbank officielle
-5. CROISER AVEC LE STOCK si disponible
-
-FORMAT DE RÉPONSE OBLIGATOIRE — commence TOUJOURS par exactement ceci :
-[STRAINS_JSON]
-[{"name":"Nom exact officiel","type":"Indica/Sativa/Hybride","thc":"XX-XX%","cbd":"X%","flowering":"XX-XX semaines","yield":"XXX g/m²","genetics":"Parent A × Parent B","seedbank":"Seedbank officielle","photo_url":null,"terpenes":[{"name":"Myrcène","pct":38,"note":"Terreux, sédatif"},{"name":"Caryophyllène","pct":26,"note":"Épicé, poivré"},{"name":"Limonène","pct":18,"note":"Citrus, frais"}],"flavor":"Description arômes","effects":["effet1","effet2"],"why":"Justification personnalisée","culture_tips":"Conseils pratiques","confidence":85,"sources":["seedbank","leafly"],"match_tags":["tag1","tag2"]}]
-[/STRAINS_JSON]
-
-Puis ton texte naturel et chaleureux APRÈS le bloc JSON.
-Style : expert, chaleureux, conversationnel. Tu tutoies.`,
-
-culture:`Tu es StrainSage Pro MODE CULTURE pour ${SHOP_NAME}. Tu utilises ta mémoire apprenante et les retours terrain de Growdiaries pour affiner tes conseils de culture.
-
-SOURCES : seedbanks officielles + growdiaries.com (retours terrain réels, à croiser) + forums spécialisés.
-IMPORTANT sur Growdiaries : les temps de floraison et rendements réels peuvent différer des données officielles — signale ces écarts quand tu les connais.
-
-FORMAT JSON :
-[STRAINS_JSON]
-[{"name":"Nom","type":"...","thc":"XX-XX%","cbd":"X%","flowering":"XX-XX semaines","yield":"XXX g/m²","genetics":"...","seedbank":"...","photo_url":"URL ou null","terpenes":[{"name":"Myrcène","pct":35,"note":"Terreux"}],"flavor":"...","effects":["..."],"why":"Justification culture personnalisée","culture_tips":"Conseils détaillés : substrat, technique, nutrition, résistance, difficultés réelles observées sur Growdiaries","confidence":80,"sources":["seedbank","growdiaries"],"match_tags":["tag1"]}]
-[/STRAINS_JSON]`,
-
-compare:`Tu es StrainSage Pro MODE COMPARAISON pour ${SHOP_NAME}. Analyse rigoureuse en croisant toutes les sources disponibles.
-
-SOURCES : seedbanks officielles + leafly/seedfinder + growdiaries (retours terrain) + mémoire apprenante.
-
-FORMAT — EXACTEMENT 2 variétés :
-[STRAINS_JSON]
-[{"name":"A","type":"...","thc":"XX-XX%","cbd":"X%","flowering":"XX semaines","yield":"XXX g/m²","genetics":"...","seedbank":"...","photo_url":"URL ou null","terpenes":[{"name":"Myrcène","pct":40,"note":"Terreux"}],"flavor":"...","effects":["..."],"why":"Points forts documentés","culture_tips":"...","confidence":85,"sources":["seedbank","leafly"],"match_tags":["..."]},{"name":"B","type":"...","thc":"XX-XX%","cbd":"X%","flowering":"XX semaines","yield":"XXX g/m²","genetics":"...","seedbank":"...","photo_url":"URL ou null","terpenes":[{"name":"Caryophyllène","pct":35,"note":"Épicé"}],"flavor":"...","effects":["..."],"why":"Points forts documentés","culture_tips":"...","confidence":90,"sources":["seedbank","growdiaries"],"match_tags":["..."]}]
-[/STRAINS_JSON]
-[COMPARE_JSON]
-{"winner_thc":"Nom","winner_cbd":"Nom","winner_flower":"Nom","winner_yield":"Nom","verdict":"Recommandation finale justifiée avec sources"}
-[/COMPARE_JSON]`
+compare:'Tu es StrainSage Pro MODE COMPARAISON pour '+SHOP_NAME+'.\nSources : seedbanks officielles + leafly/seedfinder + growdiaries.\n\nFORMAT — commence par [STRAINS_JSON] avec EXACTEMENT 2 variétés :\n[STRAINS_JSON]\n[{"name":"A","type":"...","thc":"XX-XX%","cbd":"X%","flowering":"XX semaines","yield":"XXX g/m²","genetics":"...","seedbank":"...","photo_url":null,"terpenes":[{"name":"Myrcène","pct":40,"note":"Terreux"}],"flavor":"...","effects":["..."],"why":"Points forts","culture_tips":"...","match_tags":["..."]},{"name":"B","type":"...","thc":"XX-XX%","cbd":"X%","flowering":"XX semaines","yield":"XXX g/m²","genetics":"...","seedbank":"...","photo_url":null,"terpenes":[{"name":"Caryophyllène","pct":35,"note":"Épicé"}],"flavor":"...","effects":["..."],"why":"Points forts","culture_tips":"...","match_tags":["..."]}]\n[/STRAINS_JSON]\n[COMPARE_JSON]\n{"winner_thc":"Nom","winner_cbd":"Nom","winner_flower":"Nom","winner_yield":"Nom","verdict":"Recommandation finale justifiée"}\n[/COMPARE_JSON]'
 };
 
-/* ══ DÉTECTION COMPLEXITÉ ══ */
-function getModel(txt) {
-  return 'claude-sonnet-4-20250514';
+/* MÉMOIRE */
+async function loadStrainKnowledge(names){
+  const toLoad=names.filter(function(n){return !knowledgeCache[n];});
+  if(!toLoad.length)return;
+  try{
+    for(var i=0;i<toLoad.length;i++){
+      var n=toLoad[i];
+      var snap=await getDoc(doc(db,'knowledge',n.toLowerCase().replace(/\s+/g,'_')));
+      if(snap.exists())knowledgeCache[n]=snap.data();
+    }
+  }catch(e){}
 }
 
-function getMaxTokens(txt) {
-  if (mode === 'compare') return 1800;
-  if (mode === 'culture') return 1500;
-  return 1500;
-}
-let knowledgeCache = {}; // Cache local pour éviter trop de lectures Firebase
-
-async function loadStrainKnowledge(strainNames) {
-  const toLoad = strainNames.filter(n => !knowledgeCache[n]);
-  if (!toLoad.length) return;
-  try {
-    for (const name of toLoad) {
-      const snap = await getDoc(doc(db, 'knowledge', name.toLowerCase().replace(/\s+/g, '_')));
-      if (snap.exists()) knowledgeCache[name] = snap.data();
-    }
-  } catch(e) {}
-}
-
-async function saveStrainKnowledge(strain) {
-  if (!strain.name) return;
-  const key = strain.name.toLowerCase().replace(/\s+/g, '_');
-  const existing = knowledgeCache[strain.name];
-  const now = Date.now();
-
-  // Détecter les contradictions
-  const contradictions = [];
-  if (existing) {
-    if (existing.thc && existing.thc !== strain.thc) {
-      contradictions.push(`THC: précédemment ${existing.thc}, maintenant ${strain.thc}`);
-    }
-    if (existing.genetics && existing.genetics !== strain.genetics && strain.genetics && strain.genetics !== 'null') {
-      contradictions.push(`Génétique: précédemment "${existing.genetics}", maintenant "${strain.genetics}"`);
-    }
-    if (existing.flowering && existing.flowering !== strain.flowering) {
-      contradictions.push(`Floraison: précédemment ${existing.flowering}, maintenant ${strain.flowering}`);
-    }
+async function saveStrainKnowledge(s){
+  if(!s.name)return;
+  var key=s.name.toLowerCase().replace(/\s+/g,'_');
+  var ex=knowledgeCache[s.name];
+  var now=Date.now();
+  var contradictions=[];
+  if(ex){
+    if(ex.thc&&ex.thc!==s.thc)contradictions.push('THC: '+ex.thc+'→'+s.thc);
+    if(ex.genetics&&ex.genetics!==s.genetics&&s.genetics&&s.genetics!=='null')contradictions.push('Génétique: "'+ex.genetics+'"→"'+s.genetics+'"');
+    if(ex.flowering&&ex.flowering!==s.flowering)contradictions.push('Floraison: '+ex.flowering+'→'+s.flowering);
   }
-
-  const data = {
-    name: strain.name,
-    type: strain.type || existing?.type,
-    thc: strain.thc || existing?.thc,
-    cbd: strain.cbd || existing?.cbd,
-    flowering: strain.flowering || existing?.flowering,
-    yield: strain.yield || existing?.yield,
-    genetics: (strain.genetics && strain.genetics !== 'null') ? strain.genetics : existing?.genetics,
-    seedbank: strain.seedbank || existing?.seedbank,
-    terpenes: strain.terpenes || existing?.terpenes,
-    flavor: strain.flavor || existing?.flavor,
-    effects: strain.effects || existing?.effects,
-    confidence: strain.confidence || existing?.confidence || 70,
-    sources: [...new Set([...(strain.sources || []), ...(existing?.sources || [])])],
-    searchCount: (existing?.searchCount || 0) + 1,
-    lastSeen: now,
-    firstSeen: existing?.firstSeen || now,
-    contradictions: contradictions.length ? [
-      ...(existing?.contradictions || []).slice(-4),
-      { date: new Date().toLocaleDateString('fr-FR'), issues: contradictions }
-    ] : (existing?.contradictions || []),
-    updatedAt: now
+  var prevContradictions=ex&&ex.contradictions?ex.contradictions.slice(-4):[];
+  if(contradictions.length)prevContradictions.push({date:new Date().toLocaleDateString('fr-FR'),issues:contradictions});
+  var data={
+    name:s.name,type:s.type||(ex?ex.type:null),thc:s.thc||(ex?ex.thc:null),cbd:s.cbd||(ex?ex.cbd:null),
+    flowering:s.flowering||(ex?ex.flowering:null),genetics:(s.genetics&&s.genetics!=='null')?s.genetics:(ex?ex.genetics:null),
+    seedbank:s.seedbank||(ex?ex.seedbank:null),terpenes:s.terpenes||(ex?ex.terpenes:null),
+    flavor:s.flavor||(ex?ex.flavor:null),effects:s.effects||(ex?ex.effects:null),
+    searchCount:((ex?ex.searchCount:0)||0)+1,lastSeen:now,firstSeen:(ex?ex.firstSeen:null)||now,
+    contradictions:prevContradictions,updatedAt:now
   };
-
-  knowledgeCache[strain.name] = data;
-  try {
-    await setDoc(doc(db, 'knowledge', key), data, { merge: true });
-  } catch(e) {}
+  knowledgeCache[s.name]=data;
+  try{await setDoc(doc(db,'knowledge',key),data,{merge:true});}catch(e){}
 }
 
-function buildKnowledgeCtx(strainNames) {
-  if (!strainNames.length) return '';
-  const known = strainNames.filter(n => knowledgeCache[n]);
-  if (!known.length) return '';
-
-  const lines = known.map(name => {
-    const k = knowledgeCache[name];
-    let line = `• ${name}`;
-    if (k.thc) line += ` — THC: ${k.thc}`;
-    if (k.genetics && k.genetics !== 'null') line += ` — Lignée: ${k.genetics}`;
-    if (k.flowering) line += ` — Floraison: ${k.flowering}`;
-    if (k.confidence) line += ` — Confiance: ${k.confidence}%`;
-    if (k.sources?.length) line += ` — Sources: ${k.sources.join(', ')}`;
-    if (k.searchCount > 1) line += ` — Recherchée ${k.searchCount}x`;
-    if (k.contradictions?.length) {
-      const last = k.contradictions[k.contradictions.length - 1];
-      line += ` ⚠️ Contradiction détectée (${last.date}): ${last.issues.join('; ')}`;
-    }
-    return line;
+function buildKnowledgeCtx(names){
+  var known=names.filter(function(n){return knowledgeCache[n];});
+  if(!known.length)return '';
+  var lines=known.map(function(n){
+    var k=knowledgeCache[n];
+    var l='• '+n;
+    if(k.thc)l+=' THC:'+k.thc;
+    if(k.genetics&&k.genetics!=='null')l+=' Lignée:'+k.genetics;
+    if(k.flowering)l+=' Floraison:'+k.flowering;
+    if(k.searchCount>1)l+=' ('+k.searchCount+' recherches)';
+    if(k.contradictions&&k.contradictions.length){var last=k.contradictions[k.contradictions.length-1];l+=' ⚠️ Contradiction: '+last.issues.join('; ');}
+    return l;
   }).join('\n');
-
-  return `\n\n[MÉMOIRE APPRENANTE — données vérifiées et accumulées au fil des conversations]\n${lines}\nSi tu constates une contradiction avec ces données, analyse-la et signale-la clairement.`;
+  return '\n\n[MÉMOIRE] Données vérifiées :\n'+lines;
 }
 
 /* LOGIN */
 window.loginUser=async function(){
-  const u=document.getElementById('usernameInput').value.trim();
-  const c=document.getElementById('shopCodeInput').value.trim().toLowerCase();
-  const err=document.getElementById('loginErr');
+  var u=document.getElementById('usernameInput').value.trim();
+  var c=document.getElementById('shopCodeInput').value.trim().toLowerCase();
+  var err=document.getElementById('loginErr');
   if(!u||u.length<2){err.textContent='Entrez un prénom (2 caractères minimum)';err.style.display='block';return;}
   if(c!==SHOP_CODE){err.textContent='Code magasin incorrect.';err.style.display='block';return;}
   userId=SHOP_CODE+'_'+u.toLowerCase().replace(/[^a-z0-9]/g,'_');
   username=u;
-  const snap=await getDoc(doc(db,'users',userId));
-  if(!snap.exists()){
-    await setDoc(doc(db,'users',userId),{username:u,shop:SHOP_CODE,createdAt:Date.now(),favorites:[],convHistory:[],totalConvs:0});
-  } else {const d=snap.data();favorites=d.favorites||[];convHistory=d.convHistory||[];}
+  var snap=await getDoc(doc(db,'users',userId));
+  if(!snap.exists()){await setDoc(doc(db,'users',userId),{username:u,shop:SHOP_CODE,createdAt:Date.now(),favorites:[],convHistory:[],totalConvs:0});}
+  else{var d=snap.data();favorites=d.favorites||[];convHistory=d.convHistory||[];}
   localStorage.setItem('ss_uid',userId);localStorage.setItem('ss_uname',u);
   document.getElementById('sbUsername').textContent=u;
   document.getElementById('loginModal').style.display='none';
-  await loadShopStock();
-  initApp();
+  await loadShopStock();initApp();
 };
 
 async function loadShopStock(){
   try{
-    // Chargement parallèle — config + stock en même temps
-    const [cfgSnap, stockSnap] = await Promise.all([
-      getDoc(doc(db,'adminData','config')),
-      getDoc(doc(db,'shops',SHOP_CODE))
-    ]);
-    if(cfgSnap.exists()&&cfgSnap.data().apiKey){
-      localStorage.setItem('ss_apikey',cfgSnap.data().apiKey);
-    }
-    if(stockSnap.exists()&&stockSnap.data().stock){
-      stockData=stockSnap.data().stock;
-      updateStockBar();
-    }
+    var results=await Promise.all([getDoc(doc(db,'adminData','config')),getDoc(doc(db,'shops',SHOP_CODE))]);
+    var cfgSnap=results[0],stockSnap=results[1];
+    if(cfgSnap.exists()&&cfgSnap.data().apiKey)localStorage.setItem('ss_apikey',cfgSnap.data().apiKey);
+    if(stockSnap.exists()&&stockSnap.data().stock){stockData=stockSnap.data().stock;updateStockBar();}
   }catch(e){}
 }
 
 window.logout=function(){localStorage.removeItem('ss_uid');localStorage.removeItem('ss_uname');location.reload();};
 
-window.addEventListener('DOMContentLoaded',async()=>{
-  const uid=localStorage.getItem('ss_uid'),uname=localStorage.getItem('ss_uname');
-  if(uid&&uname){const snap=await getDoc(doc(db,'users',uid));if(snap.exists()){userId=uid;username=uname;const d=snap.data();favorites=d.favorites||[];convHistory=d.convHistory||[];document.getElementById('sbUsername').textContent=uname;document.getElementById('loginModal').style.display='none';await loadShopStock();initApp();return;}}
-  document.getElementById('usernameInput').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('shopCodeInput').focus();});
-  document.getElementById('shopCodeInput').addEventListener('keydown',e=>{if(e.key==='Enter')loginUser();});
+window.addEventListener('DOMContentLoaded',async function(){
+  var uid=localStorage.getItem('ss_uid'),uname=localStorage.getItem('ss_uname');
+  if(uid&&uname){
+    var snap=await getDoc(doc(db,'users',uid));
+    if(snap.exists()){userId=uid;username=uname;var d=snap.data();favorites=d.favorites||[];convHistory=d.convHistory||[];document.getElementById('sbUsername').textContent=uname;document.getElementById('loginModal').style.display='none';await loadShopStock();initApp();return;}
+  }
+  document.getElementById('usernameInput').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('shopCodeInput').focus();});
+  document.getElementById('shopCodeInput').addEventListener('keydown',function(e){if(e.key==='Enter')loginUser();});
 });
 
-function initApp(){renderWelcome();renderFavs();renderHist();updateStockBar();const inp=document.getElementById('inp');inp.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}});inp.addEventListener('input',()=>{inp.style.height='auto';inp.style.height=Math.min(inp.scrollHeight,110)+'px';});}
+function initApp(){renderWelcome();renderFavs();renderHist();updateStockBar();var inp=document.getElementById('inp');inp.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}});inp.addEventListener('input',function(){inp.style.height='auto';inp.style.height=Math.min(inp.scrollHeight,110)+'px';});}
 
-const BADGES={chat:'💬 Chat',culture:'🌱 Culture',compare:'⚖️ Compare',stats:'📊 Stats'};
-window.setMode=function(m){mode=m;document.getElementById('modeBadge').textContent=BADGES[m];document.getElementById('inp').placeholder=m==='culture'?'Décrivez vos conditions de culture…':m==='compare'?'Nommez 2 variétés à comparer…':'Décrivez ce que vous recherchez…';['chat','culture','compare','stats'].forEach(x=>{document.getElementById('pill-'+x)?.classList.toggle('active',x===m);document.getElementById('tmode-'+x)?.classList.toggle('active',x===m);});document.getElementById('inputArea').style.display=m==='stats'?'none':'block';if(m==='stats')showStats();else if(document.getElementById('statsView'))renderWelcome();};
+var BADGES={chat:'💬 Chat',culture:'🌱 Culture',compare:'⚖️ Compare',stats:'📊 Stats'};
+window.setMode=function(m){mode=m;document.getElementById('modeBadge').textContent=BADGES[m];document.getElementById('inp').placeholder=m==='culture'?'Décrivez vos conditions de culture…':m==='compare'?'Nommez 2 variétés à comparer…':'Décrivez ce que vous recherchez…';['chat','culture','compare','stats'].forEach(function(x){var p=document.getElementById('pill-'+x);if(p)p.classList.toggle('active',x===m);var t=document.getElementById('tmode-'+x);if(t)t.classList.toggle('active',x===m);});document.getElementById('inputArea').style.display=m==='stats'?'none':'block';if(m==='stats')showStats();else if(document.getElementById('statsView'))renderWelcome();};
 
 function esc(t){return String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function toast(msg){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2800);}
-const panel=()=>document.getElementById('chatPanel');
+function toast(msg){var t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(function(){t.remove();},2800);}
+function panel(){return document.getElementById('chatPanel');}
 window.quickSend=function(txt){document.getElementById('inp').value=txt;send();};
 
-function addMsg(role,html){const w=document.createElement('div');w.className='msg '+role;const av=document.createElement('div');av.className='av '+role;av.textContent=role==='ai'?'🌿':'👤';const b=document.createElement('div');b.className='bubble';b.innerHTML=html;w.appendChild(av);w.appendChild(b);panel().appendChild(w);panel().scrollTop=panel().scrollHeight;}
-function showTyping(){const w=document.createElement('div');w.className='msg ai';w.id='typ';const av=document.createElement('div');av.className='av ai';av.textContent='🌿';const b=document.createElement('div');b.className='bubble';b.innerHTML='<div class="typing-bub"><span></span><span></span><span></span></div>';w.appendChild(av);w.appendChild(b);panel().appendChild(w);panel().scrollTop=panel().scrollHeight;}
-function removeTyping(){const t=document.getElementById('typ');if(t)t.remove();}
+function addMsg(role,html){var w=document.createElement('div');w.className='msg '+role;var av=document.createElement('div');av.className='av '+role;av.textContent=role==='ai'?'🌿':'👤';var b=document.createElement('div');b.className='bubble';b.innerHTML=html;w.appendChild(av);w.appendChild(b);panel().appendChild(w);panel().scrollTop=panel().scrollHeight;}
+function showTyping(){var w=document.createElement('div');w.className='msg ai';w.id='typ';var av=document.createElement('div');av.className='av ai';av.textContent='🌿';var b=document.createElement('div');b.className='bubble';b.innerHTML='<div class="typing-bub"><span></span><span></span><span></span></div>';w.appendChild(av);w.appendChild(b);panel().appendChild(w);panel().scrollTop=panel().scrollHeight;}
+function removeTyping(){var t=document.getElementById('typ');if(t)t.remove();}
 
 function buildPhoto(url,name,sb){
-  const fb=`<div class="sc-photo-fallback"><div class="sc-photo-fallback-icon">🌿</div><div class="sc-photo-fallback-txt">Photo non disponible</div></div>`;
-  const ov=`<div class="sc-photo-overlay"><div class="sc-photo-name">${esc(name)}</div></div>`;
-  const badge=sb&&sb!=='null'?`<div class="sc-photo-sb">${esc(sb)}</div>`:'';
-  if(!url||url==='null')return `<div class="sc-photo-wrap">${fb}${ov}</div>`;
-  return `<div class="sc-photo-wrap">${fb}<img class="sc-photo" src="${esc(url)}" alt="${esc(name)}" onload="this.classList.add('loaded');this.previousElementSibling.style.display='none'" onerror="this.style.display='none'" loading="lazy">${ov}${badge}</div>`;
+  var fb='<div class="sc-photo-fallback"><div class="sc-photo-fallback-icon">🌿</div><div class="sc-photo-fallback-txt">Photo non disponible</div></div>';
+  var ov='<div class="sc-photo-overlay"><div class="sc-photo-name">'+esc(name)+'</div></div>';
+  var badge=sb&&sb!=='null'?'<div class="sc-photo-sb">'+esc(sb)+'</div>':'';
+  if(!url||url==='null')return '<div class="sc-photo-wrap">'+fb+ov+'</div>';
+  return '<div class="sc-photo-wrap">'+fb+'<img class="sc-photo" src="'+esc(url)+'" alt="'+esc(name)+'" onload="this.classList.add(\'loaded\');this.previousElementSibling.style.display=\'none\'" onerror="this.style.display=\'none\'" loading="lazy">'+ov+badge+'</div>';
 }
-function buildCmpPhoto(url,name){if(!url||url==='null')return `<div class="cmp-photo">🌿</div>`;return `<div class="cmp-photo"><img src="${esc(url)}" alt="${esc(name)}" onload="this.classList.add('loaded')" onerror="this.parentElement.textContent='🌿'" loading="lazy"></div>`;}
+function buildCmpPhoto(url,name){if(!url||url==='null')return '<div class="cmp-photo">🌿</div>';return '<div class="cmp-photo"><img src="'+esc(url)+'" alt="'+esc(name)+'" onload="this.classList.add(\'loaded\')" onerror="this.parentElement.textContent=\'🌿\'" loading="lazy"></div>';}
+function buildGenetics(g){if(!g||g==='null'||(g.toLowerCase&&g.toLowerCase().includes('inconnu')))return '<div class="sc-genetics"><span class="gen-label">Lignée</span><span class="gen-unknown">Non documentée</span></div>';var fmt=esc(g).replace(/×/g,'<span class="gen-cross">×</span>').replace(/\s+x\s+/gi,'<span class="gen-cross">×</span>');return '<div class="sc-genetics"><span class="gen-label">Lignée</span><span class="gen-val">'+fmt+'</span></div>';}
+function buildTerps(terps){if(!terps||!terps.length)return '';var rows=terps.slice(0,5).map(function(t){var n=typeof t==='object'?t.name:t,p=typeof t==='object'?(t.pct||30):30,note=typeof t==='object'?(t.note||''):'';return '<div class="terp-row"><div class="terp-name">'+esc(n)+'</div><div class="terp-track"><div class="terp-fill" style="width:0%" data-w="'+p+'%"></div></div><div class="terp-note">'+esc(note)+'</div></div>';}).join('');return '<div class="terp-section"><div class="terp-title">Profil terpénique</div>'+rows+'</div>';}
+function buildRating(name){var id='r-'+name.replace(/\W/g,'_');var stars=[1,2,3,4,5].map(function(i){return '<button class="star" data-v="'+i+'" data-s="'+esc(name)+'" data-id="'+id+'" onclick="rateStar(this)">★</button>';}).join('');return '<div class="sc-rating"><span class="rating-label">Votre avis</span><div class="stars" id="'+id+'">'+stars+'</div><span class="rating-saved" id="'+id+'-ok">Merci !</span></div>';}
+window.rateStar=async function(btn){var v=parseInt(btn.dataset.v),s=btn.dataset.s,id=btn.dataset.id;document.querySelectorAll('#'+id+' .star').forEach(function(x,i){x.classList.toggle('on',i<v);});var ok=document.getElementById(id+'-ok');ok.classList.add('show');setTimeout(function(){ok.classList.remove('show');},2000);try{var ref=doc(db,'strains',s);var snap=await getDoc(ref);if(snap.exists())await updateDoc(ref,{ratingTotal:increment(v),ratingCount:increment(1)});else await setDoc(ref,{name:s,ratingTotal:v,ratingCount:1,searchCount:0});}catch(e){}};
 
-function buildGenetics(g){if(!g||g==='null'||g.toLowerCase().includes('inconnu'))return `<div class="sc-genetics"><span class="gen-label">Lignée</span><span class="gen-unknown">Non documentée</span></div>`;const fmt=esc(g).replace(/×/g,'<span class="gen-cross">×</span>').replace(/\s+x\s+/gi,'<span class="gen-cross">×</span>');return `<div class="sc-genetics"><span class="gen-label">Lignée</span><span class="gen-val">${fmt}</span></div>`;}
-
-function buildTerps(terps){if(!terps||!terps.length)return '';return `<div class="terp-section"><div class="terp-title">Profil terpénique</div>${terps.slice(0,5).map(t=>{const n=typeof t==='object'?t.name:t,p=typeof t==='object'?(t.pct||30):30,note=typeof t==='object'?(t.note||''):'';return `<div class="terp-row"><div class="terp-name">${esc(n)}</div><div class="terp-track"><div class="terp-fill" style="width:0%" data-w="${p}%"></div></div><div class="terp-note">${esc(note)}</div></div>`;}).join('')}</div>`;}
-
-function buildRating(name){const id='r-'+name.replace(/\W/g,'_');return `<div class="sc-rating"><span class="rating-label">Votre avis</span><div class="stars" id="${id}">${[1,2,3,4,5].map(i=>`<button class="star" data-v="${i}" data-s="${esc(name)}" data-id="${id}" onclick="rateStar(this)">★</button>`).join('')}</div><span class="rating-saved" id="${id}-ok">Merci !</span></div>`;}
-window.rateStar=async function(btn){const v=parseInt(btn.dataset.v),s=btn.dataset.s,id=btn.dataset.id;document.querySelectorAll(`#${id} .star`).forEach((x,i)=>x.classList.toggle('on',i<v));const ok=document.getElementById(id+'-ok');ok.classList.add('show');setTimeout(()=>ok.classList.remove('show'),2000);try{const ref=doc(db,'strains',s);const snap=await getDoc(ref);if(snap.exists())await updateDoc(ref,{ratingTotal:increment(v),ratingCount:increment(1)});else await setDoc(ref,{name:s,ratingTotal:v,ratingCount:1,searchCount:0});}catch(e){}};
-
-function findInStock(name){if(!stockData.length)return null;const n=name.toLowerCase().trim();return stockData.find(s=>{const sn=(s.nom||'').toLowerCase().trim();return sn===n||sn.includes(n)||n.includes(sn);})||null;}
-function buildStockSection(name){const s=findInStock(name);if(!s)return '';const ok=!s.dispo||(s.dispo.toUpperCase()==='O'||s.dispo.toUpperCase()==='OUI');const cls=s.dispo?(ok?'instock':'outstock'):'unknown';const txt=s.dispo?(ok?'✓ En stock':'✗ Rupture'):'? Stock inconnu';return `<div class="stock-bar"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="stock-badge ${cls}">${txt}</span>${s.prix?`<span class="stock-price">${s.prix} €</span>`:''} ${s.graines?`<span style="font-size:10.5px;color:var(--text2)">${s.graines} gr.</span>`:''}</div><div style="text-align:right">${s.seedbank?`<div style="font-size:10px;color:var(--gold2)">${esc(s.seedbank)}</div>`:''} ${s.ref?`<div style="font-size:9.5px;color:var(--text3)">Réf: ${esc(s.ref)}</div>`:''}</div></div>`;}
-function updateStockBar(){const bar=document.getElementById('stockStatusBar');if(!bar)return;if(stockData.length){bar.style.display='flex';const ok=stockData.filter(s=>s.dispo&&(s.dispo.toUpperCase()==='O'||s.dispo.toUpperCase()==='OUI')).length;document.getElementById('stockStatusText').textContent='📦 '+stockData.length+' variétés'+(ok?' · '+ok+' en stock':'');}else{bar.style.display='none';}}
+function findInStock(name){if(!stockData.length)return null;var n=name.toLowerCase().trim();return stockData.find(function(s){var sn=(s.nom||'').toLowerCase().trim();return sn===n||sn.includes(n)||n.includes(sn);})||null;}
+function buildStockSection(name){var s=findInStock(name);if(!s)return '';var ok=!s.dispo||(s.dispo.toUpperCase()==='O'||s.dispo.toUpperCase()==='OUI');var cls=s.dispo?(ok?'instock':'outstock'):'unknown';var txt=s.dispo?(ok?'✓ En stock':'✗ Rupture'):'? Stock inconnu';return '<div class="stock-bar"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="stock-badge '+cls+'">'+txt+'</span>'+(s.prix?'<span class="stock-price">'+s.prix+' €</span>':'')+(s.graines?'<span style="font-size:10.5px;color:var(--text2)">'+s.graines+' gr.</span>':'')+'</div><div style="text-align:right">'+(s.seedbank?'<div style="font-size:10px;color:var(--gold2)">'+esc(s.seedbank)+'</div>':'')+(s.ref?'<div style="font-size:9.5px;color:var(--text3)">Réf: '+esc(s.ref)+'</div>':'')+'</div></div>';}
+function updateStockBar(){var bar=document.getElementById('stockStatusBar');if(!bar)return;if(stockData.length){bar.style.display='flex';var ok=stockData.filter(function(s){return s.dispo&&(s.dispo.toUpperCase()==='O'||s.dispo.toUpperCase()==='OUI');}).length;document.getElementById('stockStatusText').textContent='📦 '+stockData.length+' variétés'+(ok?' · '+ok+' en stock':'');}else{bar.style.display='none';}}
 window.clearStock=function(){stockData=[];updateStockBar();toast('Stock effacé');};
 
 function normKey(k){return String(k||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');}
-function mapRow(row){const keys=Object.keys(row);const find=(...cs)=>{for(const c of cs){const k=keys.find(k=>normKey(k).includes(c));if(k&&row[k]!==undefined&&row[k]!=='')return String(row[k]).trim();}return '';};return{nom:find('nom','name','variete','strain','produit'),seedbank:find('seedbank','marque','brand'),type:find('type','categorie'),graines:find('graine','seed'),prix:find('prix','price','tarif'),ref:find('ref','reference','code','sku'),dispo:find('dispo','stock','disponible')};}
-window.importStock=function(input){const file=input.files[0];if(!file)return;const ext=file.name.split('.').pop().toLowerCase();if(ext==='csv'){const r=new FileReader();r.onload=e=>{const res=Papa.parse(e.target.result,{header:true,skipEmptyLines:true});processStock(res.data,file.name);};r.readAsText(file,'UTF-8');}else{const r=new FileReader();r.onload=e=>{const wb=XLSX.read(e.target.result,{type:'binary'});const ws=wb.Sheets[wb.SheetNames[0]];processStock(XLSX.utils.sheet_to_json(ws,{defval:''}),file.name);};r.readAsBinaryString(file);}input.value='';};
-async function processStock(rows,fname){const mapped=rows.map(mapRow).filter(r=>r.nom);if(!mapped.length){toast('⚠️ Aucune variété trouvée');return;}stockData=mapped;updateStockBar();try{await setDoc(doc(db,'shops',SHOP_CODE),{stock:mapped,updatedAt:Date.now()},{merge:true});}catch(e){}toast(`📦 ${mapped.length} variétés importées`);}
+function mapRow(row){var keys=Object.keys(row);function find(){var cs=Array.prototype.slice.call(arguments);for(var i=0;i<cs.length;i++){var k=keys.find(function(k){return normKey(k).includes(cs[i]);});if(k&&row[k]!==undefined&&row[k]!=='')return String(row[k]).trim();}return '';}return{nom:find('nom','name','variete','strain','produit'),seedbank:find('seedbank','marque','brand'),type:find('type','categorie'),graines:find('graine','seed'),prix:find('prix','price','tarif'),ref:find('ref','reference','code','sku'),dispo:find('dispo','stock','disponible')};}
+window.importStock=function(input){var file=input.files[0];if(!file)return;var ext=file.name.split('.').pop().toLowerCase();if(ext==='csv'){var r=new FileReader();r.onload=function(e){var res=Papa.parse(e.target.result,{header:true,skipEmptyLines:true});processStock(res.data,file.name);};r.readAsText(file,'UTF-8');}else{var r2=new FileReader();r2.onload=function(e){var wb=XLSX.read(e.target.result,{type:'binary'});var ws=wb.Sheets[wb.SheetNames[0]];processStock(XLSX.utils.sheet_to_json(ws,{defval:''}),file.name);};r2.readAsBinaryString(file);}input.value='';};
+async function processStock(rows,fname){var mapped=rows.map(mapRow).filter(function(r){return r.nom;});if(!mapped.length){toast('⚠️ Aucune variété trouvée');return;}stockData=mapped;updateStockBar();try{await setDoc(doc(db,'shops',SHOP_CODE),{stock:mapped,updatedAt:Date.now()},{merge:true});}catch(e){}toast('📦 '+mapped.length+' variétés importées');}
 
-function buildCard(s){const faved=favorites.some(f=>f.name===s.name);return `<div class="sc">${buildPhoto(s.photo_url,s.name,s.seedbank)}<div class="sc-actions"><button class="sc-action ${faved?'faved':''}" data-fav="${esc(s.name)}" onclick="toggleFav('${esc(s.name)}','${esc(s.type)}')">⭐ ${faved?'Favori':'Ajouter'}</button><button class="sc-action" onclick="quickSend('Donne-moi plus de détails sur ${esc(s.name)} : génétique, culture, où trouver.')">🔍 Détails</button>${s.seedbank&&s.seedbank!=='null'?`<button class="sc-action" onclick="quickSend('Où acheter ${esc(s.name)} de ${esc(s.seedbank)} ?')">🛒 Seedbank</button>`:''}</div><div class="sc-stats"><span class="pill thc">THC ${esc(s.thc)}</span><span class="pill cbd">CBD ${esc(s.cbd)}</span><span class="pill flower">🌸 ${esc(s.flowering)}</span>${s.yield?`<span class="pill yield">📦 ${esc(s.yield)}</span>`:''} ${s.seedbank&&s.seedbank!=='null'?`<span class="pill sb">🏷 ${esc(s.seedbank)}</span>`:''}</div><div class="sc-body"><div class="sc-row"><span class="sc-label">Arômes</span><span class="sc-val">${esc(s.flavor)}</span></div><div class="sc-row"><span class="sc-label">Effets</span><span class="sc-val">${(s.effects||[]).map(esc).join(', ')}</span></div><div class="sc-row"><span class="sc-label">Pourquoi</span><span class="sc-val">${esc(s.why)}</span></div>${s.culture_tips?`<div class="sc-row"><span class="sc-label">Culture</span><span class="sc-val">${esc(s.culture_tips)}</span></div>`:''}</div>${buildGenetics(s.genetics)}${buildTerps(s.terpenes)}${buildStockSection(s.name)}${buildRating(s.name)}<div class="sc-tags">${(s.match_tags||[]).map(t=>`<span class="mtag">${esc(t)}</span>`).join('')}</div></div>`;}
+function buildCard(s){
+  var faved=favorites.some(function(f){return f.name===s.name;});
+  var actions='<button class="sc-action '+(faved?'faved':'')+'" data-fav="'+esc(s.name)+'" onclick="toggleFav(\''+esc(s.name)+'\',\''+esc(s.type)+'\')">⭐ '+(faved?'Favori':'Ajouter')+'</button>';
+  actions+='<button class="sc-action" onclick="quickSend(\'Donne-moi plus de détails sur '+esc(s.name)+' : génétique, culture, où trouver.\')">🔍 Détails</button>';
+  if(s.seedbank&&s.seedbank!=='null')actions+='<button class="sc-action" onclick="quickSend(\'Où acheter '+esc(s.name)+' de '+esc(s.seedbank)+' ?\')">🛒 Seedbank</button>';
+  var stats='<span class="pill thc">THC '+esc(s.thc)+'</span><span class="pill cbd">CBD '+esc(s.cbd)+'</span><span class="pill flower">🌸 '+esc(s.flowering)+'</span>';
+  if(s.yield)stats+='<span class="pill yield">📦 '+esc(s.yield)+'</span>';
+  if(s.seedbank&&s.seedbank!=='null')stats+='<span class="pill sb">🏷 '+esc(s.seedbank)+'</span>';
+  var body='<div class="sc-row"><span class="sc-label">Arômes</span><span class="sc-val">'+esc(s.flavor)+'</span></div>';
+  body+='<div class="sc-row"><span class="sc-label">Effets</span><span class="sc-val">'+(s.effects||[]).map(esc).join(', ')+'</span></div>';
+  body+='<div class="sc-row"><span class="sc-label">Pourquoi</span><span class="sc-val">'+esc(s.why)+'</span></div>';
+  if(s.culture_tips)body+='<div class="sc-row"><span class="sc-label">Culture</span><span class="sc-val">'+esc(s.culture_tips)+'</span></div>';
+  var tags=(s.match_tags||[]).map(function(t){return '<span class="mtag">'+esc(t)+'</span>';}).join('');
+  return '<div class="sc">'+buildPhoto(s.photo_url,s.name,s.seedbank)+'<div class="sc-actions">'+actions+'</div><div class="sc-stats">'+stats+'</div><div class="sc-body">'+body+'</div>'+buildGenetics(s.genetics)+buildTerps(s.terpenes)+buildStockSection(s.name)+buildRating(s.name)+'<div class="sc-tags">'+tags+'</div></div>';
+}
 
-function buildCompare(strains,cmp){if(strains.length<2)return '';const[a,b]=strains;const w=(f,n)=>cmp&&cmp[f]===n?'cmp-win':'';const col=(s)=>`<div class="compare-col">${buildCmpPhoto(s.photo_url,s.name)}<div class="compare-col-name">${esc(s.name)}</div><div class="compare-col-type">${esc(s.type)}</div><div class="cmp-stat"><span class="cmp-stat-l">THC</span><span class="cmp-stat-v ${w('winner_thc',s.name)}">${esc(s.thc)}</span></div><div class="cmp-stat"><span class="cmp-stat-l">CBD</span><span class="cmp-stat-v">${esc(s.cbd)}</span></div><div class="cmp-stat"><span class="cmp-stat-l">Floraison</span><span class="cmp-stat-v ${w('winner_flower',s.name)}">${esc(s.flowering)}</span></div>${s.yield?`<div class="cmp-stat"><span class="cmp-stat-l">Rendement</span><span class="cmp-stat-v ${w('winner_yield',s.name)}">${esc(s.yield)}</span></div>`:''}<div class="cmp-stat"><span class="cmp-stat-l">Arômes</span><span class="cmp-stat-v" style="font-size:11px">${esc(s.flavor)}</span></div>${s.genetics&&s.genetics!=='null'?`<div class="cmp-stat"><span class="cmp-stat-l">Lignée</span><span class="cmp-stat-v" style="font-size:10.5px;font-style:italic">${esc(s.genetics)}</span></div>`:''}</div>`;return `<div class="compare-panel"><div class="compare-header">Comparaison directe</div><div class="compare-cols">${col(a)}${col(b)}</div>${cmp&&cmp.verdict?`<div class="cmp-verdict"><strong>Verdict :</strong> ${esc(cmp.verdict)}</div>`:''}</div>`;}
+function buildCompare(strains,cmp){
+  if(strains.length<2)return '';
+  var a=strains[0],b=strains[1];
+  function w(f,n){return cmp&&cmp[f]===n?'cmp-win':'';}
+  function col(s){
+    var html=buildCmpPhoto(s.photo_url,s.name);
+    html+='<div class="compare-col-name">'+esc(s.name)+'</div><div class="compare-col-type">'+esc(s.type)+'</div>';
+    html+='<div class="cmp-stat"><span class="cmp-stat-l">THC</span><span class="cmp-stat-v '+w('winner_thc',s.name)+'">'+esc(s.thc)+'</span></div>';
+    html+='<div class="cmp-stat"><span class="cmp-stat-l">CBD</span><span class="cmp-stat-v">'+esc(s.cbd)+'</span></div>';
+    html+='<div class="cmp-stat"><span class="cmp-stat-l">Floraison</span><span class="cmp-stat-v '+w('winner_flower',s.name)+'">'+esc(s.flowering)+'</span></div>';
+    if(s.yield)html+='<div class="cmp-stat"><span class="cmp-stat-l">Rendement</span><span class="cmp-stat-v '+w('winner_yield',s.name)+'">'+esc(s.yield)+'</span></div>';
+    html+='<div class="cmp-stat"><span class="cmp-stat-l">Arômes</span><span class="cmp-stat-v" style="font-size:11px">'+esc(s.flavor)+'</span></div>';
+    if(s.genetics&&s.genetics!=='null')html+='<div class="cmp-stat"><span class="cmp-stat-l">Lignée</span><span class="cmp-stat-v" style="font-size:10.5px;font-style:italic">'+esc(s.genetics)+'</span></div>';
+    return html;
+  }
+  var verdict=cmp&&cmp.verdict?'<div class="cmp-verdict"><strong>Verdict :</strong> '+esc(cmp.verdict)+'</div>':'';
+  return '<div class="compare-panel"><div class="compare-header">Comparaison directe</div><div class="compare-cols"><div class="compare-col">'+col(a)+'</div><div class="compare-col">'+col(b)+'</div></div>'+verdict+'</div>';
+}
 
-function renderReply(text){const mS=text.match(/\[STRAINS_JSON\]([\s\S]*?)\[\/STRAINS_JSON\]/);const mC=text.match(/\[COMPARE_JSON\]([\s\S]*?)\[\/COMPARE_JSON\]/);let cards='',cmpBlock='',rest=text,strains=[];if(mS){try{strains=JSON.parse(mS[1].trim());cards=strains.map(buildCard).join('');}catch(e){cards=`<em style="color:#e87070">⚠️ Erreur JSON</em>`;}rest=rest.replace(/\[STRAINS_JSON\][\s\S]*?\[\/STRAINS_JSON\]/,'');}let cmp=null;if(mC){try{cmp=JSON.parse(mC[1].trim());}catch(e){}rest=rest.replace(/\[COMPARE_JSON\][\s\S]*?\[\/COMPARE_JSON\]/,'');if(strains.length>=2){cmpBlock=buildCompare(strains,cmp);cards='';}}rest=rest.trim().replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');return (mC?cmpBlock:cards)+rest;}
+/* RENDER — robuste, tolère le texte avant les balises */
+function renderReply(text){
+  var mS=text.match(/\[STRAINS_JSON\]([\s\S]*?)\[\/STRAINS_JSON\]/);
+  var mC=text.match(/\[COMPARE_JSON\]([\s\S]*?)\[\/COMPARE_JSON\]/);
+  var cards='',cmpBlock='',rest=text,strains=[];
+  if(mS){
+    try{strains=JSON.parse(mS[1].trim());cards=strains.map(buildCard).join('');}
+    catch(e){cards='<em style="color:#e87070">⚠️ Erreur JSON</em>';}
+    rest=rest.replace(/\[STRAINS_JSON\][\s\S]*?\[\/STRAINS_JSON\]/,'');
+  }
+  var cmp=null;
+  if(mC){
+    try{cmp=JSON.parse(mC[1].trim());}catch(e){}
+    rest=rest.replace(/\[COMPARE_JSON\][\s\S]*?\[\/COMPARE_JSON\]/,'');
+    if(strains.length>=2){cmpBlock=buildCompare(strains,cmp);cards='';}
+  }
+  // Supprimer les blocs de code JSON brut résiduels
+  rest=rest.replace(/```[\s\S]*?```/g,'').replace(/\{[\s\S]{200,}\}/g,'');
+  rest=rest.trim().replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
+  return (mC?cmpBlock:cards)+rest;
+}
 
-window.toggleFav=async function(name,type){const idx=favorites.findIndex(f=>f.name===name);if(idx>=0){favorites.splice(idx,1);toast(`${name} retiré`);}else{favorites.push({name,type});toast(`⭐ ${name} ajouté`);}await updateDoc(doc(db,'users',userId),{favorites});renderFavs();document.querySelectorAll(`.sc-action[data-fav="${name}"]`).forEach(btn=>{const f=favorites.some(x=>x.name===name);btn.classList.toggle('faved',f);btn.textContent=`⭐ ${f?'Favori':'Ajouter'}`;});};
-function renderFavs(){const list=document.getElementById('favList');list.innerHTML='';if(!favorites.length){list.innerHTML='<div class="sb-empty">Aucun favori.<br>Ajoutez depuis les fiches ⭐</div>';return;}favorites.forEach(f=>{const item=document.createElement('div');item.className='fav-item';item.innerHTML=`<div class="fav-dot"></div><div style="flex:1;min-width:0"><div class="fav-name">${esc(f.name)}</div><div class="fav-type">${esc(f.type||'')}</div></div><button class="fav-del" onclick="event.stopPropagation();removeFav('${esc(f.name)}')">✕</button>`;item.addEventListener('click',()=>quickSend(`Parle-moi de ${f.name} en détail.`));list.appendChild(item);});}
-window.removeFav=async function(name){favorites=favorites.filter(f=>f.name!==name);await updateDoc(doc(db,'users',userId),{favorites});renderFavs();toast(`${name} retiré`);};
+window.toggleFav=async function(name,type){var idx=favorites.findIndex(function(f){return f.name===name;});if(idx>=0){favorites.splice(idx,1);toast(name+' retiré');}else{favorites.push({name:name,type:type});toast('⭐ '+name+' ajouté');}await updateDoc(doc(db,'users',userId),{favorites:favorites});renderFavs();document.querySelectorAll('.sc-action[data-fav="'+name+'"]').forEach(function(btn){var f=favorites.some(function(x){return x.name===name;});btn.classList.toggle('faved',f);btn.textContent='⭐ '+(f?'Favori':'Ajouter');});};
+function renderFavs(){var list=document.getElementById('favList');list.innerHTML='';if(!favorites.length){list.innerHTML='<div class="sb-empty">Aucun favori.<br>Ajoutez depuis les fiches ⭐</div>';return;}favorites.forEach(function(f){var item=document.createElement('div');item.className='fav-item';item.innerHTML='<div class="fav-dot"></div><div style="flex:1;min-width:0"><div class="fav-name">'+esc(f.name)+'</div><div class="fav-type">'+esc(f.type||'')+'</div></div><button class="fav-del" onclick="event.stopPropagation();removeFav(\''+esc(f.name)+'\')">✕</button>';item.addEventListener('click',function(){quickSend('Parle-moi de '+f.name+' en détail.');});list.appendChild(item);});}
+window.removeFav=async function(name){favorites=favorites.filter(function(f){return f.name!==name;});await updateDoc(doc(db,'users',userId),{favorites:favorites});renderFavs();toast(name+' retiré');};
 
-async function saveConv(firstMsg){const title=firstMsg.length>50?firstMsg.slice(0,50)+'…':firstMsg;const ex=convHistory.findIndex(c=>c.id===currentId);const entry={id:currentId,title,date:new Date().toLocaleDateString('fr-FR'),messages:[...history]};if(ex>=0)convHistory[ex]=entry;else convHistory.unshift(entry);if(convHistory.length>20)convHistory=convHistory.slice(0,20);await updateDoc(doc(db,'users',userId),{convHistory,totalConvs:increment(1)});renderHist();}
-function renderHist(){const list=document.getElementById('histList');list.innerHTML='';if(!convHistory.length){list.innerHTML='<div class="sb-empty">Aucune conversation.</div>';return;}convHistory.forEach(c=>{const item=document.createElement('div');item.className='hist-item';item.innerHTML=`<div class="hist-title">${esc(c.title)}</div><div class="hist-date">${c.date}</div>`;item.addEventListener('click',()=>loadConv(c));list.appendChild(item);});}
-function loadConv(conv){newChat(false);currentId=conv.id;history=[...conv.messages];document.getElementById('topTitle').textContent=conv.title;history.forEach(m=>{if(m.role==='user')addMsg('user',esc(m.content));else addMsg('ai',renderReply(m.content));});}
-window.newChat=function(resetId=true){history=[];if(resetId)currentId=Date.now();if(mode==='stats'){setMode('chat');return;}renderWelcome();document.getElementById('topTitle').textContent='Nouvelle conversation';};
+async function saveConv(firstMsg){var title=firstMsg.length>50?firstMsg.slice(0,50)+'…':firstMsg;var ex=convHistory.findIndex(function(c){return c.id===currentId;});var entry={id:currentId,title:title,date:new Date().toLocaleDateString('fr-FR'),messages:history.slice()};if(ex>=0)convHistory[ex]=entry;else convHistory.unshift(entry);if(convHistory.length>20)convHistory=convHistory.slice(0,20);await updateDoc(doc(db,'users',userId),{convHistory:convHistory,totalConvs:increment(1)});renderHist();}
+function renderHist(){var list=document.getElementById('histList');list.innerHTML='';if(!convHistory.length){list.innerHTML='<div class="sb-empty">Aucune conversation.</div>';return;}convHistory.forEach(function(c){var item=document.createElement('div');item.className='hist-item';item.innerHTML='<div class="hist-title">'+esc(c.title)+'</div><div class="hist-date">'+c.date+'</div>';item.addEventListener('click',function(){loadConv(c);});list.appendChild(item);});}
+function loadConv(conv){newChat(false);currentId=conv.id;history=conv.messages.slice();document.getElementById('topTitle').textContent=conv.title;history.forEach(function(m){if(m.role==='user')addMsg('user',esc(m.content));else addMsg('ai',renderReply(m.content));});}
+window.newChat=function(resetId){if(resetId===undefined)resetId=true;history=[];if(resetId)currentId=Date.now();if(mode==='stats'){setMode('chat');return;}renderWelcome();document.getElementById('topTitle').textContent='Nouvelle conversation';};
 
-function renderWelcome(){const p=document.getElementById('chatPanel');p.innerHTML='';const w=document.createElement('div');w.className='welcome';w.id='welcome';const fh=favorites.length?`<div class="wcard" onclick="quickSend('Recommande une variété basée sur mes favoris : ${favorites.map(f=>f.name).join(', ')}.')"><div class="wcard-tag">Basé sur mes favoris</div><div class="wcard-text">${favorites.slice(0,3).map(f=>f.name).join(' · ')}</div></div>`:'';const sh=stockData.length?`<div class="wcard" onclick="quickSend('Quelles variétés de votre stock sont idéales pour quelqu\\'un qui cherche relaxation et bons arômes ?')"><div class="wcard-tag">Depuis le stock</div><div class="wcard-text">${stockData.length} variétés disponibles</div></div>`:'';w.innerHTML=`<div class="welcome-hero"><div class="welcome-icon">🌿</div><div><h2>Bonjour, ${username} !</h2><p>Décrivez votre besoin librement — effets, saveurs, culture, variété similaire — recommandations expertes personnalisées.</p></div></div><div class="welcome-grid">${fh}${sh}<div class="wcard" onclick="quickSend('Variété stimulante, saveurs OG Kush, Sour Diesel, GMO, RS11.')"><div class="wcard-tag">Saveurs & effets</div><div class="wcard-text">Stimulant · OG / Diesel / GMO</div></div><div class="wcard" onclick="quickSend('Goût tropical, relaxation musculaire, floraison courte.')"><div class="wcard-tag">Grower · Relax</div><div class="wcard-text">Tropical · Relax · Floraison courte</div></div><div class="wcard" onclick="quickSend('Similaire à GMO Cookies, profil garlic/fuel terpin.')"><div class="wcard-tag">Variété similaire</div><div class="wcard-text">Similaire GMO · Terpin fort</div></div><div class="wcard" onclick="quickSend('Débutant, sommeil difficile, peu de THC, arômes doux.')"><div class="wcard-tag">Débutant · Bien-être</div><div class="wcard-text">Sommeil · CBD · Doux</div></div></div>`;p.appendChild(w);}
+function renderWelcome(){
+  var p=panel();p.innerHTML='';
+  var w=document.createElement('div');w.className='welcome';w.id='welcome';
+  var fh=favorites.length?'<div class="wcard" onclick="quickSend(\'Recommande une variété basée sur mes favoris : '+favorites.map(function(f){return f.name;}).join(', ')+'.\')" ><div class="wcard-tag">Basé sur mes favoris</div><div class="wcard-text">'+favorites.slice(0,3).map(function(f){return f.name;}).join(' · ')+'</div></div>':'';
+  var sh=stockData.length?'<div class="wcard" onclick="quickSend(\'Quelles variétés de votre stock sont idéales pour quelqu&apos;un qui cherche relaxation et bons arômes ?\')"><div class="wcard-tag">Depuis le stock</div><div class="wcard-text">'+stockData.length+' variétés disponibles</div></div>':'';
+  w.innerHTML='<div class="welcome-hero"><div class="welcome-icon">🌿</div><div><h2>Bonjour, '+esc(username)+' !</h2><p>Décrivez votre besoin librement — effets, saveurs, culture, variété similaire — recommandations expertes personnalisées.</p></div></div><div class="welcome-grid">'+fh+sh+'<div class="wcard" onclick="quickSend(\'Variété stimulante, saveurs OG Kush, Sour Diesel, GMO, RS11.\')"><div class="wcard-tag">Saveurs &amp; effets</div><div class="wcard-text">Stimulant · OG / Diesel / GMO</div></div><div class="wcard" onclick="quickSend(\'Goût tropical, relaxation musculaire, floraison courte.\')"><div class="wcard-tag">Grower · Relax</div><div class="wcard-text">Tropical · Relax · Floraison courte</div></div><div class="wcard" onclick="quickSend(\'Similaire à GMO Cookies, profil garlic/fuel terpin.\')"><div class="wcard-tag">Variété similaire</div><div class="wcard-text">Similaire GMO · Terpin fort</div></div><div class="wcard" onclick="quickSend(\'Débutant, sommeil difficile, peu de THC, arômes doux.\')"><div class="wcard-tag">Débutant · Bien-être</div><div class="wcard-text">Sommeil · CBD · Doux</div></div></div>';
+  p.appendChild(w);
+}
 
-async function showStats(){const p=document.getElementById('chatPanel');p.innerHTML='';const sv=document.createElement('div');sv.id='statsView';sv.className='stats-panel';sv.innerHTML=`<div class="stats-header">📊 Mes statistiques</div><div style="color:var(--text3);font-size:13px">Chargement…</div>`;p.appendChild(sv);try{const uSnap=await getDoc(doc(db,'users',userId));const uData=uSnap.data()||{};const strainsSnap=await getDocs(collection(db,'strains'));const strains=[];strainsSnap.forEach(d=>strains.push({id:d.id,...d.data()}));strains.sort((a,b)=>(b.searchCount||0)-(a.searchCount||0));sv.innerHTML=`<div class="stats-header">📊 Mes statistiques</div><div class="stats-grid"><div class="stat-card"><div class="stat-card-val">${uData.totalConvs||0}</div><div class="stat-card-label">Conversations</div></div><div class="stat-card"><div class="stat-card-val">${(uData.favorites||[]).length}</div><div class="stat-card-label">Favoris</div></div><div class="stat-card"><div class="stat-card-val">${(uData.convHistory||[]).length}</div><div class="stat-card-label">Sessions</div></div></div><div class="stats-section-title">Variétés les plus recherchées</div>${strains.slice(0,8).map((s,i)=>`<div class="top-strain-item"><div class="top-strain-rank">${i+1}</div><div class="top-strain-name">${esc(s.name||s.id)}</div>${s.ratingCount?`<div class="top-strain-rating">★ ${(s.ratingTotal/s.ratingCount).toFixed(1)}</div>`:''}<div class="top-strain-count">${s.searchCount||0} recherches</div></div>`).join('')||'<div class="sb-empty">Pas encore de données.</div>'}`;}catch(e){sv.innerHTML+=`<div style="color:#e87070;font-size:12px;margin-top:10px">Erreur : ${e.message}</div>`;}}
+async function showStats(){var p=panel();p.innerHTML='';var sv=document.createElement('div');sv.id='statsView';sv.className='stats-panel';sv.innerHTML='<div class="stats-header">📊 Mes statistiques</div><div style="color:var(--text3);font-size:13px">Chargement…</div>';p.appendChild(sv);try{var uSnap=await getDoc(doc(db,'users',userId));var uData=uSnap.data()||{};var strainsSnap=await getDocs(collection(db,'strains'));var strains=[];strainsSnap.forEach(function(d){strains.push(Object.assign({id:d.id},d.data()));});strains.sort(function(a,b){return (b.searchCount||0)-(a.searchCount||0);});sv.innerHTML='<div class="stats-header">📊 Mes statistiques</div><div class="stats-grid"><div class="stat-card"><div class="stat-card-val">'+(uData.totalConvs||0)+'</div><div class="stat-card-label">Conversations</div></div><div class="stat-card"><div class="stat-card-val">'+((uData.favorites||[]).length)+'</div><div class="stat-card-label">Favoris</div></div><div class="stat-card"><div class="stat-card-val">'+((uData.convHistory||[]).length)+'</div><div class="stat-card-label">Sessions</div></div></div><div class="stats-section-title">Variétés les plus recherchées</div>'+strains.slice(0,8).map(function(s,i){return '<div class="top-strain-item"><div class="top-strain-rank">'+(i+1)+'</div><div class="top-strain-name">'+esc(s.name||s.id)+'</div>'+(s.ratingCount?'<div class="top-strain-rating">★ '+(s.ratingTotal/s.ratingCount).toFixed(1)+'</div>':'')+'<div class="top-strain-count">'+(s.searchCount||0)+' recherches</div></div>';}).join('')||'<div class="sb-empty">Pas encore de données.</div>';}catch(e){sv.innerHTML+='<div style="color:#e87070;font-size:12px;margin-top:10px">Erreur : '+e.message+'</div>';}}
 
-async function buildCtx(userText) {
-  // Extraire les noms de variétés potentiels du message
-  const commonStrains = ['OG Kush','Sour Diesel','GMO','RS11','Blue Dream','Wedding Cake',
-    'Gelato','Runtz','Zkittlez','White Widow','Northern Lights','AK-47','Jack Herer',
-    'Amnesia','Critical','Cheese','Gorilla Glue','Girl Scout Cookies','Granddaddy Purple',
-    'Purple Haze','Pineapple Express','Strawberry Cough','Super Lemon Haze','Green Crack'];
-  const mentioned = commonStrains.filter(s =>
-    userText.toLowerCase().includes(s.toLowerCase())
-  );
-  if (mentioned.length) await loadStrainKnowledge(mentioned);
-
-  let ctx = '';
-  if (favorites.length) ctx += `\n\n[FAVORIS DE ${username.toUpperCase()}] Variétés appréciées : ${favorites.map(f=>f.name).join(', ')}. Personnalise les recommandations en conséquence.`;
-
-  if (mentioned.length) ctx += buildKnowledgeCtx(mentioned);
-
-  if (stockData.length) {
-    const lines = stockData.map(s => {
-      let l = `- ${s.nom}`;
-      if (s.seedbank) l += ` (${s.seedbank})`;
-      if (s.type) l += ` · ${s.type}`;
-      if (s.prix) l += ` · ${s.prix}€`;
-      if (s.graines) l += ` · ${s.graines}gr`;
-      if (s.ref) l += ` · Réf:${s.ref}`;
-      if (s.dispo) l += ` · ${s.dispo.toUpperCase()==='O'||s.dispo.toUpperCase()==='OUI'?'EN STOCK':'RUPTURE'}`;
-      return l;
-    }).join('\n');
-    ctx += `\n\n[STOCK ${SHOP_NAME.toUpperCase()}] Priorise ces variétés. Si une correspond, mets-la en avant avec son prix :\n${lines}`;
+async function buildCtx(txt){
+  var commonStrains=['OG Kush','Sour Diesel','GMO','RS11','Blue Dream','Wedding Cake','Gelato','Runtz','Zkittlez','White Widow','Northern Lights','AK-47','Jack Herer','Amnesia','Critical','Cheese','Gorilla Glue','Girl Scout Cookies','Granddaddy Purple','Purple Haze','Pineapple Express','Strawberry Cough','Super Lemon Haze','Green Crack'];
+  var mentioned=commonStrains.filter(function(s){return txt.toLowerCase().includes(s.toLowerCase());});
+  if(mentioned.length)await loadStrainKnowledge(mentioned);
+  var ctx='';
+  if(favorites.length)ctx+='\n\n[FAVORIS DE '+username.toUpperCase()+'] '+favorites.map(function(f){return f.name;}).join(', ')+' — personnalise en conséquence.';
+  if(mentioned.length)ctx+=buildKnowledgeCtx(mentioned);
+  if(stockData.length){
+    var lines=stockData.map(function(s){var l='- '+s.nom;if(s.seedbank)l+=' ('+s.seedbank+')';if(s.type)l+=' · '+s.type;if(s.prix)l+=' · '+s.prix+'€';if(s.graines)l+=' · '+s.graines+'gr';if(s.ref)l+=' · Réf:'+s.ref;if(s.dispo)l+=' · '+(s.dispo.toUpperCase()==='O'||s.dispo.toUpperCase()==='OUI'?'EN STOCK':'RUPTURE');return l;}).join('\n');
+    ctx+='\n\n[STOCK '+SHOP_NAME.toUpperCase()+'] Priorise ces variétés :\n'+lines;
   }
   return ctx;
 }
 
 window.send=async function(){
-  const inp=document.getElementById('inp'),sbtn=document.getElementById('sbtn');
-  const txt=inp.value.trim();
+  var inp=document.getElementById('inp'),sbtn=document.getElementById('sbtn');
+  var txt=inp.value.trim();
   if(!txt||busy)return;
-  const w=document.getElementById('welcome');if(w)w.remove();
+  var w=document.getElementById('welcome');if(w)w.remove();
   if(history.length===0)document.getElementById('topTitle').textContent=txt.length>42?txt.slice(0,42)+'…':txt;
   addMsg('user',esc(txt));
   history.push({role:'user',content:txt});
   inp.value='';inp.style.height='auto';
   busy=true;sbtn.disabled=true;showTyping();
-  const ctx = await buildCtx(txt);
-  const model = getModel(txt);
-  const maxTokens = getMaxTokens(txt);
+  var ctx=await buildCtx(txt);
   try{
-    const res=await fetch('https://strainsage-proxy.theobarege.workers.dev',{
+    var res=await fetch(PROXY,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        model,
-        max_tokens:maxTokens,
-        system:(SYS[mode]||SYS.chat)+ctx,
-        messages:history
-      })
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1800,system:(SYS[mode]||SYS.chat)+ctx,messages:history})
     });
-    if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e?.error?.message||`HTTP ${res.status}`);}
-    const data=await res.json();
-    const reply=(data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('')||'Pas de réponse.';
+    if(!res.ok){var e=await res.json().catch(function(){return {};});throw new Error((e&&e.error&&e.error.message)||('HTTP '+res.status));}
+    var data=await res.json();
+    var reply=(data.content||[]).filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('')||'Pas de réponse.';
     removeTyping();
     addMsg('ai',renderReply(reply));
     history.push({role:'assistant',content:reply});
     await saveConv(history[0].content);
-    // Sauvegarder les connaissances + compteurs
-    const mS=reply.match(/\[STRAINS_JSON\]([\s\S]*?)\[\/STRAINS_JSON\]/);
+    var mS=reply.match(/\[STRAINS_JSON\]([\s\S]*?)\[\/STRAINS_JSON\]/);
     if(mS){
       try{
-        const ss=JSON.parse(mS[1].trim());
-        for(const s of ss){
-          // Sauvegarder dans la mémoire apprenante
-          await saveStrainKnowledge(s);
-          // Compteur de recherches
-          try{
-            const ref=doc(db,'strains',s.name);
-            const snap=await getDoc(ref);
-            if(snap.exists()) await updateDoc(ref,{searchCount:increment(1)});
-            else await setDoc(ref,{name:s.name,searchCount:1,ratingTotal:0,ratingCount:0});
-          }catch(e){}
+        var ss=JSON.parse(mS[1].trim());
+        for(var i=0;i<ss.length;i++){
+          await saveStrainKnowledge(ss[i]);
+          try{var ref=doc(db,'strains',ss[i].name);var snap=await getDoc(ref);if(snap.exists())await updateDoc(ref,{searchCount:increment(1)});else await setDoc(ref,{name:ss[i].name,searchCount:1,ratingTotal:0,ratingCount:0});}catch(e2){}
         }
       }catch(e){}
     }
-    setTimeout(()=>{
-      panel().querySelectorAll('.terp-fill[data-w]').forEach(el=>{
-        const w=el.dataset.w;el.style.width='0%';
-        setTimeout(()=>{el.style.width=w;},80);
-      });
+    setTimeout(function(){
+      panel().querySelectorAll('.terp-fill[data-w]').forEach(function(el){var dw=el.dataset.w;el.style.width='0%';setTimeout(function(){el.style.width=dw;},80);});
     },120);
   }catch(err){
     removeTyping();
-    addMsg('ai',`<span style="color:#e87070;font-size:13px">⚠️ ${esc(err.message)}</span>`);
+    addMsg('ai','<span style="color:#e87070;font-size:13px">⚠️ '+esc(err.message)+'</span>');
   }
   busy=false;sbtn.disabled=false;inp.focus();
 };
+
+}); // fin window.addEventListener load
 </script>
 </body>
 </html>
