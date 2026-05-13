@@ -759,13 +759,13 @@ function buildSessionMemoryCtx(){
     ctx+='\n\n[🔍 DÉJÀ ESSAYÉ par le client] '+sessionMemory.tried.join(', ')+' — éviter de re-proposer, chercher quelque chose de nouveau ou de complémentaire.';
   return ctx;
 }
-function selectPill(field,el){
+window.selectPill=function(field,el){
   var group=el.parentElement;
   group.querySelectorAll('.profile-pill').forEach(p=>p.classList.remove('selected'));
   el.classList.add('selected');
   userProfile[field]=el.dataset.val;
 }
-function openProfile(){
+window.openProfile=function(){
   // Pré-remplir les pills si profil existant
   ['level','cultivation','budget'].forEach(field=>{
     if(userProfile[field]){
@@ -780,7 +780,7 @@ function openProfile(){
   if(userProfile.preferences)document.getElementById('pp-preferences').value=userProfile.preferences;
   document.getElementById('profileModal').style.display='flex';
 }
-async function saveProfile(){
+window.saveProfile=async function(){
   userProfile.preferences=document.getElementById('pp-preferences').value.trim();
   document.getElementById('profileModal').style.display='none';
   // Sauvegarder dans Firebase
@@ -790,7 +790,7 @@ async function saveProfile(){
   renderProfileBadge();
   toast('✅ Profil enregistré');
 }
-function skipProfile(){
+window.skipProfile=function(){
   document.getElementById('profileModal').style.display='none';
   // Marquer comme vu pour ne pas re-afficher
   try{updateDoc(doc(db,'users',userId),{'profile.seen':true});}catch(e){}
@@ -856,7 +856,7 @@ async function loadShopStock(){
     if(stockSnap.exists()&&stockSnap.data().stock){stockData=stockSnap.data().stock;updateStockBar();}
   }catch(e){}
 }
-function logout(){localStorage.removeItem('ss_uid');localStorage.removeItem('ss_uname');location.reload();};
+window.logout=function(){localStorage.removeItem('ss_uid');localStorage.removeItem('ss_uname');location.reload();};
 
 // init auto-login
 
@@ -885,7 +885,7 @@ function logout(){localStorage.removeItem('ss_uid');localStorage.removeItem('ss_
 function initApp(){renderWelcome();renderFavs();renderHist();updateStockBar();var inp=document.getElementById('inp');inp.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}});inp.addEventListener('input',function(){inp.style.height='auto';inp.style.height=Math.min(inp.scrollHeight,110)+'px';});}
 
 var BADGES={chat:'💬 Chat',culture:'🌱 Culture',compare:'⚖️ Compare',stats:'📊 Stats'};
-function setMode(m){
+window.setMode=function(m){
   mode=m;
   document.getElementById('modeBadge').textContent=BADGES[m];
   document.getElementById('inp').placeholder=m==='culture'?'Décrivez vos conditions de culture…':m==='compare'?'Nommez 2 variétés à comparer…':'Décrivez ce que vous recherchez…';
@@ -899,7 +899,7 @@ function setMode(m){
   if(sb&&sb.classList.contains('open')){sb.classList.remove('open');ov.classList.remove('open');}
 };
 
-function toggleSidebar(){var sb=document.querySelector('.sidebar'),ov=document.getElementById('sidebarOverlay');sb.classList.toggle('open');ov.classList.toggle('open');};
+window.toggleSidebar=function(){var sb=document.querySelector('.sidebar'),ov=document.getElementById('sidebarOverlay');sb.classList.toggle('open');ov.classList.toggle('open');};
 function esc(t){return String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function toast(msg,type){
   var t=document.createElement('div');t.className='toast';
@@ -909,7 +909,7 @@ function toast(msg,type){
   setTimeout(()=>{t.style.opacity='0';t.style.transform='translateY(8px)';t.style.transition='all .3s';setTimeout(()=>t.remove(),300);},2500);
 }
 function panel(){return document.getElementById('chatPanel');}
-function quickSend(txt){document.getElementById('inp').value=txt;send();};
+window.quickSend=function(txt){document.getElementById('inp').value=txt;send();};
 
 function addMsg(role,html){var w=document.createElement('div');w.className='msg '+role;var av=document.createElement('div');av.className='av '+role;av.textContent=role==='ai'?'🌿':'👤';var b=document.createElement('div');b.className='bubble';b.innerHTML=html;w.appendChild(av);w.appendChild(b);panel().appendChild(w);panel().scrollTop=panel().scrollHeight;}
 function showTyping(){var w=document.createElement('div');w.className='msg ai';w.id='typ';var av=document.createElement('div');av.className='av ai';av.textContent='🌿';var b=document.createElement('div');b.className='bubble';b.innerHTML='<div class="typing-bub"><span></span><span></span><span></span></div>';w.appendChild(av);w.appendChild(b);panel().appendChild(w);panel().scrollTop=panel().scrollHeight;}
@@ -947,15 +947,15 @@ function buildCmpPhoto(url,name){if(!url||url==='null')return '<div class="cmp-p
 function buildGenetics(g){if(!g||g==='null'||(g.toLowerCase&&g.toLowerCase().includes('inconnu')))return '<div class="sc-genetics"><span class="gen-label">Lignée</span><span class="gen-unknown">Non documentée</span></div>';var fmt=esc(g).replace(/×/g,'<span class="gen-cross">×</span>').replace(/\s+x\s+/gi,'<span class="gen-cross">×</span>');return '<div class="sc-genetics"><span class="gen-label">Lignée</span><span class="gen-val">'+fmt+'</span></div>';}
 function buildTerps(terps){if(!terps||!terps.length)return '';var rows=terps.slice(0,5).map(t=>{var n=typeof t==='object'?t.name:t,p=typeof t==='object'?(t.pct||30):30,note=typeof t==='object'?(t.note||''):'';return '<div class="terp-row"><div class="terp-name">'+esc(n)+'</div><div class="terp-track"><div class="terp-fill" style="width:0%" data-w="'+p+'%"></div></div><div class="terp-note">'+esc(note)+'</div></div>';}).join('');return '<div class="terp-section"><div class="terp-title">Profil terpénique</div>'+rows+'</div>';}
 function buildRating(name){var id='r-'+name.replace(/\W/g,'_');var stars=[1,2,3,4,5].map(i=>'<button class="star" data-v="'+i+'" data-s="'+esc(name)+'" data-id="'+id+'" onclick="rateStar(this)">★</button>').join('');return '<div class="sc-rating"><span class="rating-label">Votre avis</span><div class="stars" id="'+id+'">'+stars+'</div><span class="rating-saved" id="'+id+'-ok">Merci !</span></div>';}
-async function rateStar(btn){var v=parseInt(btn.dataset.v),s=btn.dataset.s,id=btn.dataset.id;document.querySelectorAll('#'+id+' .star').forEach((x,i)=>x.classList.toggle('on',i<v));var ok=document.getElementById(id+'-ok');ok.classList.add('show');setTimeout(()=>ok.classList.remove('show'),2000);try{var ref=doc(db,'strains',s);var snap=await getDoc(ref);if(snap.exists())await updateDoc(ref,{ratingTotal:increment(v),ratingCount:increment(1)});else await setDoc(ref,{name:s,ratingTotal:v,ratingCount:1,searchCount:0});}catch(e){}};
+window.rateStar=async function(btn){var v=parseInt(btn.dataset.v),s=btn.dataset.s,id=btn.dataset.id;document.querySelectorAll('#'+id+' .star').forEach((x,i)=>x.classList.toggle('on',i<v));var ok=document.getElementById(id+'-ok');ok.classList.add('show');setTimeout(()=>ok.classList.remove('show'),2000);try{var ref=doc(db,'strains',s);var snap=await getDoc(ref);if(snap.exists())await updateDoc(ref,{ratingTotal:increment(v),ratingCount:increment(1)});else await setDoc(ref,{name:s,ratingTotal:v,ratingCount:1,searchCount:0});}catch(e){}};
 
 function findInStock(name){if(!stockData.length)return null;var n=name.toLowerCase().trim();return stockData.find(s=>{var sn=(s.nom||'').toLowerCase().trim();return sn===n||sn.includes(n)||n.includes(sn);})||null;}
 function buildStockSection(name){var s=findInStock(name);if(!s)return '';var ok=!s.dispo||(s.dispo.toUpperCase()==='O'||s.dispo.toUpperCase()==='OUI');var cls=s.dispo?(ok?'instock':'outstock'):'unknown';var txt=s.dispo?(ok?'✓ En stock':'✗ Rupture'):'? Stock inconnu';return '<div class="stock-bar"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="stock-badge '+cls+'">'+txt+'</span>'+(s.prix?'<span class="stock-price">'+s.prix+' €</span>':'')+(s.graines?'<span style="font-size:10.5px;color:var(--text2)">'+s.graines+' gr.</span>':'')+'</div><div style="text-align:right">'+(s.seedbank?'<div style="font-size:10px;color:var(--gold2)">'+esc(s.seedbank)+'</div>':'')+(s.ref?'<div style="font-size:9.5px;color:var(--text3)">Réf: '+esc(s.ref)+'</div>':'')+'</div></div>';}
 function updateStockBar(){var bar=document.getElementById('stockStatusBar');if(!bar)return;if(stockData.length){bar.style.display='flex';var ok=stockData.filter(s=>s.dispo&&(s.dispo.toUpperCase()==='O'||s.dispo.toUpperCase()==='OUI')).length;document.getElementById('stockStatusText').textContent='📦 '+stockData.length+' variétés'+(ok?' · '+ok+' en stock':'');}else bar.style.display='none';}
-async function clearStock(){stockData=[];updateStockBar();try{await setDoc(doc(db,'shops',SHOP_CODE),{stock:[],updatedAt:Date.now()},{merge:true});}catch(e){}toast('Stock effacé');};
+window.clearStock=async function(){stockData=[];updateStockBar();try{await setDoc(doc(db,'shops',SHOP_CODE),{stock:[],updatedAt:Date.now()},{merge:true});}catch(e){}toast('Stock effacé');};
 function normKey(k){return String(k||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');}
 function mapRow(row){var keys=Object.keys(row);function find(){for(var c of arguments){var k=keys.find(k=>normKey(k).includes(c));if(k&&row[k]!==undefined&&row[k]!=='')return String(row[k]).trim();}return '';}return{nom:find('nom','name','variete','strain','produit'),seedbank:find('seedbank','marque','brand'),type:find('type','categorie'),graines:find('graine','seed'),prix:find('prix','price','tarif'),ref:find('ref','reference','code','sku'),dispo:find('dispo','stock','disponible')};}
-function importStock(input){var file=input.files[0];if(!file)return;var ext=file.name.split('.').pop().toLowerCase();if(ext==='csv'){var r=new FileReader();r.onload=e=>{var res=Papa.parse(e.target.result,{header:true,skipEmptyLines:true});processStock(res.data,file.name);};r.readAsText(file,'UTF-8');}else{var r2=new FileReader();r2.onload=e=>{var wb=XLSX.read(e.target.result,{type:'binary'});var ws=wb.Sheets[wb.SheetNames[0]];processStock(XLSX.utils.sheet_to_json(ws,{defval:''}),file.name);};r2.readAsBinaryString(file);}input.value='';};
+window.importStock=function(input){var file=input.files[0];if(!file)return;var ext=file.name.split('.').pop().toLowerCase();if(ext==='csv'){var r=new FileReader();r.onload=e=>{var res=Papa.parse(e.target.result,{header:true,skipEmptyLines:true});processStock(res.data,file.name);};r.readAsText(file,'UTF-8');}else{var r2=new FileReader();r2.onload=e=>{var wb=XLSX.read(e.target.result,{type:'binary'});var ws=wb.Sheets[wb.SheetNames[0]];processStock(XLSX.utils.sheet_to_json(ws,{defval:''}),file.name);};r2.readAsBinaryString(file);}input.value='';};
 async function processStock(rows,fname){var mapped=rows.map(mapRow).filter(r=>r.nom);if(!mapped.length){toast('⚠️ Aucune variété trouvée','error');return;}stockData=mapped;updateStockBar();try{await setDoc(doc(db,'shops',SHOP_CODE),{stock:mapped,updatedAt:Date.now()},{merge:true});}catch(e){}toast('📦 '+mapped.length+' variétés importées');}
 
 function buildCard(s){
@@ -995,14 +995,14 @@ function renderReply(text){
   return (mC?cmpBlock:cards)+rest;
 }
 
-async function toggleFav(name,type){var idx=favorites.findIndex(f=>f.name===name);if(idx>=0){favorites.splice(idx,1);toast(name+' retiré');}else{favorites.push({name,type});toast('⭐ '+name+' ajouté');}await updateDoc(doc(db,'users',userId),{favorites});renderFavs();document.querySelectorAll('.sc-action[data-fav="'+name+'"]').forEach(btn=>{var f=favorites.some(x=>x.name===name);btn.classList.toggle('faved',f);btn.textContent='⭐ '+(f?'Favori':'Ajouter');});};
-function renderFavs(){var list=document.getElementById('favList');list.innerHTML='';if(!favorites.length){list.innerHTML='<div class="sb-empty">Aucun favori.<br>Ajoutez depuis les fiches ⭐</div>';return;}favorites.forEach(f=>{var item=document.createElement('div');item.className='fav-item';item.innerHTML='<div class="fav-dot"></div><div style="flex:1;min-width:0"><div class="fav-name">'+esc(f.name)+'</div><div class="fav-type">'+esc(f.type||'')+'</div></div><button class="fav-del" onclick="event.stopPropagation();removeFav(\''+esc(f.name)+'\')">✕</button>';item.addEventListener('click',()=>quickSend('Parle-moi de '+f.name+' en détail.'));list.appendChild(item);});}
-async function removeFav(name){favorites=favorites.filter(f=>f.name!==name);await updateDoc(doc(db,'users',userId),{favorites});renderFavs();toast(name+' retiré');};
+window.toggleFav=async function(name,type){var idx=favorites.findIndex(f=>f.name===name);if(idx>=0){favorites.splice(idx,1);toast(name+' retiré');}else{favorites.push({name,type});toast('⭐ '+name+' ajouté');}await updateDoc(doc(db,'users',userId),{favorites});renderFavs();document.querySelectorAll('.sc-action[data-fav="'+name+'"]').forEach(btn=>{var f=favorites.some(x=>x.name===name);btn.classList.toggle('faved',f);btn.textContent='⭐ '+(f?'Favori':'Ajouter');});};
+window.renderFavs=function(){var list=document.getElementById('favList');list.innerHTML='';if(!favorites.length){list.innerHTML='<div class="sb-empty">Aucun favori.<br>Ajoutez depuis les fiches ⭐</div>';return;}favorites.forEach(f=>{var item=document.createElement('div');item.className='fav-item';item.innerHTML='<div class="fav-dot"></div><div style="flex:1;min-width:0"><div class="fav-name">'+esc(f.name)+'</div><div class="fav-type">'+esc(f.type||'')+'</div></div><button class="fav-del" onclick="event.stopPropagation();removeFav(\''+esc(f.name)+'\')">✕</button>';item.addEventListener('click',()=>quickSend('Parle-moi de '+f.name+' en détail.'));list.appendChild(item);});}
+window.removeFav=async function(name){favorites=favorites.filter(f=>f.name!==name);await updateDoc(doc(db,'users',userId),{favorites});renderFavs();toast(name+' retiré');};
 
 async function saveConv(firstMsg){var title=firstMsg.length>50?firstMsg.slice(0,50)+'…':firstMsg;var ex=convHistory.findIndex(c=>c.id===currentId);var entry={id:currentId,title,date:new Date().toLocaleDateString('fr-FR'),messages:history.slice()};if(ex>=0)convHistory[ex]=entry;else convHistory.unshift(entry);if(convHistory.length>20)convHistory=convHistory.slice(0,20);await updateDoc(doc(db,'users',userId),{convHistory,totalConvs:increment(1)});renderHist();}
 function renderHist(){var list=document.getElementById('histList');list.innerHTML='';if(!convHistory.length){list.innerHTML='<div class="sb-empty">Aucune conversation.</div>';return;}convHistory.forEach(c=>{var item=document.createElement('div');item.className='hist-item';item.innerHTML='<div class="hist-title">'+esc(c.title)+'</div><div class="hist-date">'+c.date+'</div>';item.addEventListener('click',()=>loadConv(c));list.appendChild(item);});}
 function loadConv(conv){newChat(false);currentId=conv.id;history=conv.messages.slice();document.getElementById('topTitle').textContent=conv.title;history.forEach(m=>{if(m.role==='user')addMsg('user',esc(m.content));else addMsg('ai',renderReply(m.content));});}
-function newChat(resetId){if(resetId===undefined)resetId=true;history=[];if(resetId){currentId=Date.now();sessionMemory={liked:[],disliked:[],tried:[]};}if(mode==='stats'){setMode('chat');return;}renderWelcome();document.getElementById('topTitle').textContent='Nouvelle conversation';};
+window.newChat=function(resetId){if(resetId===undefined)resetId=true;history=[];if(resetId){currentId=Date.now();sessionMemory={liked:[],disliked:[],tried:[]};}if(mode==='stats'){setMode('chat');return;}renderWelcome();document.getElementById('topTitle').textContent='Nouvelle conversation';};
 
 function renderWelcome(){
   var p=panel();p.innerHTML='';
@@ -1085,7 +1085,7 @@ async function buildCtx(txt){
   return ctx;
 }
 
-async function send(){
+window.send=async function(){
   var inp=document.getElementById('inp'),sbtn=document.getElementById('sbtn');
   var txt=inp.value.trim();
   if(!txt||busy)return;
