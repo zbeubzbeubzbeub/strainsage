@@ -780,7 +780,7 @@ window.openProfile=function(){
   if(userProfile.preferences)document.getElementById('pp-preferences').value=userProfile.preferences;
   document.getElementById('profileModal').style.display='flex';
 }
-async window.saveProfile=function(){
+window.saveProfile=async function(){
   userProfile.preferences=document.getElementById('pp-preferences').value.trim();
   document.getElementById('profileModal').style.display='none';
   // Sauvegarder dans Firebase
