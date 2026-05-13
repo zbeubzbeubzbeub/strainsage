@@ -759,13 +759,13 @@ function buildSessionMemoryCtx(){
     ctx+='\n\n[🔍 DÉJÀ ESSAYÉ par le client] '+sessionMemory.tried.join(', ')+' — éviter de re-proposer, chercher quelque chose de nouveau ou de complémentaire.';
   return ctx;
 }
-window.selectPill=function(field,el){
+function selectPill(field,el){
   var group=el.parentElement;
   group.querySelectorAll('.profile-pill').forEach(p=>p.classList.remove('selected'));
   el.classList.add('selected');
   userProfile[field]=el.dataset.val;
 }
-window.openProfile=function(){
+function openProfile(){
   // Pré-remplir les pills si profil existant
   ['level','cultivation','budget'].forEach(field=>{
     if(userProfile[field]){
@@ -780,7 +780,7 @@ window.openProfile=function(){
   if(userProfile.preferences)document.getElementById('pp-preferences').value=userProfile.preferences;
   document.getElementById('profileModal').style.display='flex';
 }
-window.saveProfile=async function(){
+async function saveProfile(){
   userProfile.preferences=document.getElementById('pp-preferences').value.trim();
   document.getElementById('profileModal').style.display='none';
   // Sauvegarder dans Firebase
@@ -790,7 +790,7 @@ window.saveProfile=async function(){
   renderProfileBadge();
   toast('✅ Profil enregistré');
 }
-window.skipProfile=function(){
+function skipProfile(){
   document.getElementById('profileModal').style.display='none';
   // Marquer comme vu pour ne pas re-afficher
   try{updateDoc(doc(db,'users',userId),{'profile.seen':true});}catch(e){}
@@ -1085,7 +1085,7 @@ async function buildCtx(txt){
   return ctx;
 }
 
-window.send=async function(){
+async function send(){
   var inp=document.getElementById('inp'),sbtn=document.getElementById('sbtn');
   var txt=inp.value.trim();
   if(!txt||busy)return;
