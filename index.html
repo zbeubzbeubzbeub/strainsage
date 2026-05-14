@@ -622,10 +622,18 @@ SOURCES PAR ORDRE DE FIABILITÉ :
 3. Growdiaries.com — retours terrain réels (à croiser avec sources officielles)
 4. Forums (cannaweed.com, rollitup.org) — indicatif seulement
 
+PHOTOS — RÈGLE IMPORTANTE :
+Pour le champ "photo_url", fournis l'URL EXACTE de la photo officielle de la variété sur le site de la seedbank.
+Exemples de formats d'URLs valides :
+- Royal Queen Seeds : https://www.royalqueenseeds.com/img/cms/strains/{nom}.jpg
+- Barneys Farm : https://barneysfarm.com/wp-content/uploads/{annee}/{mois}/{nom}.jpg
+- Leafly : https://consumer-assets.leafly.com/strain-photos/{nom}/{nom}.jpg
+Si tu ne connais pas l'URL exacte avec certitude → mets null (ne jamais inventer une URL)
+
 FORMAT — RÈGLE ABSOLUE : commence DIRECTEMENT par [STRAINS_JSON], ZÉRO texte avant. Même pour une question de clarification, commence par [STRAINS_JSON][] puis pose ta question.
 
 [STRAINS_JSON]
-[{"name":"Nom exact officiel","type":"Indica/Sativa/Hybride Indica-dominante/etc","thc":"XX-XX%","cbd":"X%","flowering":"XX-XX semaines","yield":"XXX g/m²","genetics":"Parent A × Parent B","seedbank":"Seedbank officielle","photo_url":null,"terpenes":[{"name":"Myrcène","pct":38,"note":"Terreux, mangue, sédatif"},{"name":"Caryophyllène","pct":26,"note":"Épicé, poivré, anti-inflammatoire"},{"name":"Limonène","pct":18,"note":"Citrus, euphorie"}],"flavor":"Description précise des arômes et saveurs","effects":["effet1","effet2","effet3"],"why":"Pourquoi cette variété répond exactement à la demande — cite les éléments du profil client","culture_tips":"Conseils pratiques adaptés au niveau du client : substrat, technique, nutrition, difficultés, récolte","match_tags":["tag1","tag2","tag3"]}]
+[{"name":"Nom exact officiel","type":"Indica/Sativa/Hybride Indica-dominante/etc","thc":"XX-XX%","cbd":"X%","flowering":"XX-XX semaines","yield":"XXX g/m²","genetics":"Parent A × Parent B","seedbank":"Seedbank officielle","photo_url":"URL exacte ou null","terpenes":[{"name":"Myrcène","pct":38,"note":"Terreux, mangue, sédatif"},{"name":"Caryophyllène","pct":26,"note":"Épicé, poivré, anti-inflammatoire"},{"name":"Limonène","pct":18,"note":"Citrus, euphorie"}],"flavor":"Description précise des arômes et saveurs","effects":["effet1","effet2","effet3"],"why":"Pourquoi cette variété répond exactement à la demande — cite les éléments du profil client","culture_tips":"Conseils pratiques adaptés au niveau du client : substrat, technique, nutrition, difficultés, récolte","match_tags":["tag1","tag2","tag3"]}]
 [/STRAINS_JSON]
 
 Texte chaleureux et expert APRÈS le JSON. Tutoie. 2-3 variétés max.`,
@@ -926,22 +934,24 @@ var STRAIN_PHOTOS={
   '_cbd':'https://images.unsplash.com/photo-1607619056574-7b8d3ee536b2?w=400&q=80'
 };
 function getPhotoUrl(name,url){
-  if(url&&url!=='null'&&url!=='undefined')return url;
+  // Si Claude a fourni une vraie URL → on la tente, le onerror gère le fallback
+  if(url&&url!=='null'&&url!=='undefined'&&url.startsWith('http'))return url;
+  // Fallback Unsplash par type
   var nl=(name||'').toLowerCase();
   if(nl.includes('purple')||nl.includes('violet')||nl.includes('grape'))return STRAIN_PHOTOS['_purple'];
   if(nl.includes('kush'))return STRAIN_PHOTOS['_kush'];
   if(nl.includes('haze'))return STRAIN_PHOTOS['_haze'];
   if(nl.includes('cbd')||nl.includes('charlotte'))return STRAIN_PHOTOS['_cbd'];
-  if(nl.includes('indica'))return STRAIN_PHOTOS['_indica'];
-  if(nl.includes('sativa'))return STRAIN_PHOTOS['_sativa'];
   return STRAIN_PHOTOS['_default'];
 }
 function buildPhoto(url,name,sb){
   var fu=getPhotoUrl(name,url);
   var ov='<div class="sc-photo-overlay"><div class="sc-photo-name">'+esc(name)+'</div></div>';
   var badge=sb&&sb!=='null'?'<div class="sc-photo-sb">'+esc(sb)+'</div>':'';
-  if(!fu)return '<div class="sc-photo-wrap"><div class="sc-photo-fallback"><div class="sc-photo-fallback-icon">🌿</div><div class="sc-photo-fallback-txt">'+esc(name)+'</div></div>'+ov+'</div>';
-  return '<div class="sc-photo-wrap"><img class="sc-photo" src="'+esc(fu)+'" alt="'+esc(name)+'" onload="this.classList.add(\'loaded\')" onerror="this.style.display=\'none\'" loading="lazy">'+ov+badge+'</div>';
+  var noRealPhoto=!url||url==='null'||url==='undefined';
+  var dataAttr=noRealPhoto?' data-strain-name="'+esc(name)+'"'+(sb&&sb!=='null'?' data-seedbank="'+esc(sb)+'"':''):'';
+  if(!fu)return '<div class="sc-photo-wrap"'+dataAttr+'><div class="sc-photo-fallback"><div class="sc-photo-fallback-icon">🌿</div><div class="sc-photo-fallback-txt">'+esc(name)+'</div></div>'+ov+'</div>';
+  return '<div class="sc-photo-wrap"'+dataAttr+'><img class="sc-photo" src="'+esc(fu)+'" alt="'+esc(name)+'" onload="this.classList.add(\'loaded\')" onerror="this.src=\''+STRAIN_PHOTOS['_default']+'\';this.classList.add(\'loaded\')" loading="lazy">'+ov+badge+'</div>';
 }
 function buildCmpPhoto(url,name){if(!url||url==='null')return '<div class="cmp-photo">🌿</div>';return '<div class="cmp-photo"><img src="'+esc(url)+'" alt="'+esc(name)+'" onload="this.classList.add(\'loaded\')" onerror="this.parentElement.textContent=\'🌿\'" loading="lazy"></div>';}
 function buildGenetics(g){if(!g||g==='null'||(g.toLowerCase&&g.toLowerCase().includes('inconnu')))return '<div class="sc-genetics"><span class="gen-label">Lignée</span><span class="gen-unknown">Non documentée</span></div>';var fmt=esc(g).replace(/×/g,'<span class="gen-cross">×</span>').replace(/\s+x\s+/gi,'<span class="gen-cross">×</span>');return '<div class="sc-genetics"><span class="gen-label">Lignée</span><span class="gen-val">'+fmt+'</span></div>';}
@@ -972,6 +982,88 @@ function buildCard(s){
   if(s.culture_tips)body+='<div class="sc-row"><span class="sc-label">Culture</span><span class="sc-val">'+esc(s.culture_tips)+'</span></div>';
   var tags=(s.match_tags||[]).map(t=>'<span class="mtag">'+esc(t)+'</span>').join('');
   return '<div class="sc">'+buildPhoto(s.photo_url,s.name,s.seedbank)+'<div class="sc-actions">'+actions+'</div><div class="sc-stats">'+stats+'</div><div class="sc-body">'+body+'</div>'+buildGenetics(s.genetics)+buildTerps(s.terpenes)+buildStockSection(s.name)+buildRating(s.name)+'<div class="sc-tags">'+tags+'</div></div>';
+}
+
+/* ══ PHOTOS RÉELLES — Seedbanks + Seedfinder ══ */
+var photoCache={};
+
+function buildSeedbankUrl(name,seedbank){
+  var slug=name.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'');
+  var sb=(seedbank||'').toLowerCase();
+  if(sb.includes('royal queen')||sb.includes('rqs'))
+    return 'https://www.royalqueenseeds.com/fr/'+slug+'.html';
+  if(sb.includes('barney')||sb.includes('barneys'))
+    return 'https://www.barneysfarm.com/cannabis-seeds/'+slug;
+  if(sb.includes('dutch passion')||sb.includes('dutch-passion'))
+    return 'https://dutch-passion.com/fr/graines-de-cannabis/'+slug+'/';
+  if(sb.includes('fastbuds')||sb.includes('fast buds'))
+    return 'https://2fast4buds.com/seeds/'+slug;
+  if(sb.includes('dinafem'))
+    return 'https://www.dinafem.org/fr/graines-cannabis/'+slug+'/';
+  if(sb.includes('sensi'))
+    return 'https://sensiseeds.com/fr/graines-cannabis/'+slug+'/';
+  if(sb.includes('humboldt'))
+    return 'https://humboldtseedorganization.com/product/'+slug+'/';
+  // Fallback seedfinder
+  return 'https://en.seedfinder.eu/strain-info/'+slug+'/';
+}
+
+async function fetchStrainPhoto(name,seedbank){
+  var cacheKey=name+'|'+(seedbank||'');
+  if(photoCache[cacheKey])return photoCache[cacheKey];
+  try{
+    var url=buildSeedbankUrl(name,seedbank);
+    var res=await fetch(PROXY+'/fetch-page',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Shop-Token':SHOP_TOKEN},
+      body:JSON.stringify({url})
+    });
+    var data=await res.json();
+    var txt=data.result||'';
+    // Chercher une image HD de la variété (au moins 300px dans l'URL ou pas d'indication de taille)
+    var patterns=[
+      /https?:\/\/[^\s"'<>]+(?:product|strain|seed|cannabis)[^\s"'<>]*\.(?:jpg|jpeg|png|webp)/i,
+      /https?:\/\/[^\s"'<>]+\.(?:jpg|jpeg|png|webp)(?:\?[^\s"'<>]*)?/i
+    ];
+    for(var p of patterns){
+      var m=txt.match(p);
+      if(m&&!m[0].includes('logo')&&!m[0].includes('icon')&&!m[0].includes('banner')&&!m[0].includes('flag')&&!m[0].includes('payment')&&!m[0].includes('sprite')){
+        photoCache[cacheKey]=m[0];
+        return m[0];
+      }
+    }
+  }catch(e){}
+  photoCache[cacheKey]=null;
+  return null;
+}
+
+async function loadPhotosForCards(){
+  var wraps=panel().querySelectorAll('.sc-photo-wrap[data-strain-name]');
+  if(!wraps.length)return;
+  await Promise.all([...wraps].map(async wrap=>{
+    var name=wrap.getAttribute('data-strain-name');
+    var seedbank=wrap.getAttribute('data-seedbank')||'';
+    if(!name)return;
+    var url=await fetchStrainPhoto(name,seedbank);
+    if(!url)return;
+    var existing=wrap.querySelector('.sc-photo');
+    if(existing){
+      existing.src=url;
+      existing.onload=function(){existing.classList.add('loaded');};
+      existing.onerror=function(){existing.style.display='none';};
+    } else {
+      var img=document.createElement('img');
+      img.className='sc-photo';
+      img.alt=name;
+      img.loading='lazy';
+      img.onload=function(){img.classList.add('loaded');};
+      img.onerror=function(){img.style.display='none';};
+      img.src=url;
+      wrap.insertBefore(img,wrap.firstChild);
+    }
+    wrap.removeAttribute('data-strain-name');
+    wrap.removeAttribute('data-seedbank');
+  }));
 }
 
 function buildCompare(strains,cmp){
@@ -1163,6 +1255,9 @@ window.send=async function(){
     bubble.id='';
     bubble.innerHTML=renderReply(reply);
     panel().scrollTop=panel().scrollHeight;
+
+    // Charger les photos réelles en arrière-plan
+    loadPhotosForCards();
 
     history.push({role:'assistant',content:reply});
     if(history.length%4===0||history.length<=2)saveConv(history[0].content);
