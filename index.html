@@ -273,6 +273,7 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
 .sc-photo-sb{position:absolute;top:10px;right:10px;font-size:9px;padding:2px 9px;border-radius:6px;background:rgba(0,0,0,.55);color:rgba(255,255,255,.85);border:1px solid rgba(255,255,255,.12)}
 .sc-actions{display:flex;gap:5px;padding:9px 13px;border-bottom:1px solid var(--border);flex-wrap:wrap;background:var(--fog)}
 .sc-action{height:27px;padding:0 10px;border-radius:7px;border:1px solid var(--border);background:var(--panel);cursor:pointer;font-size:10.5px;display:flex;align-items:center;gap:4px;transition:all .15s;color:var(--text2);white-space:nowrap}
+a.sc-action{text-decoration:none}
 .sc-action:hover{border-color:var(--accent);color:var(--accent)}
 .sc-action.faved{color:var(--gold2);border-color:var(--bordergold);background:var(--goldfog)}
 .sc-stats{display:flex;gap:5px;flex-wrap:wrap;padding:10px 13px;border-bottom:1px solid var(--border)}
@@ -291,6 +292,7 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
 .gen-val{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:13.5px;color:var(--text1);line-height:1.5}
 .gen-cross{color:var(--gold2);font-style:normal;font-family:'DM Sans',sans-serif;font-size:10.5px;margin:0 4px;opacity:.7}
 .gen-unknown{font-size:11.5px;color:var(--text3);font-style:normal}
+.gen-src{font-size:9px;color:var(--text3);margin-left:6px;font-style:normal;font-family:'DM Sans',sans-serif}
 .terp-section{padding:10px 13px;border-top:1px solid var(--border)}
 .terp-title{font-size:8.5px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:10px;font-weight:500}
 .terp-row{display:flex;align-items:center;gap:10px;margin-bottom:7px}
@@ -553,6 +555,7 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="gd-reference.js"></script>
 <script>
 /* ══ THÈME ══ */
 function updateThemeLabel(t){
@@ -617,23 +620,16 @@ COMPORTEMENT :
 - Si la demande est floue → pose UNE seule question de clarification avant de recommander
 
 SOURCES PAR ORDRE DE FIABILITÉ :
+0. [RÉFÉRENCE GROWDIARIES] et [CANDIDATS GROWDIARIES] fournis dans le contexte — données structurées, prioritaires pour lignée, breeders, THC, floraison
 1. Seedbanks officielles (barneysfarm.com, seedjunky.com, compoundgenetics.com, royalqueenseeds.com, dutch-passion.com)
 2. Bases spécialisées (leafly.com, seedfinder.eu, allbud.com)
 3. Growdiaries.com — retours terrain réels (à croiser avec sources officielles)
 4. Forums (cannaweed.com, rollitup.org) — indicatif seulement
 
-PHOTOS — RÈGLE IMPORTANTE :
-Pour le champ "photo_url", fournis l'URL EXACTE de la photo officielle de la variété sur le site de la seedbank.
-Exemples de formats d'URLs valides :
-- Royal Queen Seeds : https://www.royalqueenseeds.com/img/cms/strains/{nom}.jpg
-- Barneys Farm : https://barneysfarm.com/wp-content/uploads/{annee}/{mois}/{nom}.jpg
-- Leafly : https://consumer-assets.leafly.com/strain-photos/{nom}/{nom}.jpg
-Si tu ne connais pas l'URL exacte avec certitude → mets null (ne jamais inventer une URL)
-
 FORMAT — RÈGLE ABSOLUE : commence DIRECTEMENT par [STRAINS_JSON], ZÉRO texte avant. Même pour une question de clarification, commence par [STRAINS_JSON][] puis pose ta question.
 
 [STRAINS_JSON]
-[{"name":"Nom exact officiel","type":"Indica/Sativa/Hybride Indica-dominante/etc","thc":"XX-XX%","cbd":"X%","flowering":"XX-XX semaines","yield":"XXX g/m²","genetics":"Parent A × Parent B","seedbank":"Seedbank officielle","photo_url":"URL exacte ou null","terpenes":[{"name":"Myrcène","pct":38,"note":"Terreux, mangue, sédatif"},{"name":"Caryophyllène","pct":26,"note":"Épicé, poivré, anti-inflammatoire"},{"name":"Limonène","pct":18,"note":"Citrus, euphorie"}],"flavor":"Description précise des arômes et saveurs","effects":["effet1","effet2","effet3"],"why":"Pourquoi cette variété répond exactement à la demande — cite les éléments du profil client","culture_tips":"Conseils pratiques adaptés au niveau du client : substrat, technique, nutrition, difficultés, récolte","match_tags":["tag1","tag2","tag3"]}]
+[{"name":"Nom exact officiel","type":"Indica/Sativa/Hybride Indica-dominante/etc","thc":"XX-XX%","cbd":"X%","flowering":"XX-XX semaines","yield":"XXX g/m²","genetics":"Parent A × Parent B","seedbank":"Seedbank officielle","photo_url":null,"terpenes":[{"name":"Myrcène","pct":38,"note":"Terreux, mangue, sédatif"},{"name":"Caryophyllène","pct":26,"note":"Épicé, poivré, anti-inflammatoire"},{"name":"Limonène","pct":18,"note":"Citrus, euphorie"}],"flavor":"Description précise des arômes et saveurs","effects":["effet1","effet2","effet3"],"why":"Pourquoi cette variété répond exactement à la demande — cite les éléments du profil client","culture_tips":"Conseils pratiques adaptés au niveau du client : substrat, technique, nutrition, difficultés, récolte","match_tags":["tag1","tag2","tag3"]}]
 [/STRAINS_JSON]
 
 Texte chaleureux et expert APRÈS le JSON. Tutoie. 2-3 variétés max.`,
@@ -644,7 +640,7 @@ Tu conseilles des growers sur le choix et la culture de variétés. Sois précis
 
 Adapte le niveau de détail au profil client (débutant = bases claires, expert = EC semaine par semaine, techniques avancées).
 
-SOURCES : seedbanks officielles en priorité, growdiaries.com pour les retours terrain réels.
+SOURCES : [RÉFÉRENCE GROWDIARIES] du contexte en priorité pour la génétique, puis seedbanks officielles, growdiaries.com pour les retours terrain réels.
 
 FORMAT — commence par [STRAINS_JSON] immédiatement, zéro texte avant :
 [STRAINS_JSON]
@@ -655,7 +651,7 @@ Après le JSON : conseils culture détaillés, erreurs fréquentes à éviter, t
 
 compare:`Tu es StrainSage Pro MODE COMPARAISON pour ${SHOP_NAME}.
 
-Compare objectivement 2 variétés sur tous les critères. Sois factuel, cite les sources, signale les contradictions entre sources. Adapte le verdict au profil du client s'il est connu.
+Compare objectivement 2 variétés sur tous les critères. Sois factuel, cite les sources, signale les contradictions entre sources. Adapte le verdict au profil du client s'il est connu. Utilise en priorité la [RÉFÉRENCE GROWDIARIES] fournie dans le contexte.
 
 FORMAT — [STRAINS_JSON] avec EXACTEMENT 2 variétés, zéro texte avant :
 [STRAINS_JSON]
@@ -695,7 +691,7 @@ async function saveStrainKnowledge(s){
 function buildKnowledgeCtx(names){
   var known=names.filter(n=>knowledgeCache[n]);
   if(!known.length)return '';
-  return '\n\n[MÉMOIRE] Données vérifiées :\n'+known.map(n=>{var k=knowledgeCache[n];var l='• '+n;if(k.thc)l+=' THC:'+k.thc;if(k.genetics&&k.genetics!=='null')l+=' Lignée:'+k.genetics;if(k.flowering)l+=' Floraison:'+k.flowering;if(k.searchCount>1)l+=' ('+k.searchCount+' recherches)';if(k.contradictions&&k.contradictions.length){var last=k.contradictions[k.contradictions.length-1];l+=' ⚠️ Contradiction: '+last.issues.join('; ');}return l;}).join('\n');
+  return '\n\n[MÉMOIRE] Fiches générées lors de recherches précédentes (moins fiables que la RÉFÉRENCE GROWDIARIES) :\n'+known.map(n=>{var k=knowledgeCache[n];var l='• '+n;if(k.thc)l+=' THC:'+k.thc;if(k.genetics&&k.genetics!=='null')l+=' Lignée:'+k.genetics;if(k.flowering)l+=' Floraison:'+k.flowering;if(k.searchCount>1)l+=' ('+k.searchCount+' recherches)';if(k.contradictions&&k.contradictions.length){var last=k.contradictions[k.contradictions.length-1];l+=' ⚠️ Contradiction: '+last.issues.join('; ');}return l;}).join('\n');
 }
 
 /* ══ DÉTECTION D'INTENTION — likes/dislikes/essais ══ */
@@ -864,7 +860,7 @@ async function loadShopStock(){
     if(stockSnap.exists()&&stockSnap.data().stock){stockData=stockSnap.data().stock;updateStockBar();}
   }catch(e){}
 }
-window.logout=function(){localStorage.removeItem('ss_uid');localStorage.removeItem('ss_uname');location.reload();};
+function logout(){localStorage.removeItem('ss_uid');localStorage.removeItem('ss_uname');location.reload();};
 
 // init auto-login
 
@@ -893,7 +889,7 @@ window.logout=function(){localStorage.removeItem('ss_uid');localStorage.removeIt
 function initApp(){renderWelcome();renderFavs();renderHist();updateStockBar();var inp=document.getElementById('inp');inp.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}});inp.addEventListener('input',function(){inp.style.height='auto';inp.style.height=Math.min(inp.scrollHeight,110)+'px';});}
 
 var BADGES={chat:'💬 Chat',culture:'🌱 Culture',compare:'⚖️ Compare',stats:'📊 Stats'};
-window.setMode=function(m){
+function setMode(m){
   mode=m;
   document.getElementById('modeBadge').textContent=BADGES[m];
   document.getElementById('inp').placeholder=m==='culture'?'Décrivez vos conditions de culture…':m==='compare'?'Nommez 2 variétés à comparer…':'Décrivez ce que vous recherchez…';
@@ -907,7 +903,7 @@ window.setMode=function(m){
   if(sb&&sb.classList.contains('open')){sb.classList.remove('open');ov.classList.remove('open');}
 };
 
-window.toggleSidebar=function(){var sb=document.querySelector('.sidebar'),ov=document.getElementById('sidebarOverlay');sb.classList.toggle('open');ov.classList.toggle('open');};
+function toggleSidebar(){var sb=document.querySelector('.sidebar'),ov=document.getElementById('sidebarOverlay');sb.classList.toggle('open');ov.classList.toggle('open');};
 function esc(t){return String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function toast(msg,type){
   var t=document.createElement('div');t.className='toast';
@@ -917,7 +913,7 @@ function toast(msg,type){
   setTimeout(()=>{t.style.opacity='0';t.style.transform='translateY(8px)';t.style.transition='all .3s';setTimeout(()=>t.remove(),300);},2500);
 }
 function panel(){return document.getElementById('chatPanel');}
-window.quickSend=function(txt){document.getElementById('inp').value=txt;send();};
+function quickSend(txt){document.getElementById('inp').value=txt;send();};
 
 function addMsg(role,html){var w=document.createElement('div');w.className='msg '+role;var av=document.createElement('div');av.className='av '+role;av.textContent=role==='ai'?'🌿':'👤';var b=document.createElement('div');b.className='bubble';b.innerHTML=html;w.appendChild(av);w.appendChild(b);panel().appendChild(w);panel().scrollTop=panel().scrollHeight;}
 function showTyping(){var w=document.createElement('div');w.className='msg ai';w.id='typ';var av=document.createElement('div');av.className='av ai';av.textContent='🌿';var b=document.createElement('div');b.className='bubble';b.innerHTML='<div class="typing-bub"><span></span><span></span><span></span></div>';w.appendChild(av);w.appendChild(b);panel().appendChild(w);panel().scrollTop=panel().scrollHeight;}
@@ -934,136 +930,59 @@ var STRAIN_PHOTOS={
   '_cbd':'https://images.unsplash.com/photo-1607619056574-7b8d3ee536b2?w=400&q=80'
 };
 function getPhotoUrl(name,url){
-  // Si Claude a fourni une vraie URL → on la tente, le onerror gère le fallback
-  if(url&&url!=='null'&&url!=='undefined'&&url.startsWith('http'))return url;
-  // Fallback Unsplash par type
+  if(url&&url!=='null'&&url!=='undefined')return url;
   var nl=(name||'').toLowerCase();
   if(nl.includes('purple')||nl.includes('violet')||nl.includes('grape'))return STRAIN_PHOTOS['_purple'];
   if(nl.includes('kush'))return STRAIN_PHOTOS['_kush'];
   if(nl.includes('haze'))return STRAIN_PHOTOS['_haze'];
   if(nl.includes('cbd')||nl.includes('charlotte'))return STRAIN_PHOTOS['_cbd'];
+  if(nl.includes('indica'))return STRAIN_PHOTOS['_indica'];
+  if(nl.includes('sativa'))return STRAIN_PHOTOS['_sativa'];
   return STRAIN_PHOTOS['_default'];
 }
 function buildPhoto(url,name,sb){
   var fu=getPhotoUrl(name,url);
   var ov='<div class="sc-photo-overlay"><div class="sc-photo-name">'+esc(name)+'</div></div>';
   var badge=sb&&sb!=='null'?'<div class="sc-photo-sb">'+esc(sb)+'</div>':'';
-  var noRealPhoto=!url||url==='null'||url==='undefined';
-  var dataAttr=noRealPhoto?' data-strain-name="'+esc(name)+'"'+(sb&&sb!=='null'?' data-seedbank="'+esc(sb)+'"':''):'';
-  if(!fu)return '<div class="sc-photo-wrap"'+dataAttr+'><div class="sc-photo-fallback"><div class="sc-photo-fallback-icon">🌿</div><div class="sc-photo-fallback-txt">'+esc(name)+'</div></div>'+ov+'</div>';
-  return '<div class="sc-photo-wrap"'+dataAttr+'><img class="sc-photo" src="'+esc(fu)+'" alt="'+esc(name)+'" onload="this.classList.add(\'loaded\')" onerror="this.src=\''+STRAIN_PHOTOS['_default']+'\';this.classList.add(\'loaded\')" loading="lazy">'+ov+badge+'</div>';
+  if(!fu)return '<div class="sc-photo-wrap"><div class="sc-photo-fallback"><div class="sc-photo-fallback-icon">🌿</div><div class="sc-photo-fallback-txt">'+esc(name)+'</div></div>'+ov+'</div>';
+  return '<div class="sc-photo-wrap"><img class="sc-photo" src="'+esc(fu)+'" alt="'+esc(name)+'" onload="this.classList.add(\'loaded\')" onerror="this.style.display=\'none\'" loading="lazy">'+ov+badge+'</div>';
 }
 function buildCmpPhoto(url,name){if(!url||url==='null')return '<div class="cmp-photo">🌿</div>';return '<div class="cmp-photo"><img src="'+esc(url)+'" alt="'+esc(name)+'" onload="this.classList.add(\'loaded\')" onerror="this.parentElement.textContent=\'🌿\'" loading="lazy"></div>';}
-function buildGenetics(g){if(!g||g==='null'||(g.toLowerCase&&g.toLowerCase().includes('inconnu')))return '<div class="sc-genetics"><span class="gen-label">Lignée</span><span class="gen-unknown">Non documentée</span></div>';var fmt=esc(g).replace(/×/g,'<span class="gen-cross">×</span>').replace(/\s+x\s+/gi,'<span class="gen-cross">×</span>');return '<div class="sc-genetics"><span class="gen-label">Lignée</span><span class="gen-val">'+fmt+'</span></div>';}
+function buildGenetics(g,src){if(!g||g==='null'||(g.toLowerCase&&g.toLowerCase().includes('inconnu')))return '<div class="sc-genetics"><span class="gen-label">Lignée</span><span class="gen-unknown">Non documentée</span></div>';var fmt=esc(g).replace(/×/g,'<span class="gen-cross">×</span>').replace(/\s+x\s+/gi,'<span class="gen-cross">×</span>');return '<div class="sc-genetics"><span class="gen-label">Lignée</span><span class="gen-val">'+fmt+(src?'<span class="gen-src">· '+esc(src)+'</span>':'')+'</span></div>';}
 function buildTerps(terps){if(!terps||!terps.length)return '';var rows=terps.slice(0,5).map(t=>{var n=typeof t==='object'?t.name:t,p=typeof t==='object'?(t.pct||30):30,note=typeof t==='object'?(t.note||''):'';return '<div class="terp-row"><div class="terp-name">'+esc(n)+'</div><div class="terp-track"><div class="terp-fill" style="width:0%" data-w="'+p+'%"></div></div><div class="terp-note">'+esc(note)+'</div></div>';}).join('');return '<div class="terp-section"><div class="terp-title">Profil terpénique</div>'+rows+'</div>';}
 function buildRating(name){var id='r-'+name.replace(/\W/g,'_');var stars=[1,2,3,4,5].map(i=>'<button class="star" data-v="'+i+'" data-s="'+esc(name)+'" data-id="'+id+'" onclick="rateStar(this)">★</button>').join('');return '<div class="sc-rating"><span class="rating-label">Votre avis</span><div class="stars" id="'+id+'">'+stars+'</div><span class="rating-saved" id="'+id+'-ok">Merci !</span></div>';}
-window.rateStar=async function(btn){var v=parseInt(btn.dataset.v),s=btn.dataset.s,id=btn.dataset.id;document.querySelectorAll('#'+id+' .star').forEach((x,i)=>x.classList.toggle('on',i<v));var ok=document.getElementById(id+'-ok');ok.classList.add('show');setTimeout(()=>ok.classList.remove('show'),2000);try{var ref=doc(db,'strains',s);var snap=await getDoc(ref);if(snap.exists())await updateDoc(ref,{ratingTotal:increment(v),ratingCount:increment(1)});else await setDoc(ref,{name:s,ratingTotal:v,ratingCount:1,searchCount:0});}catch(e){}};
+async function rateStar(btn){var v=parseInt(btn.dataset.v),s=btn.dataset.s,id=btn.dataset.id;document.querySelectorAll('#'+id+' .star').forEach((x,i)=>x.classList.toggle('on',i<v));var ok=document.getElementById(id+'-ok');ok.classList.add('show');setTimeout(()=>ok.classList.remove('show'),2000);try{var ref=doc(db,'strains',s);var snap=await getDoc(ref);if(snap.exists())await updateDoc(ref,{ratingTotal:increment(v),ratingCount:increment(1)});else await setDoc(ref,{name:s,ratingTotal:v,ratingCount:1,searchCount:0});}catch(e){}};
 
 function findInStock(name){if(!stockData.length)return null;var n=name.toLowerCase().trim();return stockData.find(s=>{var sn=(s.nom||'').toLowerCase().trim();return sn===n||sn.includes(n)||n.includes(sn);})||null;}
+function stockInfo(name){var s=findInStock(name);if(!s)return '';var ok=!s.dispo||/^(o|oui)$/i.test(s.dispo);return ok?'EN STOCK':'en rupture';}
 function buildStockSection(name){var s=findInStock(name);if(!s)return '';var ok=!s.dispo||(s.dispo.toUpperCase()==='O'||s.dispo.toUpperCase()==='OUI');var cls=s.dispo?(ok?'instock':'outstock'):'unknown';var txt=s.dispo?(ok?'✓ En stock':'✗ Rupture'):'? Stock inconnu';return '<div class="stock-bar"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="stock-badge '+cls+'">'+txt+'</span>'+(s.prix?'<span class="stock-price">'+s.prix+' €</span>':'')+(s.graines?'<span style="font-size:10.5px;color:var(--text2)">'+s.graines+' gr.</span>':'')+'</div><div style="text-align:right">'+(s.seedbank?'<div style="font-size:10px;color:var(--gold2)">'+esc(s.seedbank)+'</div>':'')+(s.ref?'<div style="font-size:9.5px;color:var(--text3)">Réf: '+esc(s.ref)+'</div>':'')+'</div></div>';}
 function updateStockBar(){var bar=document.getElementById('stockStatusBar');if(!bar)return;if(stockData.length){bar.style.display='flex';var ok=stockData.filter(s=>s.dispo&&(s.dispo.toUpperCase()==='O'||s.dispo.toUpperCase()==='OUI')).length;document.getElementById('stockStatusText').textContent='📦 '+stockData.length+' variétés'+(ok?' · '+ok+' en stock':'');}else bar.style.display='none';}
-window.clearStock=async function(){stockData=[];updateStockBar();try{await setDoc(doc(db,'shops',SHOP_CODE),{stock:[],updatedAt:Date.now()},{merge:true});}catch(e){}toast('Stock effacé');};
+async function clearStock(){stockData=[];updateStockBar();try{await setDoc(doc(db,'shops',SHOP_CODE),{stock:[],updatedAt:Date.now()},{merge:true});}catch(e){}toast('Stock effacé');};
 function normKey(k){return String(k||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');}
 function mapRow(row){var keys=Object.keys(row);function find(){for(var c of arguments){var k=keys.find(k=>normKey(k).includes(c));if(k&&row[k]!==undefined&&row[k]!=='')return String(row[k]).trim();}return '';}return{nom:find('nom','name','variete','strain','produit'),seedbank:find('seedbank','marque','brand'),type:find('type','categorie'),graines:find('graine','seed'),prix:find('prix','price','tarif'),ref:find('ref','reference','code','sku'),dispo:find('dispo','stock','disponible')};}
-window.importStock=function(input){var file=input.files[0];if(!file)return;var ext=file.name.split('.').pop().toLowerCase();if(ext==='csv'){var r=new FileReader();r.onload=e=>{var res=Papa.parse(e.target.result,{header:true,skipEmptyLines:true});processStock(res.data,file.name);};r.readAsText(file,'UTF-8');}else{var r2=new FileReader();r2.onload=e=>{var wb=XLSX.read(e.target.result,{type:'binary'});var ws=wb.Sheets[wb.SheetNames[0]];processStock(XLSX.utils.sheet_to_json(ws,{defval:''}),file.name);};r2.readAsBinaryString(file);}input.value='';};
+function importStock(input){var file=input.files[0];if(!file)return;var ext=file.name.split('.').pop().toLowerCase();if(ext==='csv'){var r=new FileReader();r.onload=e=>{var res=Papa.parse(e.target.result,{header:true,skipEmptyLines:true});processStock(res.data,file.name);};r.readAsText(file,'UTF-8');}else{var r2=new FileReader();r2.onload=e=>{var wb=XLSX.read(e.target.result,{type:'binary'});var ws=wb.Sheets[wb.SheetNames[0]];processStock(XLSX.utils.sheet_to_json(ws,{defval:''}),file.name);};r2.readAsBinaryString(file);}input.value='';};
 async function processStock(rows,fname){var mapped=rows.map(mapRow).filter(r=>r.nom);if(!mapped.length){toast('⚠️ Aucune variété trouvée','error');return;}stockData=mapped;updateStockBar();try{await setDoc(doc(db,'shops',SHOP_CODE),{stock:mapped,updatedAt:Date.now()},{merge:true});}catch(e){}toast('📦 '+mapped.length+' variétés importées');}
 
 function buildCard(s){
+  var ref=window.GDRef?window.GDRef.get(s.name):null;
   var faved=favorites.some(f=>f.name===s.name);
   var actions='<button class="sc-action '+(faved?'faved':'')+'" data-fav="'+esc(s.name)+'" onclick="toggleFav(\''+esc(s.name)+'\',\''+esc(s.type)+'\')">⭐ '+(faved?'Favori':'Ajouter')+'</button>';
   actions+='<button class="sc-action" onclick="quickSend(\'Donne-moi plus de détails sur '+esc(s.name)+' : génétique, culture, où trouver.\')">🔍 Détails</button>';
   if(s.seedbank&&s.seedbank!=='null')actions+='<button class="sc-action" onclick="quickSend(\'Où acheter '+esc(s.name)+' de '+esc(s.seedbank)+' ?\')">🛒 Seedbank</button>';
+  if(ref&&ref.url)actions+='<a class="sc-action" href="'+esc(ref.url)+'" target="_blank" rel="noopener">📖 GrowDiaries</a>';
   var stats='<span class="pill thc">THC '+esc(s.thc)+'</span><span class="pill cbd">CBD '+esc(s.cbd)+'</span><span class="pill flower">🌸 '+esc(s.flowering)+'</span>';
   if(s.yield)stats+='<span class="pill yield">📦 '+esc(s.yield)+'</span>';
   if(s.seedbank&&s.seedbank!=='null')stats+='<span class="pill sb">🏷 '+esc(s.seedbank)+'</span>';
+  if(ref&&ref.rating)stats+='<span class="pill sb">★ '+esc(ref.rating)+(ref.harvests?' · '+esc(ref.harvests)+' récoltes':'')+'</span>';
   var body='<div class="sc-row"><span class="sc-label">Arômes</span><span class="sc-val">'+esc(s.flavor)+'</span></div>';
   body+='<div class="sc-row"><span class="sc-label">Effets</span><span class="sc-val">'+(s.effects||[]).map(esc).join(', ')+'</span></div>';
   body+='<div class="sc-row"><span class="sc-label">Pourquoi</span><span class="sc-val">'+esc(s.why)+'</span></div>';
   if(s.culture_tips)body+='<div class="sc-row"><span class="sc-label">Culture</span><span class="sc-val">'+esc(s.culture_tips)+'</span></div>';
+  if(ref&&ref.breeders&&ref.breeders.length)body+='<div class="sc-row"><span class="sc-label">Breeders</span><span class="sc-val">'+ref.breeders.slice(0,6).map(b=>esc(b.name)).filter(Boolean).join(', ')+'</span></div>';
+  if(ref&&ref.descendants&&ref.descendants.length)body+='<div class="sc-row"><span class="sc-label">Descend.</span><span class="sc-val">'+ref.descendants.slice(0,5).map(d=>esc(d.name)+(d.other_parent?' <span style="color:var(--text3)">(× '+esc(d.other_parent)+')</span>':'')).join(', ')+'</span></div>';
   var tags=(s.match_tags||[]).map(t=>'<span class="mtag">'+esc(t)+'</span>').join('');
-  return '<div class="sc">'+buildPhoto(s.photo_url,s.name,s.seedbank)+'<div class="sc-actions">'+actions+'</div><div class="sc-stats">'+stats+'</div><div class="sc-body">'+body+'</div>'+buildGenetics(s.genetics)+buildTerps(s.terpenes)+buildStockSection(s.name)+buildRating(s.name)+'<div class="sc-tags">'+tags+'</div></div>';
-}
-
-/* ══ PHOTOS RÉELLES — Seedbanks + Seedfinder ══ */
-var photoCache={};
-
-function buildSeedbankUrl(name,seedbank){
-  var slug=name.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'');
-  var sb=(seedbank||'').toLowerCase();
-  if(sb.includes('royal queen')||sb.includes('rqs'))
-    return 'https://www.royalqueenseeds.com/fr/'+slug+'.html';
-  if(sb.includes('barney')||sb.includes('barneys'))
-    return 'https://www.barneysfarm.com/cannabis-seeds/'+slug;
-  if(sb.includes('dutch passion')||sb.includes('dutch-passion'))
-    return 'https://dutch-passion.com/fr/graines-de-cannabis/'+slug+'/';
-  if(sb.includes('fastbuds')||sb.includes('fast buds'))
-    return 'https://2fast4buds.com/seeds/'+slug;
-  if(sb.includes('dinafem'))
-    return 'https://www.dinafem.org/fr/graines-cannabis/'+slug+'/';
-  if(sb.includes('sensi'))
-    return 'https://sensiseeds.com/fr/graines-cannabis/'+slug+'/';
-  if(sb.includes('humboldt'))
-    return 'https://humboldtseedorganization.com/product/'+slug+'/';
-  // Fallback seedfinder
-  return 'https://en.seedfinder.eu/strain-info/'+slug+'/';
-}
-
-async function fetchStrainPhoto(name,seedbank){
-  var cacheKey=name+'|'+(seedbank||'');
-  if(photoCache[cacheKey])return photoCache[cacheKey];
-  try{
-    var url=buildSeedbankUrl(name,seedbank);
-    var res=await fetch(PROXY+'/fetch-page',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','X-Shop-Token':SHOP_TOKEN},
-      body:JSON.stringify({url})
-    });
-    var data=await res.json();
-    var txt=data.result||'';
-    // Chercher une image HD de la variété (au moins 300px dans l'URL ou pas d'indication de taille)
-    var patterns=[
-      /https?:\/\/[^\s"'<>]+(?:product|strain|seed|cannabis)[^\s"'<>]*\.(?:jpg|jpeg|png|webp)/i,
-      /https?:\/\/[^\s"'<>]+\.(?:jpg|jpeg|png|webp)(?:\?[^\s"'<>]*)?/i
-    ];
-    for(var p of patterns){
-      var m=txt.match(p);
-      if(m&&!m[0].includes('logo')&&!m[0].includes('icon')&&!m[0].includes('banner')&&!m[0].includes('flag')&&!m[0].includes('payment')&&!m[0].includes('sprite')){
-        photoCache[cacheKey]=m[0];
-        return m[0];
-      }
-    }
-  }catch(e){}
-  photoCache[cacheKey]=null;
-  return null;
-}
-
-async function loadPhotosForCards(){
-  var wraps=panel().querySelectorAll('.sc-photo-wrap[data-strain-name]');
-  if(!wraps.length)return;
-  await Promise.all([...wraps].map(async wrap=>{
-    var name=wrap.getAttribute('data-strain-name');
-    var seedbank=wrap.getAttribute('data-seedbank')||'';
-    if(!name)return;
-    var url=await fetchStrainPhoto(name,seedbank);
-    if(!url)return;
-    var existing=wrap.querySelector('.sc-photo');
-    if(existing){
-      existing.src=url;
-      existing.onload=function(){existing.classList.add('loaded');};
-      existing.onerror=function(){existing.style.display='none';};
-    } else {
-      var img=document.createElement('img');
-      img.className='sc-photo';
-      img.alt=name;
-      img.loading='lazy';
-      img.onload=function(){img.classList.add('loaded');};
-      img.onerror=function(){img.style.display='none';};
-      img.src=url;
-      wrap.insertBefore(img,wrap.firstChild);
-    }
-    wrap.removeAttribute('data-strain-name');
-    wrap.removeAttribute('data-seedbank');
-  }));
+  var genetics=(ref&&ref.parents&&ref.parents.length)?buildGenetics(ref.parents.join(' × '),'GrowDiaries'):buildGenetics(s.genetics);
+  return '<div class="sc">'+buildPhoto(s.photo_url,s.name,s.seedbank)+'<div class="sc-actions">'+actions+'</div><div class="sc-stats">'+stats+'</div><div class="sc-body">'+body+'</div>'+genetics+buildTerps(s.terpenes)+buildStockSection(s.name)+buildRating(s.name)+'<div class="sc-tags">'+tags+'</div></div>';
 }
 
 function buildCompare(strains,cmp){
@@ -1087,14 +1006,14 @@ function renderReply(text){
   return (mC?cmpBlock:cards)+rest;
 }
 
-window.toggleFav=async function(name,type){var idx=favorites.findIndex(f=>f.name===name);if(idx>=0){favorites.splice(idx,1);toast(name+' retiré');}else{favorites.push({name,type});toast('⭐ '+name+' ajouté');}await updateDoc(doc(db,'users',userId),{favorites});renderFavs();document.querySelectorAll('.sc-action[data-fav="'+name+'"]').forEach(btn=>{var f=favorites.some(x=>x.name===name);btn.classList.toggle('faved',f);btn.textContent='⭐ '+(f?'Favori':'Ajouter');});};
-window.renderFavs=function(){var list=document.getElementById('favList');list.innerHTML='';if(!favorites.length){list.innerHTML='<div class="sb-empty">Aucun favori.<br>Ajoutez depuis les fiches ⭐</div>';return;}favorites.forEach(f=>{var item=document.createElement('div');item.className='fav-item';item.innerHTML='<div class="fav-dot"></div><div style="flex:1;min-width:0"><div class="fav-name">'+esc(f.name)+'</div><div class="fav-type">'+esc(f.type||'')+'</div></div><button class="fav-del" onclick="event.stopPropagation();removeFav(\''+esc(f.name)+'\')">✕</button>';item.addEventListener('click',()=>quickSend('Parle-moi de '+f.name+' en détail.'));list.appendChild(item);});}
-window.removeFav=async function(name){favorites=favorites.filter(f=>f.name!==name);await updateDoc(doc(db,'users',userId),{favorites});renderFavs();toast(name+' retiré');};
+async function toggleFav(name,type){var idx=favorites.findIndex(f=>f.name===name);if(idx>=0){favorites.splice(idx,1);toast(name+' retiré');}else{favorites.push({name,type});toast('⭐ '+name+' ajouté');}await updateDoc(doc(db,'users',userId),{favorites});renderFavs();document.querySelectorAll('.sc-action[data-fav="'+name+'"]').forEach(btn=>{var f=favorites.some(x=>x.name===name);btn.classList.toggle('faved',f);btn.textContent='⭐ '+(f?'Favori':'Ajouter');});};
+function renderFavs(){var list=document.getElementById('favList');list.innerHTML='';if(!favorites.length){list.innerHTML='<div class="sb-empty">Aucun favori.<br>Ajoutez depuis les fiches ⭐</div>';return;}favorites.forEach(f=>{var item=document.createElement('div');item.className='fav-item';item.innerHTML='<div class="fav-dot"></div><div style="flex:1;min-width:0"><div class="fav-name">'+esc(f.name)+'</div><div class="fav-type">'+esc(f.type||'')+'</div></div><button class="fav-del" onclick="event.stopPropagation();removeFav(\''+esc(f.name)+'\')">✕</button>';item.addEventListener('click',()=>quickSend('Parle-moi de '+f.name+' en détail.'));list.appendChild(item);});}
+async function removeFav(name){favorites=favorites.filter(f=>f.name!==name);await updateDoc(doc(db,'users',userId),{favorites});renderFavs();toast(name+' retiré');};
 
 async function saveConv(firstMsg){var title=firstMsg.length>50?firstMsg.slice(0,50)+'…':firstMsg;var ex=convHistory.findIndex(c=>c.id===currentId);var entry={id:currentId,title,date:new Date().toLocaleDateString('fr-FR'),messages:history.slice()};if(ex>=0)convHistory[ex]=entry;else convHistory.unshift(entry);if(convHistory.length>20)convHistory=convHistory.slice(0,20);await updateDoc(doc(db,'users',userId),{convHistory,totalConvs:increment(1)});renderHist();}
 function renderHist(){var list=document.getElementById('histList');list.innerHTML='';if(!convHistory.length){list.innerHTML='<div class="sb-empty">Aucune conversation.</div>';return;}convHistory.forEach(c=>{var item=document.createElement('div');item.className='hist-item';item.innerHTML='<div class="hist-title">'+esc(c.title)+'</div><div class="hist-date">'+c.date+'</div>';item.addEventListener('click',()=>loadConv(c));list.appendChild(item);});}
 function loadConv(conv){newChat(false);currentId=conv.id;history=conv.messages.slice();document.getElementById('topTitle').textContent=conv.title;history.forEach(m=>{if(m.role==='user')addMsg('user',esc(m.content));else addMsg('ai',renderReply(m.content));});}
-window.newChat=function(resetId){if(resetId===undefined)resetId=true;history=[];if(resetId){currentId=Date.now();sessionMemory={liked:[],disliked:[],tried:[]};}if(mode==='stats'){setMode('chat');return;}renderWelcome();document.getElementById('topTitle').textContent='Nouvelle conversation';};
+function newChat(resetId){if(resetId===undefined)resetId=true;history=[];if(resetId){currentId=Date.now();sessionMemory={liked:[],disliked:[],tried:[]};}if(mode==='stats'){setMode('chat');return;}renderWelcome();document.getElementById('topTitle').textContent='Nouvelle conversation';};
 
 function renderWelcome(){
   var p=panel();p.innerHTML='';
@@ -1110,6 +1029,9 @@ async function showStats(){var p=panel();p.innerHTML='';var sv=document.createEl
 async function searchWeb(query){try{var res=await fetch(PROXY+'/search',{method:'POST',headers:{'Content-Type':'application/json','X-Shop-Token':SHOP_TOKEN},body:JSON.stringify({query})});var data=await res.json();return data.result||'';}catch(e){return '';}}
 async function fetchPage(url){try{var res=await fetch(PROXY+'/fetch-page',{method:'POST',headers:{'Content-Type':'application/json','X-Shop-Token':SHOP_TOKEN},body:JSON.stringify({url})});var data=await res.json();return data.result||'';}catch(e){return '';}}
 
+// Mots en majuscule fréquents en début de phrase, à ne pas prendre pour des noms de variétés
+var CAP_STOPWORDS=['variété','variete','goût','gout','débutant','debutant','similaire','donne','parle','recommande','quelles','quelle','quel','quels','bonjour','salut','merci','stimulant','stimulante','grower','culture','indoor','outdoor','sativa','indica','hybride','tropical','relax','profil','saveurs','saveur','effets','effet','floraison','sommeil','arômes','aromes','seedbank','comment','pourquoi','avec','pour','dans','mais','elle','cette','cherche','veux','voudrais','aime','acheter','détails','details','basé','base','plus','peux','est-ce','tu','je','une','un','des','les','sur','mon','mes','ma'];
+
 async function buildCtx(txt){
   // DÉTECTION NLP — regex sur les mots capitalisés + liste étendue
   var knownStrains=['OG Kush','Sour Diesel','GMO','RS11','Blue Dream','Wedding Cake','Gelato','Runtz',
@@ -1122,12 +1044,17 @@ async function buildCtx(txt){
     'Cereal Milk','Pancakes','Lemon Cherry Gelato','RS11','Gary Payton','Compound Genetics','Seed Junky',
     'Ethos','Cannarado','Dying Breed','Exotic Genetix','Humboldt','Barneys Farm','Royal Queen',
     'Dutch Passion','FastBuds','Dinafem','Sensi Seeds'];
+  // Noms de seedbanks : pas des variétés, on ne les cherche pas sur GrowDiaries
+  var breederNames=['Compound Genetics','Seed Junky','Ethos','Cannarado','Dying Breed','Exotic Genetix','Humboldt','Barneys Farm','Royal Queen','Dutch Passion','FastBuds','Dinafem','Sensi Seeds'];
   // Détection via la liste + extraction des mots capitalisés du message
   var mentioned=knownStrains.filter(s=>txt.toLowerCase().includes(s.toLowerCase()));
   // Extraire aussi les groupes de mots capitalisés inconnus (ex: "Slurricane", "Gushers")
   var capitalWords=txt.match(/\b[A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)*\b/g)||[];
-  capitalWords.forEach(w=>{if(w.length>3&&!mentioned.includes(w))mentioned.push(w);});
-  mentioned=mentioned.slice(0,5); // max 5 pour ne pas exploser le contexte
+  capitalWords.forEach(w=>{
+    var first=w.split(/\s+/)[0].toLowerCase();
+    if(w.length>3&&!CAP_STOPWORDS.includes(first)&&!mentioned.some(m=>m.toLowerCase().includes(w.toLowerCase())))mentioned.push(w);
+  });
+  mentioned=[...new Set(mentioned)].slice(0,5); // max 5 pour ne pas exploser le contexte
 
   if(mentioned.length)await loadStrainKnowledge(mentioned);
   var ctx='';
@@ -1137,10 +1064,17 @@ async function buildCtx(txt){
   detectIntent(txt);
   ctx+=buildSessionMemoryCtx();
   if(favorites.length)ctx+='\n\n[FAVORIS DE '+username.toUpperCase()+'] '+favorites.map(f=>f.name).join(', ')+' — s\'en inspirer pour les recommandations.';
+
+  // RÉFÉRENCE GROWDIARIES — base Firestore d'abord, GrowDiaries seulement si la fiche manque ou a plus de 60 jours
+  var strainNames=mentioned.filter(n=>!breederNames.includes(n));
+  var gd={ctx:'',coveredStrains:0,requestedStrains:0,candidates:0};
+  try{if(window.GDRef)gd=await window.GDRef.buildContext(txt,strainNames,stockInfo);}catch(e){console.warn('[GDRef]',e);}
+  ctx+=gd.ctx;
   if(mentioned.length)ctx+=buildKnowledgeCtx(mentioned);
 
-  // RECHERCHE WEB — requêtes Jina propres sans site: ni OR
-  var shouldResearch=mentioned.length>0||(txt.length>40&&txt.match(/\b(variété|variete|kush|haze|cookies|gelato|runtz|diesel|CBD|THC|floraison|seedbank|terpènes|terps|grower|culture|indoor|outdoor)\b/i));
+  // RECHERCHE WEB — seulement si la référence GrowDiaries ne couvre pas la demande
+  var gdCovers=(gd.requestedStrains>0&&gd.coveredStrains>=gd.requestedStrains)||(gd.requestedStrains===0&&gd.candidates>0);
+  var shouldResearch=!gdCovers&&(mentioned.length>0||(txt.length>40&&txt.match(/\b(variété|variete|kush|haze|cookies|gelato|runtz|diesel|CBD|THC|floraison|seedbank|terpènes|terps|grower|culture|indoor|outdoor)\b/i)));
   if(shouldResearch){
     try{
       var searchQueries=[];
@@ -1256,15 +1190,12 @@ window.send=async function(){
     bubble.innerHTML=renderReply(reply);
     panel().scrollTop=panel().scrollHeight;
 
-    // Charger les photos réelles en arrière-plan
-    loadPhotosForCards();
-
     history.push({role:'assistant',content:reply});
     if(history.length%4===0||history.length<=2)saveConv(history[0].content);
 
-    // Sauvegarder les strains dans Firebase
+    // Sauvegarder les strains dans Firebase + enrichir la base de référence GrowDiaries
     var mS=reply.match(/\[STRAINS_JSON\]([\s\S]*?)\[\/STRAINS_JSON\]/);
-    if(mS){try{var ss=JSON.parse(mS[1].trim());ss.forEach(s=>{saveStrainKnowledge(s);getDoc(doc(db,'strains',s.name)).then(snap=>{if(snap.exists())updateDoc(doc(db,'strains',s.name),{searchCount:increment(1)});else setDoc(doc(db,'strains',s.name),{name:s.name,searchCount:1,ratingTotal:0,ratingCount:0});}).catch(()=>{});});}catch(e){}}
+    if(mS){try{var ss=JSON.parse(mS[1].trim());ss.forEach(s=>{saveStrainKnowledge(s);getDoc(doc(db,'strains',s.name)).then(snap=>{if(snap.exists())updateDoc(doc(db,'strains',s.name),{searchCount:increment(1)});else setDoc(doc(db,'strains',s.name),{name:s.name,searchCount:1,ratingTotal:0,ratingCount:0});}).catch(()=>{});});if(window.GDRef)window.GDRef.enrichFromReply(ss.map(s=>s.name));}catch(e){}}
 
     // Animer les terpènes
     requestAnimationFrame(()=>requestAnimationFrame(()=>{
@@ -1282,6 +1213,9 @@ window.send=async function(){
   }
   busy=false;sbtn.disabled=false;inp.focus();
 };
+
+// Fonctions appelées depuis les onclick du HTML : elles doivent être globales
+Object.assign(window,{loginUser,logout,toggleSidebar,setMode,newChat,clearStock,toggleFav,removeFav,rateStar,quickSend,importStock});
 
 }); // fin DOMContentLoaded
 </script>
