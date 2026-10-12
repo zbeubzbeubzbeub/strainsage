@@ -16,7 +16,7 @@
   var FRESH_MS     = 60*24*3600*1000;  // fiche variété valable 60 jours
   var CAT_FRESH_MS =  7*24*3600*1000;  // listes par critère valables 7 jours
   var MISS_MS      = 14*24*3600*1000;  // variété introuvable : on ne réessaie pas avant 14 jours
-  var MODEL        = 'claude-sonnet-4-20250514';
+  var MODEL        = 'claude-haiku-5-5';  // modèle rapide et économique pour l'extraction
   var GD           = 'https://growdiaries.com';
   var cache = {}, pending = {};
 
