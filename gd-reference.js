@@ -25,14 +25,31 @@
   function keyOf(name){return norm(name).replace(/ /g,'_').slice(0,120);}
   function slugOf(name){return norm(name).replace(/ /g,'-');}
   function prettify(slug){return slug.split('-').map(function(w){return w.charAt(0).toUpperCase()+w.slice(1);}).join(' ');}
-  function isFresh(d){return !!(d&&d.fetchedAt&&(Date.now()-d.fetchedAt)<(d.notFound?MISS_MS:FRESH_MS));}
+  var SCHEMA       = 2;  // incrémenter force la relecture de toutes les fiches
+  function isFresh(d){return !!(d&&d.fetchedAt&&(d.v||0)>=SCHEMA&&(Date.now()-d.fetchedAt)<(d.notFound?MISS_MS:FRESH_MS));}
 
   async function proxyPost(path,body){
     var res=await fetch(PROXY+path,{method:'POST',headers:{'Content-Type':'application/json','X-Shop-Token':SHOP_TOKEN},body:JSON.stringify(body)});
     var data=await res.json();
     return data.result||'';
   }
-  function fetchPage(url){return proxyPost('/fetch-page',{url:url}).catch(function(){return '';});}
+  // Le Worker demande du texte brut tronqué à 8000 caractères (sans liens) : on lit d'abord
+  // la page en markdown complet via Jina directement depuis le navigateur, le Worker sert de secours.
+  function unwrap(t){
+    t=String(t||'');
+    if(t.charAt(0)==='{'){
+      try{var j=JSON.parse(t),d=j.data||j;return (d.title?'Title: '+d.title+'\n\n':'')+(d.content||'');}
+      catch(e){return t.replace(/\\n/g,'\n').replace(/\\"/g,'"');}
+    }
+    return t;
+  }
+  async function fetchPage(url){
+    try{
+      var r=await fetch('https://r.jina.ai/'+url,{headers:{'X-Return-Format':'markdown'}});
+      if(r.ok){var t=await r.text();if(t&&t.length>300)return t;}
+    }catch(e){}
+    return unwrap(await proxyPost('/fetch-page',{url:url}).catch(function(){return '';}));
+  }
   function search(q){return proxyPost('/search',{query:q}).catch(function(){return '';});}
 
   async function readDoc(col,k){try{var s=await db.collection(col).doc(k).get();return s.exists?s.data():null;}catch(e){return null;}}
@@ -52,7 +69,7 @@
     var aka=(t.match(/^aka\s+(.+)$/mi)||[])[1]||'';
     var h=norm(h1+' '+aka),n=norm(name);
     if(!h||!n)return false;
-    return h.indexOf(n)>-1||h.replace(/ /g,'').indexOf(n.replace(/ /g,''))>-1||n.indexOf(norm(h1))>-1;
+    return h.indexOf(n)>-1||h.replace(/ /g,'').indexOf(n.replace(/ /g,''))>-1||(norm(h1).length>2&&n.indexOf(norm(h1))>-1);
   }
   async function resolvePage(name){
     var url=GD+'/strains/'+slugOf(name);
@@ -102,13 +119,13 @@
       if(isFresh(stored)){cache[k]=stored;return stored.notFound?null:stored;}
       var page=await resolvePage(name);
       if(!page){
-        var miss={notFound:true,query:name,fetchedAt:Date.now()};
+        var miss={notFound:true,query:name,fetchedAt:Date.now(),v:SCHEMA};
         cache[k]=miss;writeDoc('reference',k,miss);
         return (stored&&!stored.notFound)?stored:null;
       }
       var data=await extract(trimStrainPage(page.txt));
       if(!data||!data.name)return (stored&&!stored.notFound)?stored:null; // on garde l'ancienne fiche si l'extraction échoue
-      var rec=Object.assign({},data,{url:page.url,source:'growdiaries',notFound:false,fetchedAt:Date.now(),firstSeen:(stored&&stored.firstSeen)||Date.now()});
+      var rec=Object.assign({},data,{url:page.url,source:'growdiaries',notFound:false,v:SCHEMA,fetchedAt:Date.now(),firstSeen:(stored&&stored.firstSeen)||Date.now()});
       cache[k]=rec;writeDoc('reference',k,rec);
       var k2=keyOf(data.name);
       if(k2&&k2!==k){cache[k2]=rec;writeDoc('reference',k2,rec);} // alias : "Rainbow Sherbert 11" et "RS11" pointent vers la même fiche
@@ -258,11 +275,22 @@
 
   /* ── enrichissement après réponse : les variétés recommandées entrent dans la base ── */
   async function enrichFromReply(names){
-    var todo=(names||[]).filter(function(n){return n&&!isFresh(cache[keyOf(n)]);}).slice(0,3);
+    var todo=(names||[]).filter(function(n){return n&&!get(n)&&!isFresh(cache[keyOf(n)]);}).slice(0,3);
     for(var i=0;i<todo.length;i++){try{await getStrain(todo[i]);}catch(e){}}
   }
 
-  function get(name){var r=cache[keyOf(name)];return (r&&!r.notFound)?r:null;}
+  function get(name){
+    var k=keyOf(name),r=cache[k];
+    if(r&&!r.notFound)return r;
+    var n=norm(name);if(!n)return null;
+    for(var key in cache){
+      var c=cache[key];
+      if(key.indexOf('cat:')===0||!c||c.notFound||!c.name)continue;
+      var names=[c.name].concat(c.aka||[]).map(norm).filter(function(x){return x.length>2;});
+      if(names.some(function(x){return x===n||n.indexOf(x)>-1||x.indexOf(n)>-1;})){cache[k]=c;return c;}
+    }
+    return null;
+  }
 
   window.GDRef={buildContext:buildContext,getStrain:getStrain,criteriaCandidates:criteriaCandidates,enrichFromReply:enrichFromReply,get:get};
 })();
