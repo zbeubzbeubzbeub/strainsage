@@ -1,0 +1,403 @@
+/* ══════════════════════════════════════════════════════════════
+   StrainSage Pro — Base de variétés (côté client)
+   Lit la base importée depuis l'admin (onglet « Base de variétés ») :
+   - index léger "varietes_index" (noms + alias) chargé une fois par session ;
+   - fiches complètes "varietes/{id}" lues à la demande, mises en cache.
+
+   Sert à :
+   - détecter les variétés citées dans un message (noms et alias de la base) ;
+   - fournir à l'IA une fiche compacte (faits utiles seulement) ;
+   - relier une variété au stock par une correspondance de noms tolérante ;
+   - afficher source et banques/breeders sur les cartes ;
+   - chercher par critères (effets, goûts, floraison, THC…) ou par profil proche d'une variété.
+
+   Utilise db défini dans index.html.
+══════════════════════════════════════════════════════════════ */
+(function(){
+  var COL='varietes', IDX='varietes_index';
+  var MAX_FICHES=4, MAX_STOCK=80;
+
+  var entries=[], byKey={}, byCompact={}, keys=[], loaded=false, loading=null;
+  var docs={}, pendingDocs={};
+
+  /* ── normalisation (identique à l'admin) ── */
+  function nrm(s){return String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[™®©]/g,'').replace(/[^a-z0-9]+/g,' ').trim();}
+  function noAcc(s){return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'');}
+  function escRe(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
+
+  // mots qui sont aussi des descripteurs courants : un nom de variété composé d'un seul de ces mots
+  // n'est détecté que s'il est écrit avec une majuscule (« Gelato » oui, « un goût gelato » non)
+  var GENERIC=['indica','sativa','hybride','hybrid','auto','autos','kush','haze','og','cbd','thc','skunk','cheese','diesel','cookies','cookie','gelato','lemon','citron','lime','purple','fruit','fruity','fruite','sweet','sour','blue','white','black','green','red','gold','orange','cherry','grape','mango','banana','strawberry','berry','berries','candy','cake','cream','ice','fire','super','big','mega','fast','early','critical','sugar','honey','mint','menthe','pine','pin','earth','gas','fuel','glue','punch','pie','dream','widow','amnesia','power','relax','sleep','happy','energy','gorilla','zkittlez','runtz','jack','bubble','gum','vanilla','coffee','chocolate','tropical','tropicale','melon','peach','apple','papaya','pineapple','grapefruit','tangerine','tangie','garlic','ail','skunky','musk','haze','afghan','hash','maroc','bio','xl','xxl','cbd'];
+
+  /* ── index ── */
+  function load(){
+    if(loaded)return Promise.resolve(entries);
+    if(loading)return loading;
+    loading=(async function(){
+      try{
+        var meta=await db.collection(IDX).doc('meta').get();
+        var parts=meta.exists?(meta.data().parts||0):0;
+        var snaps=await Promise.all(Array.from({length:parts},function(_,i){return db.collection(IDX).doc('part_'+i).get();}));
+        var list=[];
+        snaps.forEach(function(s){if(!s.exists)return;(s.data().entries||[]).forEach(function(e){var p=String(e).split('|');list.push({id:p[0],nom:p[1]||p[0],alias:p.slice(2).filter(Boolean)});});});
+        entries=list;byKey={};byCompact={};keys=[];
+        list.forEach(function(e){
+          [e.nom].concat(e.alias).forEach(function(n,i){
+            var k=nrm(n);if(!k)return;
+            if(!byKey[k])byKey[k]=e;
+            var c=k.replace(/ /g,'');if(!byCompact[c])byCompact[c]=e;
+            if(k.length>=3)keys.push({k:k,e:e,raw:n,isAlias:i>0});
+          });
+        });
+        keys.sort(function(a,b){return b.k.length-a.k.length;});
+        loaded=list.length>0;
+        if(!list.length){loading=null;console.warn('[VarDB] index vide : la base n\'a pas encore été importée ou l\'index doit être reconstruit (admin → Base de variétés)');}
+        console.info('[VarDB] index chargé : '+entries.length+' noms (collection '+IDX+')');
+      }catch(e){
+        // on ne marque PAS la base comme chargée : le prochain message retentera la lecture
+        console.error('[VarDB] lecture de l\'index impossible ('+(e&&e.code||'erreur')+') : '+(e&&e.message)+'. Nouvel essai au prochain message.');
+        loading=null;
+      }
+      return entries;
+    })();
+    return loading;
+  }
+
+  /* ── résolution tolérante d'un nom (majuscules, accents, ponctuation, alias, suffixes de graine) ── */
+  var SUFFIX=/\s+(auto|autoflower|autoflowering|autofloraison|fem|feminized|feminised|feminisee|feminisees|feminises|regular|reguliere|regulieres|reg|fast|fastversion|fast version|f1|cbd|xl|xxl|seeds?|graines?|\d+\s*(?:graines?|seeds?|x|pcs?))$/;
+  function resolve(name){
+    var k=nrm(name);if(!k)return null;
+    var tries=[k];
+    var noParen=nrm(String(name).replace(/\([^)]*\)/g,' '));if(noParen&&noParen!==k)tries.push(noParen);
+    var cut=k,prev;do{prev=cut;cut=cut.replace(SUFFIX,'').trim();if(cut&&cut!==prev)tries.push(cut);}while(cut!==prev);
+    for(var i=0;i<tries.length;i++){
+      if(byKey[tries[i]])return byKey[tries[i]];
+      var c=tries[i].replace(/ /g,'');if(byCompact[c])return byCompact[c];
+    }
+    return null;
+  }
+  function idOf(name){var e=resolve(name);return e?e.id:null;}
+
+  /* ── détection des variétés citées dans un message ── */
+  function detect(txt,max){
+    if(!keys.length||!txt)return [];
+    var msg=' '+nrm(txt)+' ',orig=noAcc(txt),found=[],taken=[];
+    for(var i=0;i<keys.length;i++){
+      var c=keys[i],pos=msg.indexOf(' '+c.k+' ');
+      if(pos<0)continue;
+      // déjà couvert par un nom plus long (ex. « Gelato 41 » couvre « Gelato »)
+      if(taken.some(function(t){return pos>=t[0]&&pos+c.k.length<=t[1];}))continue;
+      if(c.k.indexOf(' ')<0&&GENERIC.indexOf(c.k)>-1){
+        var w=noAcc(c.raw).trim(),re=new RegExp('(^|[^A-Za-z0-9])'+escRe(w.charAt(0).toUpperCase()+w.slice(1))+'([^A-Za-z0-9]|$)');
+        if(!re.test(orig))continue;
+      }
+      taken.push([pos,pos+c.k.length]);
+      if(found.indexOf(c.e)<0)found.push(c.e);
+      if(found.length>=(max||5))break;
+    }
+    return found;
+  }
+
+  /* ── fiches complètes ── */
+  function fetchDoc(id){
+    if(docs[id]!==undefined)return Promise.resolve(docs[id]);
+    if(pendingDocs[id])return pendingDocs[id];
+    pendingDocs[id]=db.collection(COL).doc(id).get().then(function(s){docs[id]=s.exists?s.data():null;delete pendingDocs[id];return docs[id];}).catch(function(){delete pendingDocs[id];return null;});
+    return pendingDocs[id];
+  }
+  async function get(name){await load();var e=resolve(name);return e?fetchDoc(e.id):null;}
+  function cached(name){var e=resolve(name);return e&&docs[e.id]?docs[e.id]:null;}
+  async function prefetch(names,timeoutMs){
+    await load();
+    var ids=[];(names||[]).forEach(function(n){var e=resolve(n);if(e&&ids.indexOf(e.id)<0)ids.push(e.id);});
+    if(!ids.length)return;
+    var all=Promise.all(ids.slice(0,12).map(fetchDoc));
+    if(!timeoutMs)return all;
+    return Promise.race([all,new Promise(function(r){setTimeout(r,timeoutMs);})]);
+  }
+
+  /* ── fiche compacte pour l'IA ── */
+  function range(a,b,unit){if(a==null&&b==null)return null;if(a===b||b==null)return a+(unit||'');if(a==null)return '≤'+b+(unit||'');return a+'–'+b+(unit||'');}
+  function head(l,n){return (l||[]).slice(0,n).join(', ');}
+  function banques(f){var seen={},out=[];(f.produits||[]).forEach(function(p){var b=p&&p.breeder;if(!b)return;var k=nrm(b);if(seen[k])return;seen[k]=1;out.push(b);});return out;}
+  function domain(u){try{return new URL(u).hostname.replace(/^www\./,'');}catch(e){return u;}}
+  function compact(f,stockInfo){
+    var l='• '+f.nom;
+    if(f.alias&&f.alias.length)l+=' (aka '+head(f.alias,4)+')';
+    var t=f.type?f.type+(f.dominante&&f.type==='hybride'?' à dominante '+f.dominante:''):null;if(t)l+=' · '+t;
+    if(f.autofloraison===true)l+=' · autofloraison';
+    var thc=range(f.thc_min,f.thc_max,'%');if(thc)l+=' · THC '+thc;
+    var cbd=range(f.cbd_min,f.cbd_max,'%');if(cbd)l+=' · CBD '+cbd;
+    if(f.parents&&f.parents.length)l+=' · Lignée : '+f.parents.join(' × ');
+    if(f.breeder_createur)l+=' · Créateur : '+f.breeder_createur;
+    var fl=range(f.floraison_sem_min,f.floraison_sem_max,' sem.');if(fl)l+=' · Floraison '+fl;
+    if(f.difficulte)l+=' · Difficulté '+f.difficulte;
+    if(f.hauteur)l+=' · Hauteur '+f.hauteur;
+    if(f.rendement)l+=' · Rendement '+f.rendement;
+    var env=['indoor','outdoor','serre'].filter(function(k){return f[k]===true;});if(env.length)l+=' · '+env.join('/');
+    if(f.effets&&f.effets.length)l+=' · Effets : '+head(f.effets,5);
+    if(f.effets_indesirables&&f.effets_indesirables.length)l+=' · Indésirables : '+head(f.effets_indesirables,3);
+    if(f.gouts&&f.gouts.length)l+=' · Goûts : '+head(f.gouts,5);
+    if(f.terpenes&&f.terpenes.length)l+=' · Terpènes : '+head(f.terpenes,4);
+    var b=banques(f);if(b.length)l+=' · Dispo chez (banques/breeders) : '+b.slice(0,8).join(', ')+(b.length>8?' (+'+(b.length-8)+')':'');
+    if(f.descendants&&f.descendants.length)l+=' · Descendants : '+f.descendants.slice(0,4).map(function(d){return d.nom;}).join(', ');
+    if(f.sources&&f.sources.length)l+=' · Source : '+domain(f.sources[0].url);
+    var st=stockInfo&&stockInfo(f.nom);if(st)l+=' · '+st;
+    return l;
+  }
+
+  /* ── contexte pour buildCtx ── */
+  async function buildContext(txt,extraNames,stockInfo){
+    await load();
+    var picked=detect(txt,MAX_FICHES);
+    var missing=[];
+    (extraNames||[]).forEach(function(n){
+      var e=resolve(n);
+      if(e){if(picked.indexOf(e)<0&&picked.length<MAX_FICHES)picked.push(e);}
+      else missing.push(n);
+    });
+    var fiches=(await Promise.all(picked.map(function(e){return fetchDoc(e.id);}))).filter(Boolean);
+    var ctx='';
+    if(fiches.length){
+      ctx='\n\n[BASE STRAINSAGE — base de variétés de la boutique, source PRIORITAIRE : ces faits priment sur tes connaissances et sur le web, ne les contredis pas]\n'+
+        fiches.map(function(f){return compact(f,stockInfo);}).join('\n')+
+        '\nUtilise ces valeurs dans le JSON des cartes (THC, CBD, floraison, lignée). Pour « où acheter » ou le champ seedbank, choisis parmi les banques/breeders listés après « Dispo chez ». Une info absente de la fiche est inconnue : dis-le plutôt que d\'inventer.';
+    }
+    return {ctx:ctx,found:fiches.map(function(f){return f.nom;}),detected:picked.map(function(e){return e.nom;}),missing:missing,size:entries.length};
+  }
+
+  /* ── stock enrichi par la base ── */
+  async function stockFacts(stock){
+    await load();
+    var out={};if(!stock||!stock.length||!entries.length)return out;
+    var items=stock.slice(0,MAX_STOCK).map(function(s,i){var e=resolve(s.nom);return e?{i:i,e:e}:null;}).filter(Boolean);
+    var got=await Promise.all(items.map(function(x){return fetchDoc(x.e.id);}));
+    items.forEach(function(x,j){
+      var f=got[j];if(!f)return;
+      var p=[];
+      if(f.type)p.push(f.type);
+      var thc=range(f.thc_min,f.thc_max,'%');if(thc)p.push('THC '+thc);
+      var fl=range(f.floraison_sem_min,f.floraison_sem_max,' sem.');if(fl)p.push('flo '+fl);
+      if(f.effets&&f.effets.length)p.push(head(f.effets,3));
+      if(f.gouts&&f.gouts.length)p.push(head(f.gouts,3));
+      if(p.length)out[x.i]='[base : '+p.join(' · ')+']';
+    });
+    return out;
+  }
+
+
+  /* ══ RECHERCHE PAR CRITÈRES ══
+     Les facettes (faits compacts de chaque fiche) sont chargées à la première demande par critères.
+     Une phrase libre est traduite en critères : effets, goûts, type, THC, CBD, floraison, culture…
+     Chaque fiche reçoit un score = part des critères remplis ; les critères « à éviter » retirent des points. */
+  var facets=null, facetsLoading=null;
+  function loadFacets(){
+    if(facets)return Promise.resolve(facets);
+    if(facetsLoading)return facetsLoading;
+    facetsLoading=(async function(){
+      var list=[];
+      try{
+        var meta=await db.collection(IDX).doc('meta').get();
+        var n=meta.exists?(meta.data().fparts||0):0;
+        var snaps=await Promise.all(Array.from({length:n},function(_,i){return db.collection(IDX).doc('f_'+i).get();}));
+        var byId={};entries.forEach(function(e){byId[e.id]=e;});
+        snaps.forEach(function(s){if(!s.exists)return;(s.data().entries||[]).forEach(function(str){
+          var p=String(str).split('|');
+          var num=function(v){return v===''||v===undefined?null:parseFloat(v);};
+          var lst=function(v){return v?v.split(','):[];};
+          var e=byId[p[0]];
+          list.push({id:p[0],e:e,nom:e?e.nom:p[0],type:p[1],dom:p[2],thcMin:num(p[3]),thcMax:num(p[4]),cbdMax:num(p[5]),floMin:num(p[6]),floMax:num(p[7]),
+            auto:p[8]==='1'?true:p[8]==='0'?false:(e&&/\bauto\b/.test(nrm(e.nom))?true:null),
+            diff:p[9],haut:p[10],rend:p[11],env:p[12]||'',mold:p[13]==='1'?true:p[13]==='0'?false:null,nProd:parseInt(p[14]||'0',10)||0,
+            eff:lst(p[15]),neg:lst(p[16]),gouts:lst(p[17]),terps:lst(p[18])});
+        });});
+      }catch(e){console.warn('[VarDB] facettes illisibles',e&&e.message);}
+      facets=list;return list;
+    })();
+    return facetsLoading;
+  }
+
+  // q : repérage dans la demande (texte normalisé, sans accents) · d : repérage dans les valeurs de la fiche (FR et EN)
+  var EFFECTS=[
+    {k:'relax',l:'relaxant',q:/\b(relax\w*|detente|detendre|detendu\w*|calme\w*|apais\w*|chill\w*|zen|decompress\w*|tranquille\w*|stress\w*)\b/,d:/\b(relax\w*|calm\w*|chill\w*|detente|apais\w*|tranquil\w*|peace\w*|paisib\w*)\b/},
+    {k:'sleep',l:'sommeil',q:/\b(dormir|sommeil\w*|endorm\w*|insomni\w*|sleep\w*|sedati\w*|soir\w*|nuit|couch\w*|canape)\b/,d:/\b(sleep\w*|sommeil\w*|sedat\w*|somnol\w*|couch\w*|drows\w*|tired|fatigu\w*|endorm\w*)\b/},
+    {k:'energy',l:'énergisant',q:/\b(energ\w*|stimul\w*|dynami\w*|peche|motiv\w*|reveil\w*|matin\w*|journee|actif|active|boost\w*|uplift\w*|tonique\w*)\b/,d:/\b(energ\w*|stimul\w*|uplift\w*|dynami\w*|active|motiv\w*|alert\w*|awake)\b/},
+    {k:'euphoria',l:'euphorique',q:/\b(euphori\w*|joie|joyeu\w*|heureu\w*|happy|humeur|rire|rigol\w*|giggl\w*|fun|festi\w*|fete|planer|planant\w*)\b/,d:/\b(euphor\w*|happy|heureu\w*|joy\w*|giggl\w*|rire|gai\w*|blissful)\b/},
+    {k:'creative',l:'créatif',q:/\b(creati\w*|inspir\w*|artist\w*|musique|ecrire|dessin\w*|imagin\w*)\b/,d:/\b(creat\w*|inspir\w*|imagin\w*)\b/},
+    {k:'focus',l:'concentration',q:/\b(concentr\w*|focus\w*|bosser|etudi\w*|productiv\w*|lucide\w*)\b/,d:/\b(focus\w*|concentr\w*|clear\w*|lucid\w*)\b/},
+    {k:'social',l:'sociable',q:/\b(social\w*|sociable\w*|bavard\w*|potes|amis|soiree\w*|talkativ\w*|apero)\b/,d:/\b(talk\w*|social\w*|bavard\w*|sociab\w*)\b/},
+    {k:'hungry',l:'appétit',q:/\b(appetit|faim|munch\w*|hungry)\b/,d:/\b(hungr\w*|appetit\w*|faim|munch\w*)\b/},
+    {k:'pain',l:'douleurs',q:/\b(douleur\w*|migrain\w*|arthr\w*|inflamm\w*|courbatur\w*|musculaire\w*|mal de dos)\b/,d:/\b(pain\w*|douleur\w*|inflam\w*|muscl\w*|analges\w*)\b/}
+  ];
+  var TASTES=[
+    {k:'fruity',l:'fruité',q:/\b(frui\w*)\b/,d:/\b(fruit\w*|berr\w*|baie\w*|citr\w*|agrum\w*|tropic\w*|mango\w*|mangue\w*|grape\w*|raisin\w*|apple\w*|pomme\w*|peach\w*|peche\w*|cherr\w*|ceris\w*|strawberr\w*|fraise\w*|melon\w*|banan\w*|pineapple\w*|ananas|lemon\w*|citron\w*|orange\w*|lime\w*|grapefruit\w*|pamplemousse\w*|blueberr\w*|myrtille\w*|passion\w*|papay\w*|plum\w*|prune\w*|kiwi\w*|guava|goyave|apricot\w*|abricot\w*)\b/},
+    {k:'citrus',l:'agrumes',q:/\b(citron\w*|lemon\w*|agrum\w*|citrus|lime|orange\w*|pamplemousse\w*|grapefruit\w*|mandarine\w*|tangerine\w*|zest\w*|acidul\w*)\b/,d:/\b(citr\w*|lemon\w*|lime\w*|orange\w*|agrum\w*|grapefruit\w*|pamplemousse\w*|tangerin\w*|mandarin\w*)\b/},
+    {k:'tropical',l:'tropical',q:/\b(tropica\w*|mangue\w*|mango\w*|ananas|pineapple\w*|passion|papaye\w*|papaya\w*|exotique\w*|coco)\b/,d:/\b(tropic\w*|mango\w*|mangue\w*|pineapple\w*|ananas|passion\w*|papay\w*|coconut\w*|coco|guava|goyave|exoti\w*|banan\w*|kiwi\w*)\b/},
+    {k:'berry',l:'fruits rouges',q:/\b(baies?|berr\w*|fraise\w*|framboise\w*|myrtille\w*|cassis|mures?|fruits rouges)\b/,d:/\b(berr\w*|baie\w*|fraise\w*|strawberr\w*|framboi\w*|raspberr\w*|myrtil\w*|blueberr\w*|cassis|mure\w*|blackberr\w*)\b/},
+    {k:'grape',l:'raisin',q:/\b(raisin\w*|grape\w*)\b/,d:/\b(grape\w*|raisin\w*|wine|vin)\b/},
+    {k:'sweet',l:'sucré',q:/\b(sucr\w*|sweet\w*|bonbon\w*|candy|miel|honey|vanill\w*|dessert\w*|gourmand\w*|caramel\w*|cream\w*|cremeu\w*)\b/,d:/\b(sweet\w*|sucr\w*|candy|bonbon\w*|honey|miel|vanill\w*|caramel\w*|cream\w*|crem\w*|dessert\w*|sugar\w*|gourmand\w*)\b/},
+    {k:'earthy',l:'terreux',q:/\b(terreu\w*|earth\w*|boise\w*|woody|musqu\w*|hash\w*)\b/,d:/\b(earth\w*|terreu\w*|terre|wood\w*|bois\w*|musk\w*|musqu\w*|hash\w*|soil)\b/},
+    {k:'pine',l:'pin',q:/\b(pin|pins|sapin\w*|resin\w*|conifere\w*)\b/,d:/\b(pine|pin|sapin\w*|resin\w*|conif\w*|fir)\b/},
+    {k:'fuel',l:'diesel / gaz',q:/\b(diesel|fuel|gas|gaz|essence|carburant\w*|chem\w*|chimique\w*)\b/,d:/\b(diesel|fuel\w*|gas\w*|gaz|petrol\w*|chemic\w*|chimiq\w*|ammon\w*)\b/},
+    {k:'skunk',l:'skunk',q:/\b(skunk\w*|putois)\b/,d:/\b(skunk\w*|putois|pungent\w*)\b/},
+    {k:'spicy',l:'épicé',q:/\b(epic\w*|poivr\w*|spic\w*|pepper\w*|piquant\w*)\b/,d:/\b(spic\w*|epic\w*|pepper\w*|poivr\w*|clove\w*|girofle|cinnamon|cannelle)\b/},
+    {k:'cheese',l:'fromage',q:/\b(fromage\w*|cheese\w*)\b/,d:/\b(chees\w*|fromag\w*)\b/},
+    {k:'garlic',l:'ail',q:/\b(ail|garlic|oignon\w*|onion\w*)\b/,d:/\b(garlic|ail|onion\w*|oignon\w*)\b/},
+    {k:'mint',l:'menthe',q:/\b(menthe\w*|mint\w*|menthol\w*)\b/,d:/\b(mint\w*|menth\w*)\b/},
+    {k:'floral',l:'floral',q:/\b(floral\w*|lavand\w*|fleuri\w*)\b/,d:/\b(floral\w*|flower\w*|fleur\w*|lavend\w*|lavand\w*|rose|violet\w*)\b/},
+    {k:'coffee',l:'café / chocolat',q:/\b(cafe|coffee|chocolat\w*|cacao|cocoa)\b/,d:/\b(coffee|cafe|chocolat\w*|cacao|cocoa)\b/},
+    {k:'herbal',l:'herbacé',q:/\b(herbac\w*|herbal)\b/,d:/\b(herb\w*|tea|the)\b/}
+  ];
+  var AVOID=[
+    {k:'noparano',l:'sans parano ni anxiété',q:/\b(parano\w*|anxi\w*|angoiss\w*|panique\w*|bad trip|crise)\b/,d:/\b(parano\w*|anxi\w*|angoiss\w*|panic\w*|paniqu\w*)\b/},
+    {k:'nodizzy',l:'sans vertiges',q:/\b(vertige\w*|tourni\w*|dizz\w*)\b/,d:/\b(dizz\w*|vertig\w*)\b/},
+    {k:'nohead',l:'sans maux de tête',q:/\b(mal de tete|maux de tete|migraine\w*|headache\w*)\b/,d:/\b(headache\w*|mal de tete|migrain\w*)\b/}
+  ];
+  var NEG=/\b(pas|sans|evite\w*|eviter|non|aucun\w*|deteste\w*|horreur|plus jamais|n aime pas|naime pas|j aime pas|jaime pas|hors de question)\s+(\w+\s+){0,3}$/;
+  function negated(msg,idx){return NEG.test(msg.slice(Math.max(0,idx-40),idx));}
+
+  function parseCriteria(txt,drop){
+    var msg=' '+nrm(txt)+' ',out=[];
+    function add(c){if(!out.some(function(x){return x.k===c.k;}))out.push(c);}
+    EFFECTS.concat(TASTES).forEach(function(c){
+      var m=c.q.exec(msg);if(!m)return;
+      var fam=EFFECTS.indexOf(c)>-1?'eff':'gout';
+      if(negated(msg,m.index))add({k:'no-'+c.k,l:'pas '+c.l,fam:'avoid',w:1,test:function(f){return f[fam==='eff'?'eff':'gouts'].some(function(t){return c.d.test(t);})?-1:0;}});
+      else add({k:c.k,l:c.l,fam:fam,w:1,test:function(f){return f[fam==='eff'?'eff':'gouts'].some(function(t){return c.d.test(t);})?1:0;}});
+    });
+    AVOID.forEach(function(c){if(c.q.test(msg))add({k:c.k,l:c.l,fam:'avoid',w:1,test:function(f){return f.neg.some(function(t){return c.d.test(t);})?-1:0;}});});
+    // type
+    var wantI=/\bindica\b/.test(msg),wantS=/\bsativa\b/.test(msg);
+    if(wantI&&!wantS)add({k:'indica',l:'indica',fam:'type',w:1.2,test:function(f){return f.type==='i'?1:(f.type==='h'&&f.dom==='i')?0.7:0;}});
+    else if(wantS&&!wantI)add({k:'sativa',l:'sativa',fam:'type',w:1.2,test:function(f){return f.type==='s'?1:(f.type==='h'&&f.dom==='s')?0.7:0;}});
+    else if(/\bhybride?s?\b/.test(msg))add({k:'hybride',l:'hybride',fam:'type',w:1,test:function(f){return f.type==='h'?1:0;}});
+    // autofloraison
+    if(/\b(auto|autos|autofloraison\w*|autoflo\w*|automatique\w*)\b/.test(msg)&&!/\bphotoperiod\w*/.test(msg))add({k:'auto',l:'autofloraison',fam:'culture',w:1.5,test:function(f){return f.auto===true?1:0;}});
+    else if(/\b(photoperiod\w*|photo period\w*|non auto)\b/.test(msg))add({k:'photo',l:'photopériode',fam:'culture',w:1.2,test:function(f){return f.auto===false||(f.auto===null&&f.e&&!/\bauto\b/.test(nrm(f.nom)))?1:0;}});
+    // floraison
+    var mw=msg.match(/\b(?:moins de|max\w*|en|sous|pas plus de)\s*(\d{1,2})\s*(?:sem\w*|weeks?)\b/),md=msg.match(/\b(?:moins de|max\w*|en|sous)\s*(\d{2,3})\s*(?:jours|j)\b/);
+    var floMax=mw?parseInt(mw[1],10):md?Math.round(parseInt(md[1],10)/7):(/\b(floraison|flo|fleurit|fleurir|recolte)\s+(\w+\s+)?(courte|rapide|vite|express)\b|\b(courte|rapide)\s+floraison\b|\b(fast|express)\b|\brapide a (fleurir|recolter)\b/.test(msg)?8:null);
+    if(floMax)add({k:'flo',l:'floraison ≤ '+floMax+' sem.',fam:'culture',w:1.3,test:function(f){var v=f.floMax!=null?f.floMax:f.floMin;return v==null?0:v<=floMax?1:v<=floMax+1?0.4:0;}});
+    else if(/\bfloraison\s+(\w+\s+)?longue\b/.test(msg))add({k:'flolong',l:'floraison longue',fam:'culture',w:1,test:function(f){var v=f.floMin!=null?f.floMin:f.floMax;return v!=null&&v>=10?1:0;}});
+    // THC
+    var lt=msg.match(/\b(?:moins de|max\w*|pas plus de|sous)\s*(\d{1,2})\s*(?:%|pourcent|pc)?\s*(?:de\s+)?thc\b/)||msg.match(/\bthc\s*(?:<|inferieur a|sous|max\w*)\s*(\d{1,2})/);
+    var gt=msg.match(/\b(?:plus de|au moins|minimum|min|>)\s*(\d{1,2})\s*(?:%|pourcent|pc)?\s*(?:de\s+)?thc\b/)||msg.match(/\bthc\s*(?:>|superieur a|au moins|min\w*|plus de)\s*(\d{1,2})/);
+    var light=/\b(pas trop fort\w*|pas forte?s?|trop forte?s?|leger\w*|legere\w*|doux|douce|faible\w* thc|thc faible|soft|modere\w*)\b/.test(msg);
+    var strong=!light&&/\b(fort|forte|forts|fortes|puissant\w*|costaud\w*|defonc\w*|tres fort\w*|percutant\w*|thc eleve|beaucoup de thc|haut thc|high thc)\b/.test(msg);
+    if(gt)add({k:'thcgt',l:'THC ≥ '+gt[1]+' %',fam:'chimie',w:1.2,test:function(f){return f.thcMax==null?0:f.thcMax>=+gt[1]?1:0;}});
+    else if(strong)add({k:'strong',l:'puissante (THC ≥ 22 %)',fam:'chimie',w:1.1,test:function(f){return f.thcMax==null?0:f.thcMax>=22?1:f.thcMax>=20?0.5:0;}});
+    if(lt)add({k:'thclt',l:'THC ≤ '+lt[1]+' %',fam:'chimie',w:1.2,test:function(f){var v=f.thcMax!=null?f.thcMax:f.thcMin;return v==null?0:v<=+lt[1]?1:0;}});
+    else if(light)add({k:'light',l:'douce (THC ≤ 17 %)',fam:'chimie',w:1.1,test:function(f){var v=f.thcMax!=null?f.thcMax:f.thcMin;return v==null?0:v<=17?1:v<=19?0.5:0;}});
+    // CBD
+    if(/\bcbd\b/.test(msg))add({k:'cbd',l:'riche en CBD',fam:'chimie',w:1.3,test:function(f){return f.cbdMax==null?0:f.cbdMax>=4?1:f.cbdMax>=1?0.3:0;}});
+    // culture
+    if(/\b(debutant\w*|facile\w*|simple a cultiver|novice\w*|premiere fois|premier grow|easy)\b/.test(msg))add({k:'facile',l:'facile à cultiver',fam:'culture',w:1.2,test:function(f){return f.diff==='f'?1:f.diff==='m'?0.4:0;}});
+    else if(/\b(expert\w*|difficile\w*|exigeant\w*|challenge)\b/.test(msg))add({k:'difficile',l:'pour expert',fam:'culture',w:1,test:function(f){return f.diff==='d'?1:0;}});
+    if(/\b(compact\w*|petite plante|petit\w* taille|discret\w*|discrete\w*|placard\w*|stealth|pas trop grande?)\b/.test(msg))add({k:'compacte',l:'compacte',fam:'culture',w:1,test:function(f){return f.haut==='c'?1:f.haut==='m'?0.3:0;}});
+    else if(/\b(grande plante|tres grande?|geante?|haute taille)\b/.test(msg))add({k:'grande',l:'grande taille',fam:'culture',w:1,test:function(f){return f.haut==='g'?1:0;}});
+    if(/\b(gros rendement|rendement (eleve|important|max\w*|enorme|xxl)|tres productive?|productive?s?|grosse recolte|max de recolte)\b/.test(msg))add({k:'rend',l:'rendement élevé',fam:'culture',w:1,test:function(f){return f.rend==='e'?1:f.rend==='m'?0.3:0;}});
+    if(/\b(outdoor|exterieur\w*|dehors|jardin\w*|balcon\w*|terrasse\w*|plein air|plein champ)\b/.test(msg))add({k:'outdoor',l:'outdoor',fam:'culture',w:1,test:function(f){return f.env.indexOf('o')>-1?1:0;}});
+    if(/\b(indoor|interieur\w*|placard\w*|tente\w*|chambre de culture|growbox|grow box|sous lampe\w*)\b/.test(msg))add({k:'indoor',l:'indoor',fam:'culture',w:1,test:function(f){return f.env.indexOf('i')>-1?1:0;}});
+    if(/\b(serre\w*|greenhouse)\b/.test(msg))add({k:'serre',l:'serre',fam:'culture',w:1,test:function(f){return f.env.indexOf('s')>-1?1:0;}});
+    if(/\b(moisissure\w*|mildiou|botrytis|humid\w*|pluie\w*|pluvieu\w*|pays basque|bord de mer)\b/.test(msg))add({k:'mold',l:'résiste à l\'humidité',fam:'culture',w:1.1,test:function(f){return f.mold===true?1:0;}});
+    // critères retirés par le client (bouton × du bandeau)
+    if(drop&&drop.length)out=out.filter(function(c){return drop.indexOf(c.k)<0;});
+    return out;
+  }
+
+  var SIMILAR=/\b(similaire\w*|comme|proche\w*|ressembl\w*|alternative\w*|equivalent\w*|meme genre|meme style|meme profil|genre de|dans le style|qui rappelle\w*)\b/;
+  function jacc(a,b){if(!a.length||!b.length)return 0;var n=0;a.forEach(function(x){if(b.indexOf(x)>-1)n++;});return n/(a.length+b.length-n);}
+
+  // opts : {exclude:[noms], stockInfo:fn(nom)→'EN STOCK'|'', limit, similarTo:entrée}
+  async function search(txt,opts){
+    opts=opts||{};
+    await load();
+    var crit=parseCriteria(txt,opts.drop),ref=null;
+    var detected=opts.detected||detect(txt,3);
+    var wantSimilar=SIMILAR.test(' '+nrm(txt)+' ')&&detected.length>0;
+    if(!crit.length&&!wantSimilar)return {criteria:[],items:[],total:0,similarTo:null};
+    var all=await loadFacets();
+    if(!all.length)return {criteria:crit,items:[],total:0,similarTo:null,noFacets:true};
+    if(wantSimilar){ref=all.find(function(f){return f.id===detected[0].id;})||null;}
+    // un critère que la base ne renseigne pour aucune fiche (ex. outdoor) est écarté du calcul et signalé
+    var unsupported=crit.filter(function(c){return !all.some(function(f){return c.test(f)!==0;});});
+    crit=crit.filter(function(c){return unsupported.indexOf(c)<0;});
+    if(!crit.length&&!ref)return {criteria:[],unsupported:unsupported,items:[],total:0,similarTo:null};
+    var excl=(opts.exclude||[]).map(nrm).filter(Boolean);
+    var skip={};detected.forEach(function(e){skip[e.id]=1;});
+    var pos=crit.filter(function(c){return c.fam!=='avoid';}),wsum=pos.reduce(function(s,c){return s+c.w;},0);
+    var scored=[];
+    all.forEach(function(f){
+      if(skip[f.id]&&ref)return;
+      var nn=nrm(f.nom);
+      if(excl.some(function(x){return x.length>2&&(nn===x||nn.indexOf(x)>-1);}))return;
+      var hits=0,sc=0,hitLabels=[],strong=0;
+      crit.forEach(function(c){var v=c.test(f);if(c.fam==='avoid'){sc+=v*0.6;}else if(v>0){sc+=v*c.w;hits++;if(v>=0.7){hitLabels.push(c.l);strong++;}}});
+      var score=wsum?sc/wsum:0;
+      if(ref){
+        var sim=jacc(f.eff,ref.eff)*0.4+jacc(f.gouts,ref.gouts)*0.35+jacc(f.terps,ref.terps)*0.15+(f.type&&f.type===ref.type?0.1:0);
+        score=wsum?score*0.5+sim*0.5:sim;
+        if(sim<0.12)return;
+      }else if(!hits)return;
+      var st=opts.stockInfo&&opts.stockInfo(f.nom);
+      scored.push({f:f,score:score+(st==='EN STOCK'?0.15:0)+Math.min(f.nProd,30)/600,hits:hits,hitLabels:hitLabels,stock:st||'',all:strong===pos.length});
+    });
+    scored.sort(function(a,b){return b.score-a.score;});
+    // total = variétés qui remplissent tous les critères (ou, en mode « profil proche », toutes les proches retenues)
+    var full=ref&&!pos.length?scored.length:scored.filter(function(x){return x.all;}).length;
+    return {criteria:crit,unsupported:unsupported,items:scored.slice(0,opts.limit||12),total:full,partial:scored.length,similarTo:ref?ref.nom:null};
+  }
+
+  function facetLine(it){
+    var f=it.f,p=[];
+    var t={i:'indica',s:'sativa',h:'hybride'}[f.type];if(t)p.push(t+(f.type==='h'&&f.dom&&f.dom!=='e'?' ('+({i:'indica',s:'sativa'})[f.dom]+')':''));
+    if(f.auto===true)p.push('auto');
+    if(f.thcMax!=null)p.push('THC '+(f.thcMin!=null&&f.thcMin!==f.thcMax?f.thcMin+'–':'')+f.thcMax+'%');
+    if(f.cbdMax!=null&&f.cbdMax>=1)p.push('CBD '+f.cbdMax+'%');
+    if(f.floMin!=null||f.floMax!=null)p.push('flo '+(f.floMin!=null&&f.floMax!=null&&f.floMin!==f.floMax?f.floMin+'–'+f.floMax:(f.floMax!=null?f.floMax:f.floMin))+' sem.');
+    if(f.eff.length)p.push('effets : '+f.eff.slice(0,4).join(', '));
+    if(f.gouts.length)p.push('goûts : '+f.gouts.slice(0,4).join(', '));
+    if(f.nProd)p.push(f.nProd+' banque'+(f.nProd>1?'s':''));
+    if(it.stock)p.push(it.stock);
+    return '- '+f.nom+' · '+p.join(' · ')+(it.hitLabels.length?' · ✓ '+it.hitLabels.join(', '):'');
+  }
+  async function criteriaContext(txt,opts){
+    var r=await search(txt,opts);
+    if(!r.items.length)return {ctx:'',info:r};
+    var head=r.similarTo?'variétés au profil proche de '+r.similarTo+(r.criteria.length?' et correspondant à : '+r.criteria.map(function(c){return c.l;}).join(', '):''):'critères : '+r.criteria.map(function(c){return c.l;}).join(', ');
+    // fiches complètes des 3 premières : banques/breeders et sources
+    var top=await Promise.all(r.items.slice(0,3).map(function(it){return fetchDoc(it.f.id);}));
+    var ctx='\n\n[CANDIDATS BASE STRAINSAGE — '+head+'] '+(r.total?r.total+' variété(s) de la base remplissent tous les critères':'aucune variété ne remplit tous les critères, voici les plus proches')+' ; voici les mieux classées (critères remplis, puis stock, puis disponibilité) :\n'+
+      r.items.map(facetLine).join('\n')+
+      (top.filter(Boolean).length?'\nDétail des 3 premières :\n'+top.filter(Boolean).map(function(f){return compact(f,opts&&opts.stockInfo);}).join('\n'):'')+
+      (r.unsupported&&r.unsupported.length?'\nLa base ne renseigne pas : '+r.unsupported.map(function(c){return c.l;}).join(', ')+' — vérifie ces points avec tes connaissances et signale-le au client.':'')+
+      '\nRecommande en priorité parmi ces candidats (d\'abord ceux EN STOCK), avec leurs vraies valeurs. N\'invente pas de variété hors de cette liste sans le signaler.';
+    return {ctx:ctx,info:r};
+  }
+
+
+  /* ══ ARBRE GÉNÉALOGIQUE ══
+     Remonte les parents de fiche en fiche (jusqu à 4 générations, 3 parents max par nœud).
+     Un parent absent de la base reste affiché avec son seul nom. */
+  async function lineage(name,depth){
+    depth=depth||3;await load();
+    var seen={};
+    async function node(n,level){
+      var e=resolve(n),f=e?await fetchDoc(e.id):null;
+      var key=e?e.id:'n:'+nrm(n);
+      var out={nom:f?f.nom:cleanParent(n),type:f&&f.type||'',photo:f&&f.photos&&f.photos.length?f.photos[0]:'',known:!!f,parents:[]};
+      if(seen[key]||level>=depth||!f||!f.parents||!f.parents.length){seen[key]=1;return out;}
+      seen[key]=1;
+      var ps=f.parents.slice(0,3);
+      out.parents=await Promise.all(ps.map(function(p){return node(p,level+1);}));
+      return out;
+    }
+    return node(name,1);
+  }
+  function cleanParent(n){return String(n||'').replace(/[™®©]/g,'').replace(/\s+/g,' ').trim();}
+
+  window.VarDB={lineage:lineage,load:load,detect:detect,resolve:resolve,idOf:idOf,get:get,cached:cached,prefetch:prefetch,
+    compact:compact,buildContext:buildContext,stockFacts:stockFacts,banques:banques,domain:domain,norm:nrm,
+    search:search,criteriaContext:criteriaContext,parseCriteria:parseCriteria,loadFacets:loadFacets,
+    size:function(){return entries.length;}};
+})();

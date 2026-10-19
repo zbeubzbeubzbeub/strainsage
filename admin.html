@@ -4,9 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>StrainSage Pro — Admin</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2048%2048%22%3E%3Crect%20x%3D%222%22%20y%3D%222%22%20width%3D%2244%22%20height%3D%2244%22%20rx%3D%2212%22%20fill%3D%22%2317201b%22/%3E%3Cg%20transform%3D%22translate%289%209%29%20scale%281%29%22%3E%3Cpath%20d%3D%22M15%2030V17.6%22%20stroke%3D%22%234cc38a%22%20stroke-width%3D%223%22%20stroke-linecap%3D%22round%22/%3E%3Cpath%20d%3D%22M14.6%2018.8C9.6%2019.8%202.6%2016.8.8%207.6%208.4%206.2%2013.8%2010.8%2014.6%2018.8Z%22%20fill%3D%22%234cc38a%22/%3E%3Cpath%20d%3D%22M15.4%2018.8C16.2%2010.8%2021.6%206.2%2029.2%207.6%2027.4%2016.8%2020.4%2019.8%2015.4%2018.8Z%22%20fill%3D%22%234cc38a%22/%3E%3Cpath%20d%3D%22M15%2017.8C12.4%2013.8%2012.6%205.8%2015%201%2017.4%205.8%2017.6%2013.8%2015%2017.8Z%22%20fill%3D%22%23a8e6c4%22/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -15,87 +16,47 @@
    THÈMES
 ══════════════════════════════════ */
 :root,[data-theme="light"]{
-  --bg:#faf7f2;
-  --bg2:#f4f0e8;
-  --bg3:#ffffff;
-  --bg4:#f0ece4;
-  --panel:#ffffff;
-  --accent:#2d6b26;
-  --accent2:#3d8a33;
-  --accent-fg:rgba(45,107,38,0.08);
-  --gold:#8a6a1e;
-  --gold2:#a07c28;
-  --gold3:#c49a3c;
-  --goldfog:rgba(138,106,30,0.08);
-  --goldfog2:rgba(138,106,30,0.12);
-  --text1:#1c1c14;
-  --text2:#4a4a3a;
-  --text3:#8a8a72;
-  --border:rgba(0,0,0,0.07);
-  --border2:rgba(0,0,0,0.12);
-  --bordergold:rgba(138,106,30,0.2);
-  --shadow:0 2px 12px rgba(0,0,0,0.06);
-  --shadow2:0 4px 24px rgba(0,0,0,0.1);
-  --fog:rgba(0,0,0,0.025);
-  --fog2:rgba(0,0,0,0.05);
-  --red:#dc2626;
-  --redfog:rgba(220,38,38,0.07);
-  --badge-green-bg:rgba(45,107,38,0.1);
-  --badge-green-color:#2d6b26;
-  --badge-green-border:rgba(45,107,38,0.2);
-  --badge-red-bg:rgba(220,38,38,0.08);
-  --badge-red-color:#dc2626;
-  --badge-red-border:rgba(220,38,38,0.18);
-  --badge-gold-bg:rgba(138,106,30,0.1);
-  --badge-gold-color:#8a6a1e;
-  --badge-gold-border:rgba(138,106,30,0.2);
-  --margin-pos:#2d6b26;
-  --margin-neg:#dc2626;
-  --bar-fill:linear-gradient(90deg,#2d6b26,#6aaa60);
-  --r:10px;--rl:14px;
+  --font-ui:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-display:'Bricolage Grotesque','Figtree',system-ui,sans-serif;
+  --bg:#f6f5f1;--bg2:#f6f5f1;--bg3:#ffffff;--bg4:#eeede7;--panel:#ffffff;
+  --accent:#00703c;--accent2:#005c31;--accent-fg:#e2f0e7;
+  --ink:#17201b;--red-brand:#c8102e;
+  --gold:#8a5a00;--gold2:#8a5a00;--gold3:#b07a14;--goldfog:#f6ecd8;--goldfog2:#f6ecd8;
+  --text1:#17201b;--text2:#424b45;--text3:#5c655f;
+  --border:#e2e0d8;--border2:#cbc8bd;--bordergold:#e4cf9f;
+  --shadow:0 1px 2px rgba(23,32,27,.06),0 4px 14px rgba(23,32,27,.05);
+  --shadow2:0 2px 6px rgba(23,32,27,.08),0 12px 32px rgba(23,32,27,.10);
+  --fog:rgba(23,32,27,.025);--fog2:rgba(23,32,27,.05);
+  --red:#a50d26;--redfog:#fbe8eb;
+  --badge-green-bg:#e2f0e7;--badge-green-color:#00703c;--badge-green-border:#b7dcc5;
+  --badge-red-bg:#fbe8eb;--badge-red-color:#a50d26;--badge-red-border:#f2c2ca;
+  --badge-gold-bg:#f6ecd8;--badge-gold-color:#8a5a00;--badge-gold-border:#e4cf9f;
+  --margin-pos:#00703c;--margin-neg:#a50d26;
+  --bar-fill:#0b5f73;
+  --focus:0 0 0 3px rgba(0,112,60,.35);
+  --r:10px;--rl:16px;
 }
-
 [data-theme="dark"]{
-  --bg:#0e1117;
-  --bg2:#0d1016;
-  --bg3:#161b22;
-  --bg4:#1c2330;
-  --panel:#0e1117;
-  --accent:#4ade80;
-  --accent2:#22c55e;
-  --accent-fg:rgba(74,222,128,0.08);
-  --gold:#fbbf24;
-  --gold2:#f59e0b;
-  --gold3:#d97706;
-  --goldfog:rgba(251,191,36,0.08);
-  --goldfog2:rgba(251,191,36,0.12);
-  --text1:rgba(255,255,255,0.92);
-  --text2:rgba(255,255,255,0.55);
-  --text3:rgba(255,255,255,0.28);
-  --border:rgba(255,255,255,0.07);
-  --border2:rgba(255,255,255,0.12);
-  --bordergold:rgba(251,191,36,0.2);
-  --shadow:0 2px 12px rgba(0,0,0,0.4);
-  --shadow2:0 4px 24px rgba(0,0,0,0.5);
-  --fog:rgba(255,255,255,0.025);
-  --fog2:rgba(255,255,255,0.05);
-  --red:#f87171;
-  --redfog:rgba(248,113,113,0.08);
-  --badge-green-bg:rgba(74,222,128,0.1);
-  --badge-green-color:#4ade80;
-  --badge-green-border:rgba(74,222,128,0.22);
-  --badge-red-bg:rgba(248,113,113,0.1);
-  --badge-red-color:#f87171;
-  --badge-red-border:rgba(248,113,113,0.22);
-  --badge-gold-bg:rgba(251,191,36,0.1);
-  --badge-gold-color:#fbbf24;
-  --badge-gold-border:rgba(251,191,36,0.22);
-  --margin-pos:#4ade80;
-  --margin-neg:#f87171;
-  --bar-fill:linear-gradient(90deg,#16a34a,#4ade80);
+  --bg:#111513;--bg2:#111513;--bg3:#1a1f1c;--bg4:#232925;--panel:#1a1f1c;
+  --accent:#4cc38a;--accent2:#38a974;--accent-fg:rgba(76,195,138,.13);
+  --ink:#eef1ec;--red-brand:#cc2741;
+  --gold:#e2ac4a;--gold2:#e2ac4a;--gold3:#e2ac4a;--goldfog:rgba(226,172,74,.13);--goldfog2:rgba(226,172,74,.13);
+  --text1:#eef1ec;--text2:#c3cbc5;--text3:#9aa59d;
+  --border:#2b322e;--border2:#3c4540;--bordergold:rgba(226,172,74,.3);
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25);
+  --shadow2:0 2px 6px rgba(0,0,0,.35),0 12px 32px rgba(0,0,0,.4);
+  --fog:rgba(255,255,255,.025);--fog2:rgba(255,255,255,.05);
+  --red:#ff8a9b;--redfog:rgba(224,50,75,.15);
+  --badge-green-bg:rgba(76,195,138,.13);--badge-green-color:#4cc38a;--badge-green-border:rgba(76,195,138,.3);
+  --badge-red-bg:rgba(224,50,75,.15);--badge-red-color:#ff8a9b;--badge-red-border:rgba(224,50,75,.35);
+  --badge-gold-bg:rgba(226,172,74,.13);--badge-gold-color:#e2ac4a;--badge-gold-border:rgba(226,172,74,.3);
+  --margin-pos:#4cc38a;--margin-neg:#ff8a9b;
+  --bar-fill:#5fb7cc;
+  --focus:0 0 0 3px rgba(76,195,138,.4);
 }
 
-html,body{min-height:100vh;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text1);transition:background-color .25s,color .15s}
+
+html,body{min-height:100vh;font-family:var(--font-ui);background:var(--bg);color:var(--text1);transition:background-color .25s,color .15s}
 *{transition:background-color .2s,border-color .2s,color .15s}
 img,button,input,textarea,select{transition:none!important}
 
@@ -109,18 +70,18 @@ img,button,input,textarea,select{transition:none!important}
 .login-box{background:var(--panel);border:1px solid var(--border2);border-radius:20px;padding:34px;max-width:420px;width:100%;box-shadow:var(--shadow2)}
 .login-logo{display:flex;align-items:center;gap:13px;margin-bottom:24px}
 .login-mark{width:46px;height:46px;border-radius:13px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 16px rgba(45,107,38,.2)}
-[data-theme="dark"] .login-mark{background:linear-gradient(135deg,#166534,#16a34a)}
-.login-box h1{font-family:'Cormorant Garamond',serif;font-size:21px;color:var(--text1);font-weight:600}
-.login-sub{font-size:10px;color:var(--text3);opacity:.8;letter-spacing:1.2px;text-transform:uppercase;display:block;margin-top:1px}
+
+.login-box h1{font-family:var(--font-display);letter-spacing:-.02em;font-size:21px;color:var(--text1);font-weight:600}
+.login-sub{font-size:10px;color:var(--text3);opacity:.8;display:block;margin-top:1px}
 .login-box p{font-size:13px;color:var(--text2);margin-bottom:18px;line-height:1.65}
-.field-label{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:5px;display:block}
-.field-input{width:100%;padding:11px 14px;border:1px solid var(--border2);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text1);background:var(--bg4);outline:none;margin-bottom:12px}
+.field-label{font-size:10px;color:var(--text3);margin-bottom:5px;display:block}
+.field-input{width:100%;padding:11px 14px;border:1px solid var(--border2);border-radius:10px;font-family:var(--font-ui);font-size:13px;color:var(--text1);background:var(--bg4);outline:none;margin-bottom:12px}
 [data-theme="light"] .field-input{background:#f8f5f0}
 .field-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(45,107,38,.08)}
 [data-theme="dark"] .field-input:focus{box-shadow:0 0 0 3px rgba(74,222,128,.07)}
 .field-input::placeholder{color:var(--text3)}
-.login-btn{width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:13.5px;font-weight:500;cursor:pointer;box-shadow:0 4px 14px rgba(45,107,38,.2)}
-[data-theme="dark"] .login-btn{background:linear-gradient(135deg,#166534,#16a34a)}
+.login-btn{width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-family:var(--font-ui);font-size:13.5px;font-weight:500;cursor:pointer;box-shadow:0 4px 14px rgba(45,107,38,.2)}
+
 .login-btn:hover{opacity:.88}
 .login-err{font-size:12px;color:var(--red);margin-bottom:10px;display:none;padding:8px 12px;background:var(--redfog);border-radius:8px;border:1px solid rgba(220,38,38,.15)}
 
@@ -132,9 +93,9 @@ img,button,input,textarea,select{transition:none!important}
 .topbar{height:56px;background:var(--panel);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:14px;flex-shrink:0;box-shadow:var(--shadow)}
 .topbar-logo{display:flex;align-items:center;gap:9px}
 .topbar-mark{width:30px;height:30px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:14px}
-[data-theme="dark"] .topbar-mark{background:linear-gradient(135deg,#166534,#16a34a)}
-.topbar-name{font-family:'Cormorant Garamond',serif;font-size:16px;color:var(--text1);font-weight:600}
-.topbar-badge{font-size:8.5px;padding:2px 8px;border-radius:5px;background:var(--goldfog2);color:var(--gold2);border:1px solid var(--bordergold);margin-left:4px;letter-spacing:.5px}
+
+.topbar-name{font-family:var(--font-display);letter-spacing:-.02em;font-size:16px;color:var(--text1);font-weight:600}
+.topbar-badge{font-size:8.5px;padding:2px 8px;border-radius:5px;background:var(--goldfog2);color:var(--gold2);border:1px solid var(--bordergold);margin-left:4px;}
 .topbar-shop{font-size:11px;color:var(--accent);background:var(--accent-fg);padding:3px 11px;border-radius:6px;border:1px solid;border-color:rgba(45,107,38,0.15)}
 [data-theme="dark"] .topbar-shop{border-color:rgba(74,222,128,0.15);color:#4ade80}
 .topbar-right{margin-left:auto;display:flex;align-items:center;gap:12px}
@@ -160,30 +121,30 @@ img,button,input,textarea,select{transition:none!important}
 .content::-webkit-scrollbar{width:3px}
 .content::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
 .page{display:none}.page.active{display:block}
-.page-title{font-family:'Cormorant Garamond',serif;font-size:24px;color:var(--text1);font-weight:600;margin-bottom:4px}
+.page-title{font-family:var(--font-display);letter-spacing:-.02em;font-size:24px;color:var(--text1);font-weight:600;margin-bottom:4px}
 .page-sub{font-size:12px;color:var(--text3);margin-bottom:26px;line-height:1.6}
 
 /* ══ STAT CARDS ══ */
 .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px}
 .stat-card{background:var(--panel);border:1px solid var(--border);border-radius:var(--rl);padding:18px;box-shadow:var(--shadow)}
-.stat-val{font-family:'Cormorant Garamond',serif;font-size:34px;color:var(--gold2);font-weight:500;line-height:1}
+.stat-val{font-family:var(--font-display);letter-spacing:-.02em;font-size:34px;color:var(--gold2);font-weight:500;line-height:1}
 [data-theme="dark"] .stat-val{color:var(--accent)}
-.stat-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-top:5px}
+.stat-label{font-size:10px;color:var(--text3);margin-top:5px}
 
 /* ══ SECTION TITLE ══ */
-.section-title{font-size:9.5px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-weight:500;margin-bottom:12px}
+.section-title{font-size:9.5px;color:var(--text3);font-weight:500;margin-bottom:12px}
 
 /* ══ TABLE ══ */
 .table-wrap{background:var(--panel);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;margin-bottom:26px;box-shadow:var(--shadow)}
 .table-header{padding:13px 17px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--fog)}
 .table-header-title{font-size:12.5px;color:var(--text2);font-weight:500}
 table{width:100%;border-collapse:collapse}
-th{padding:9px 15px;text-align:left;font-size:9.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);border-bottom:1px solid var(--border);font-weight:500;white-space:nowrap;background:var(--fog)}
+th{padding:9px 15px;text-align:left;font-size:9.5px;color:var(--text3);border-bottom:1px solid var(--border);font-weight:500;white-space:nowrap;background:var(--fog)}
 td{padding:11px 15px;font-size:12.5px;color:var(--text1);border-bottom:1px solid rgba(0,0,0,0.04)}
 [data-theme="dark"] td{border-bottom:1px solid rgba(255,255,255,0.04)}
 tr:last-child td{border:none}
 tr:hover td{background:var(--fog2)}
-.td-num{font-family:'Cormorant Garamond',serif;font-size:16px;color:var(--gold2)}
+.td-num{font-family:var(--font-display);letter-spacing:-.02em;font-size:16px;color:var(--gold2)}
 [data-theme="dark"] .td-num{color:var(--accent)}
 .td-badge{display:inline-flex;align-items:center;font-size:10px;padding:2px 9px;border-radius:10px;font-weight:500;border:1px solid}
 .td-badge.green{background:var(--badge-green-bg);color:var(--badge-green-color);border-color:var(--badge-green-border)}
@@ -197,9 +158,9 @@ tr:hover td{background:var(--fog2)}
 
 /* ══ BUTTONS ══ */
 .stock-actions{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}
-.btn{height:35px;padding:0 15px;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;border:none;white-space:nowrap;font-weight:500}
+.btn{height:35px;padding:0 15px;border-radius:9px;font-family:var(--font-ui);font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;border:none;white-space:nowrap;font-weight:500}
 .btn-primary{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(45,107,38,.2)}
-[data-theme="dark"] .btn-primary{background:linear-gradient(135deg,#166534,#16a34a)}
+
 .btn-primary:hover{opacity:.88}
 .btn-secondary{background:var(--panel);color:var(--text2);border:1px solid var(--border)}
 .btn-secondary:hover{border-color:var(--border2);color:var(--text1)}
@@ -209,7 +170,7 @@ tr:hover td{background:var(--fog2)}
 .btn-danger:hover{background:rgba(220,38,38,.12)}
 
 /* ══ STOCK TABLE ══ */
-.stock-input{background:transparent;border:none;color:var(--text1);font-family:'DM Sans',sans-serif;font-size:12.5px;width:100%;outline:none;padding:2px 4px;border-radius:5px}
+.stock-input{background:transparent;border:none;color:var(--text1);font-family:var(--font-ui);font-size:12.5px;width:100%;outline:none;padding:2px 4px;border-radius:5px}
 .stock-input:focus{background:var(--bg4);border:1px solid rgba(45,107,38,.25)}
 [data-theme="dark"] .stock-input:focus{background:var(--bg3);border-color:rgba(74,222,128,.2)}
 .margin-cell{font-weight:500}
@@ -238,12 +199,87 @@ tr:hover td{background:var(--fog2)}
 .empty-state{text-align:center;padding:44px 20px;color:var(--text3);font-size:13px;line-height:1.7}
 .empty-icon{font-size:38px;opacity:.2;margin-bottom:10px}
 
+/* ══ BASE DE VARIÉTÉS ══ */
+.vdb-body{padding:18px 20px;display:flex;flex-direction:column;gap:12px}
+.vdb-info{font-size:12px;color:var(--text2);line-height:1.7}
+.vdb-info b{color:var(--text1);font-weight:500}
+.vdb-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.vdb-select{height:32px;padding:0 10px;border:1px solid var(--border2);border-radius:8px;background:var(--bg4);color:var(--text1);font-family:var(--font-ui);font-size:12px;outline:none;max-width:260px}
+.vdb-select:focus{border-color:var(--accent)}
+.vdb-select:disabled{opacity:.55}
+.vdb-select.auto{border-color:var(--badge-green-border);box-shadow:0 0 0 1px var(--badge-green-border)}
+.vdb-select.saved{border-color:var(--bordergold);box-shadow:0 0 0 1px var(--bordergold)}
+.vdb-check{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text2);cursor:pointer}
+.vdb-check input{accent-color:var(--accent)}
+.vdb-foot{padding:13px 17px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:var(--fog)}
+.vdb-note{font-size:11px;color:var(--text3);line-height:1.6}
+.vdb-ex{max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text2);font-size:12px}
+.vdb-fill{display:inline-block;width:46px;height:5px;border-radius:3px;background:var(--fog2);vertical-align:middle;margin-right:6px;overflow:hidden}
+.vdb-fill i{display:block;height:5px;background:var(--bar-fill)}
+.vdb-null{color:var(--text3);font-style:italic}
+.vdb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.vdb-grid .stat-card{padding:14px}
+.vdb-grid .stat-val{font-size:28px}
+.vdb-list{font-size:12px;color:var(--text2);line-height:1.75;max-height:260px;overflow-y:auto;padding:4px 0}
+.vdb-list li{margin-left:18px}
+.vdb-progress{height:8px;border-radius:5px;background:var(--fog2);overflow:hidden}
+.vdb-progress i{display:block;height:8px;width:0;background:var(--bar-fill);transition:width .2s}
+.vdb-detail{padding:12px 15px;background:var(--fog);font-size:12px;color:var(--text2);line-height:1.75}
+.vdb-detail b{color:var(--text1);font-weight:500}
+.vdb-detail a{color:var(--accent)}
+.vdb-search{height:32px;padding:0 12px;border:1px solid var(--border2);border-radius:8px;background:var(--bg4);color:var(--text1);font-family:var(--font-ui);font-size:12px;outline:none;width:240px}
+.vdb-search:focus{border-color:var(--accent)}
+.vdb-sub{font-size:12px;color:var(--text1);font-weight:500;margin-top:4px}
+.btn:disabled{opacity:.5;cursor:default}
+.page-sub code,.vdb-note code,.vdb-info code{font-size:11px;background:var(--fog2);padding:1px 5px;border-radius:4px}
+
+/* ══ IDENTITÉ STRAINSAGE (alignée sur l'app client) ══ */
+html,body{font-family:var(--font-ui);-webkit-font-smoothing:antialiased}
+:focus-visible{outline:none;box-shadow:var(--focus)!important}
+.login-box{border-radius:24px;position:relative;overflow:hidden}
+.login-box::before{content:'';position:absolute;left:0;right:0;top:0;height:8px;background:linear-gradient(90deg,#4a3486 0 33.3%,#0b5f73 33.3% 66.6%,#9a5f00 66.6%)}
+.login-mark,.topbar-mark{display:none}
+.login-box h1{font-size:38px;font-weight:800;letter-spacing:-.04em}
+.login-box h1 em,.topbar-name em{font-style:normal;color:var(--red-brand)}
+.login-sub{font-size:13px;margin-top:4px}
+.login-btn{background:var(--ink);color:var(--bg3);border-radius:99px;box-shadow:none;font-weight:600}
+.field-label{font-size:13px;font-weight:600;color:var(--text1)}
+.field-input{border-radius:12px;font-size:14px}
+.topbar-name{font-size:23px;font-weight:800;letter-spacing:-.03em}
+.topbar-badge{font-size:11px}
+.nav-item{font-size:14px;border-radius:10px}
+.nav-item.active,[data-theme="dark"] .nav-item.active{background:var(--ink);color:var(--bg3);font-weight:600}
+.page-title{font-size:30px;font-weight:800;letter-spacing:-.035em}
+.page-sub{font-size:14px;color:var(--text2)}
+.section-title{font-size:14px;color:var(--text1);font-weight:600}
+.stat-val,[data-theme="dark"] .stat-val{color:var(--text1);font-weight:700;letter-spacing:-.03em}
+.stat-label{font-size:13px}
+th{font-size:12px;color:var(--text2);font-weight:600}
+td{font-size:13.5px}
+.td-num,[data-theme="dark"] .td-num{color:var(--text1);font-weight:600}
+.btn{height:38px;border-radius:99px;font-size:13px;padding:0 16px}
+.btn-primary,[data-theme="dark"] .btn-primary{background:var(--ink);color:var(--bg3);box-shadow:none}
+.btn-gold{background:var(--goldfog);color:var(--gold2)}
+.period-tab{font-size:13px}
+.toast{border-radius:12px;font-size:14px}
+.vdb-sub{font-size:14px}
+.table-header-title{font-size:14px;color:var(--text1);font-weight:600}
+
 /* ══ RESPONSIVE ══ */
 @media(max-width:768px){
   .stat-grid{grid-template-columns:1fr 1fr}
   .sidenav{display:none}
   .content{padding:16px}
 }
+
+/* ══ LOGO : « strainsage », le point du i est une jeune pousse ══ */
+.sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.logo-wm{font-family:'Bricolage Grotesque','Figtree',system-ui,sans-serif;font-weight:800;letter-spacing:-.05em;line-height:1;color:var(var(--text1));display:inline-block;white-space:nowrap}
+.logo-i{position:relative;display:inline-block}
+.logo-sprout{position:absolute;left:50%;top:-.23em;width:.86em;height:.69em;transform:translateX(-50%);overflow:visible}
+.lf1{fill:#00703c}.lf2{fill:#2f9a5f}.lst{stroke:#00703c;stroke-width:2.6;stroke-linecap:round;fill:none}
+.lmr{stroke:var(--panel);stroke-width:1.4;stroke-linecap:round;fill:none}
+[data-theme="dark"] .lf1,[data-theme="dark"] .lst{fill:#4cc38a}[data-theme="dark"] .lst{fill:none;stroke:#4cc38a}[data-theme="dark"] .lf2{fill:#8fe0b4}
 </style>
 </head>
 <body>
@@ -253,7 +289,7 @@ tr:hover td{background:var(--fog2)}
   <div class="login-box">
     <div class="login-logo">
       <div class="login-mark">🌿</div>
-      <div><h1>StrainSage Pro</h1><span class="login-sub">Interface Administration</span></div>
+      <div><h1><span class="logo-wm"><span class="sr-only">StrainSage</span><span aria-hidden="true">stra<span class="logo-i">ı<svg class="logo-sprout" viewBox="0 0 30 24" aria-hidden="true"><path class="lst" d="M15 24V17.6"/><path class="lf1" d="M14.6 18.8C9.6 19.8 2.6 16.8.8 7.6 8.4 6.2 13.8 10.8 14.6 18.8Z"/><path class="lf1" d="M15.4 18.8C16.2 10.8 21.6 6.2 29.2 7.6 27.4 16.8 20.4 19.8 15.4 18.8Z"/><path class="lf2" d="M15 17.8C12.4 13.8 12.6 5.8 15 1 17.4 5.8 17.6 13.8 15 17.8Z"/><path class="lmr" d="M13.6 17.8C10.6 15.2 7 12.2 3.6 9.2M16.4 17.8C19.4 15.2 23 12.2 26.4 9.2M15 15.6V5"/></svg></span>nsage</span></span></h1><span class="login-sub">Administration de la boutique</span></div>
     </div>
     <p>Connectez-vous avec vos identifiants administrateur pour accéder au dashboard.</p>
     <div class="login-err" id="loginErr">Identifiants incorrects.</div>
@@ -270,7 +306,7 @@ tr:hover td{background:var(--fog2)}
   <div class="topbar">
     <div class="topbar-logo">
       <div class="topbar-mark">🌿</div>
-      <div class="topbar-name">StrainSage</div>
+      <div class="topbar-name"><span class="logo-wm"><span class="sr-only">StrainSage</span><span aria-hidden="true">stra<span class="logo-i">ı<svg class="logo-sprout" viewBox="0 0 30 24" aria-hidden="true"><path class="lst" d="M15 24V17.6"/><path class="lf1" d="M14.6 18.8C9.6 19.8 2.6 16.8.8 7.6 8.4 6.2 13.8 10.8 14.6 18.8Z"/><path class="lf1" d="M15.4 18.8C16.2 10.8 21.6 6.2 29.2 7.6 27.4 16.8 20.4 19.8 15.4 18.8Z"/><path class="lf2" d="M15 17.8C12.4 13.8 12.6 5.8 15 1 17.4 5.8 17.6 13.8 15 17.8Z"/><path class="lmr" d="M13.6 17.8C10.6 15.2 7 12.2 3.6 9.2M16.4 17.8C19.4 15.2 23 12.2 26.4 9.2M15 15.6V5"/></svg></span>nsage</span></span></div>
       <span class="topbar-badge">ADMIN</span>
     </div>
     <div class="topbar-shop" id="shopName">—</div>
@@ -297,6 +333,9 @@ tr:hover td{background:var(--fog2)}
       </button>
       <button class="nav-item" onclick="showPage('users')" id="nav-users">
         <span class="nav-item-icon">👥</span>Clients
+      </button>
+      <button class="nav-item" onclick="showPage('varietes')" id="nav-varietes">
+        <span class="nav-item-icon">🌿</span>Base de variétés
       </button>
       <div class="nav-sep"></div>
       <button class="nav-item" onclick="showPage('settings')" id="nav-settings">
@@ -394,6 +433,75 @@ tr:hover td{background:var(--fog2)}
             <thead><tr><th>Username</th><th>Créé le</th><th>Conversations</th><th>Favoris</th><th>Dernière activité</th><th></th></tr></thead>
             <tbody id="usersBody"><tr><td colspan="6" style="text-align:center;padding:22px;color:var(--text3)">Chargement…</td></tr></tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- BASE DE VARIÉTÉS -->
+      <div class="page" id="page-varietes">
+        <div class="page-title">Base de variétés</div>
+        <div class="page-sub">Importe un fichier CSV de variétés : l'app l'analyse, reconnaît les colonnes, convertit les valeurs et enregistre les fiches dans Firestore (collection <code>varietes</code>).<br>Rien n'est inventé : une valeur absente ou illisible reste vide (<code>null</code>).</div>
+
+        <div class="section-title">1 · Fichier</div>
+        <div class="table-wrap">
+          <div class="vdb-body">
+            <div class="vdb-row">
+              <button class="btn btn-primary" onclick="vdbPickFile()">📥 Choisir un fichier CSV</button>
+              <input type="file" id="vdbFile" accept=".csv,.txt,text/csv" style="display:none" onchange="vdbOnFile(this)"/>
+              <span id="vdbParseOpts" style="display:none" class="vdb-row">
+                <label class="vdb-note" for="vdbEnc">Encodage</label>
+                <select class="vdb-select" id="vdbEnc" onchange="vdbReparse()"><option value="utf-8">UTF-8</option><option value="windows-1252">Windows-1252 (Excel)</option><option value="iso-8859-1">ISO-8859-1</option><option value="utf-16le">UTF-16</option></select>
+                <label class="vdb-note" for="vdbSep">Séparateur</label>
+                <select class="vdb-select" id="vdbSep" onchange="vdbReparse()"><option value=";">Point-virgule ;</option><option value=",">Virgule ,</option><option value="&#9;">Tabulation</option></select>
+              </span>
+            </div>
+            <div id="vdbFileInfo" class="vdb-info"></div>
+          </div>
+        </div>
+
+        <div id="vdbStepAnalyse" style="display:none">
+          <div class="section-title">2 · Analyse du fichier</div>
+          <div class="table-wrap"><div class="vdb-body" id="vdbAnalyse"></div></div>
+        </div>
+
+        <div id="vdbStepMap" style="display:none">
+          <div class="section-title">3 · Correspondance des colonnes</div>
+          <div class="table-wrap">
+            <div class="table-header">
+              <span class="table-header-title" id="vdbMapTitle"></span>
+              <span class="vdb-row"><label class="vdb-check"><input type="checkbox" id="vdbIgnoreLong" checked onchange="vdbToggleLong(this.checked)"/> Ignorer les textes longs (descriptions, avis)</label><label class="vdb-check"><input type="checkbox" id="vdbIgnorePhotos" onchange="vdbTogglePhotos(this.checked)"/> Ignorer les photos</label></span>
+            </div>
+            <div style="overflow-x:auto"><table><thead><tr><th>Colonne du CSV</th><th>Exemple</th><th>Remplie</th><th>Champ de la base</th></tr></thead><tbody id="vdbMapBody"></tbody></table></div>
+            <div class="vdb-foot">
+              <span class="vdb-note">Cadre vert : reconnue automatiquement · cadre doré : correspondance mémorisée · une colonne non reliée n'est pas importée.</span>
+              <div class="vdb-row"><button class="btn btn-secondary" onclick="vdbForgetMapping()">Oublier la correspondance mémorisée</button><button class="btn btn-primary" onclick="vdbPreview()">Voir l'aperçu →</button></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="vdbStepPreview" style="display:none">
+          <div class="section-title">4 · Aperçu et validation</div>
+          <div class="table-wrap">
+            <div class="vdb-body" id="vdbPreviewInfo"></div>
+            <div style="overflow-x:auto"><table><thead><tr><th>Nom</th><th>Alias</th><th>Type</th><th>THC %</th><th>CBD %</th><th>Floraison (sem.)</th><th>Parents</th><th>Banques</th><th>Sources</th><th></th></tr></thead><tbody id="vdbPreviewBody"></tbody></table></div>
+            <div class="vdb-foot">
+              <span class="vdb-note">Une fiche déjà présente dans la base est mise à jour, jamais dupliquée.</span>
+              <div class="vdb-row"><button class="btn btn-secondary" id="vdbBtnTest" onclick="vdbImport(true)">🧪 Importer 20 fiches (test)</button><button class="btn btn-primary" id="vdbBtnAll" onclick="vdbImport(false)">💾 Tout importer</button></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="vdbStepReport" style="display:none">
+          <div class="section-title">5 · Rapport d'import</div>
+          <div class="table-wrap"><div class="vdb-body" id="vdbReport"></div></div>
+        </div>
+
+        <div class="section-title">Fiches enregistrées</div>
+        <div class="table-wrap">
+          <div class="table-header">
+            <span class="table-header-title" id="vdbListCount">—</span>
+            <div class="vdb-row"><input class="vdb-search" id="vdbSearch" placeholder="Rechercher un nom ou un alias…" oninput="vdbSearch()"/><button class="btn btn-secondary" title="Recharger" onclick="vdbOpen(true)">🔄</button><button class="btn btn-secondary" id="vdbBtnRebuild" onclick="vdbRebuild()" title="Relit toutes les fiches et recrée l'index utilisé par le chat (noms, alias et critères)">⟳ Reconstruire l'index</button><button class="btn btn-danger" id="vdbBtnClear" onclick="vdbClear()">🗑 Vider la base</button></div>
+          </div>
+          <div style="overflow-x:auto"><table><thead><tr><th>Nom</th><th>Alias</th><th>Type</th><th>THC %</th><th>Floraison (sem.)</th><th>Banques</th><th>Sources</th><th></th></tr></thead><tbody id="vdbListBody"><tr><td colspan="8"><div class="empty-state"><div class="empty-icon">🌿</div>Aucune fiche pour le moment</div></td></tr></tbody></table></div>
         </div>
       </div>
 
@@ -502,6 +610,7 @@ function showPage(name){
   document.getElementById('nav-'+name).classList.add('active');
   if(name==='stats')loadStats();
   if(name==='users')loadUsers();
+  if(name==='varietes'&&window.vdbOpen)window.vdbOpen();
 }
 
 function toast(msg,type){
@@ -738,6 +847,758 @@ async function saveApiKey(){
     document.getElementById('settingApiKey').value='';
   }catch(e){toast('Erreur: '+e.message,'error');}
 }
+</script>
+<script>
+/* ══════════════════════════════════════════════════════════════
+   BASE DE VARIÉTÉS — import CSV → Firestore
+   - Le fichier est lu dans le navigateur : encodage et séparateur détectés,
+     listes séparées par | dans les cellules.
+   - Chaque colonne est reliée à un champ du schéma CLAUDE.md (correspondance
+     automatique FR/EN, corrigeable, mémorisée dans adminData/varietesMapping).
+   - Rien n'est inventé : une valeur absente ou illisible vaut null ([] pour une liste).
+   - Collection "varietes" (id = nom en minuscules avec tirets) +
+     index léger "varietes_index" (noms et alias) pour la détection côté client.
+══════════════════════════════════════════════════════════════ */
+(function(){
+var MAP_V=2, COL='varietes', IDX='varietes_index', MAP_REF=['adminData','varietesMapping'], LS_MAP='ss_vdb_mapping';
+var BATCH=400, IDX_PART=2000, FACET_PART=1500, PREVIEW_N=10, TEST_N=20, LONG_LEN=200, LIST_N=40;
+
+/* ── normalisation ── */
+function nrm(s){return String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[™®©]/g,'').replace(/[^a-z0-9]+/g,' ').trim();}
+function hkey(s){return nrm(s).replace(/ /g,'');}
+function slug(s){return nrm(s).replace(/ /g,'-').slice(0,120);}
+function cleanName(s){return String(s||'').replace(/[™®©]/g,'').replace(/\s+/g,' ').trim();}
+function uniq(list,keyFn){var seen={},out=[];(list||[]).forEach(function(x){var k=keyFn?keyFn(x):nrm(x);if(!k||seen[k])return;seen[k]=1;out.push(x);});return out;}
+
+/* ── schéma (CLAUDE.md §4) ──
+   t : text | id | list | parents | desc | num | range | bool | enum | type | dom | culture | surl | stype | sdate | extra
+   syn : noms de colonnes reconnus (comparés sans accents, espaces ni ponctuation) */
+var FIELDS=[
+ {k:'nom',l:'Nom',t:'text',g:'Identité',syn:['nom','name','strain','strainname','nomvariete','variete','variety','cultivar','nomdelavariete','strainnom','title','titre']},
+ {k:'id',l:'Identifiant (id)',t:'id',g:'Identité',syn:['id','slug','strainid','varieteid','identifiant','key','cle']},
+ {k:'alias',l:'Alias',t:'list',g:'Identité',syn:['alias','aliases','aka','autresnoms','autrenom','othernames','alsoknownas','surnom','surnoms','synonymes','synonyms']},
+ {k:'type',l:'Type (indica/sativa/hybride)',t:'type',g:'Génétique',syn:['type','genes','gene','straintype','typevariete','typedevariete','categorie','category','genetictype','typegenetique','espece','species','famille']},
+ {k:'dominante',l:'Dominante',t:'dom',g:'Génétique',syn:['dominante','dominance','dominant','indicasativa','sativaindica','ratio','ratioindicasativa','ratiosativaindica','indicasativaratio']},
+ {k:'breeder_createur',l:'Breeder / créateur',t:'text',g:'Génétique',syn:['breeder','breedercreateur','createur','obtenteur','breedername','createdby','creator','originalbreeder','breederoriginal']},
+ {k:'parents',l:'Parents (lignée)',t:'parents',g:'Génétique',syn:['parents','parent','genetics','genetique','genetiques','lineage','lignee','cross','croisement','parentage','geneticlineage','origine genetique']},
+ {k:'descendants',l:'Descendants',t:'desc',g:'Génétique',syn:['descendants','descendant','descendance','children','enfants','offspring','familytree']},
+ {k:'thc',l:'THC (min-max)',t:'range',to:['thc_min','thc_max'],lim:[0,45],g:'Chimie',syn:['thc','thclevel','tauxthc','tauxdethc','thcpercent','thcpourcent','thccontent','thcpct','thcrange']},
+ {k:'thc_min',l:'THC min',t:'num',lim:[0,45],g:'Chimie',syn:['thcmin','minthc','thcminimum','thcmini','thcbas','thclow']},
+ {k:'thc_max',l:'THC max',t:'num',lim:[0,45],g:'Chimie',syn:['thcmax','maxthc','thcmaximum','thcmaxi','thchaut','thchigh']},
+ {k:'cbd',l:'CBD (min-max)',t:'range',to:['cbd_min','cbd_max'],lim:[0,35],g:'Chimie',syn:['cbd','cbdlevel','tauxcbd','tauxdecbd','cbdpercent','cbdpourcent','cbdcontent','cbdpct','cbdrange']},
+ {k:'cbd_min',l:'CBD min',t:'num',lim:[0,35],g:'Chimie',syn:['cbdmin','mincbd','cbdminimum','cbdmini','cbdlow']},
+ {k:'cbd_max',l:'CBD max',t:'num',lim:[0,35],g:'Chimie',syn:['cbdmax','maxcbd','cbdmaximum','cbdmaxi','cbdhigh']},
+ {k:'terpenes',l:'Terpènes',t:'list',g:'Chimie',syn:['terpenes','terpene','terps','terp','terpenesdominants','dominantterpenes','terpeneprofile','profilterpenique','mainterpenes']},
+ {k:'effets',l:'Effets',t:'list',g:'Profil',syn:['effets','effet','effects','effect','positiveeffects','effetspositifs','feelings']},
+ {k:'effets_indesirables',l:'Effets indésirables',t:'list',g:'Profil',syn:['effetsindesirables','effetindesirable','negativeeffects','negatives','negative','sideeffects','effetsnegatifs','effetssecondaires','effetsnefastes']},
+ {k:'gouts',l:'Goûts / arômes',t:'list',g:'Profil',syn:['gouts','gout','tastes','taste','flavors','flavours','flavor','flavour','saveurs','saveur','aromes','arome','aroma','aromas','odeur','odeurs','smell','parfum']},
+ {k:'floraison',l:'Floraison (min-max, semaines)',t:'range',to:['floraison_sem_min','floraison_sem_max'],lim:[3,30],weeks:true,g:'Culture',syn:['floraison','flowering','floweringtime','tempsdefloraison','tempsfloraison','dureefloraison','dureedefloraison','floraisonsemaines','floweringweeks','floweringperiod','bloomtime','periodedefloraison','floraisonindoor','floweringtimeindoor']},
+ {k:'floraison_jours',l:'Floraison en jours (min-max)',t:'range',to:['floraison_sem_min','floraison_sem_max'],lim:[3,30],weeks:true,days:true,g:'Culture',syn:['floweringdays','floraisonjours','floraisonenjours','dureefloraisonjours','floweringtimedays','bloomdays','joursfloraison','daysflowering']},
+ {k:'floraison_sem_min',l:'Floraison min (sem.)',t:'num',lim:[3,30],weeks:true,g:'Culture',syn:['floraisonsemmin','floraisonmin','floweringmin','floweringtimemin','minflowering','floraisonminimum']},
+ {k:'floraison_sem_max',l:'Floraison max (sem.)',t:'num',lim:[3,30],weeks:true,g:'Culture',syn:['floraisonsemmax','floraisonmax','floweringmax','floweringtimemax','maxflowering','floraisonmaximum']},
+ {k:'autofloraison',l:'Autofloraison (oui/non)',t:'bool',auto:true,g:'Culture',syn:['autofloraison','autoflowering','autoflower','auto','isauto','autofloraisons','autoflorissante','photoperiode','photoperiodic']},
+ {k:'difficulte',l:'Difficulté',t:'enum',g:'Culture',syn:['difficulte','difficulty','growdifficulty','difficultedeculture','niveau','level','growlevel','facilite']},
+ {k:'hauteur',l:'Hauteur',t:'enum',g:'Culture',syn:['hauteur','height','taille','plantheight','hauteurplante','size']},
+ {k:'rendement',l:'Rendement',t:'enum',g:'Culture',syn:['rendement','yield','production','recolte','rendementindoor','yieldindoor','productivite']},
+ {k:'resistance_moisissure',l:'Résistance moisissure',t:'bool',mold:true,g:'Culture',syn:['resistancemoisissure','resistancemoisissures','resistanceauxmoisissures','moldresistance','mouldresistance','resistance','resistancemildiou','botrytis']},
+ {k:'culture',l:'Culture (liste indoor|outdoor|serre)',t:'culture',g:'Culture',syn:['culture','growtype','typeculture','typedeculture','environnement','environment','cultivation','growenvironment']},
+ {k:'indoor',l:'Indoor (oui/non)',t:'bool',g:'Culture',syn:['indoor','interieur','enint','cultureinterieure']},
+ {k:'outdoor',l:'Outdoor (oui/non)',t:'bool',g:'Culture',syn:['outdoor','exterieur','enext','cultureexterieure','pleinair']},
+ {k:'serre',l:'Serre (oui/non)',t:'bool',g:'Culture',syn:['serre','greenhouse','sousserre']},
+ {k:'produit_breeder',l:'Banques / breeders qui la vendent (liste)',t:'pbrand',g:'Banques de graines',syn:['brands','brand','marques','marque','banques','banque','seedbanks','seedbank','banquesdegraines','banquedegraines','vendeurs','vendupar','soldby','sellers','breeders','breederseedbank']},
+ {k:'produit_nom',l:'Noms commerciaux (liste)',t:'pname',g:'Banques de graines',syn:['productnames','productname','products','produits','nomscommerciaux','nomcommercial','commercialnames','nomsproduits']},
+ {k:'produit_url',l:'URL des produits (liste)',t:'purl',g:'Banques de graines',syn:['producturls','producturl','productlinks','liensproduits','urlsproduits','urlproduits','producturlslist']},
+ {k:'source_url',l:'Source — URL',t:'surl',g:'Sources',syn:['url','urls','source','sources','sourceurl','urlsource','lien','liens','link','links','website','siteweb','site','reference','references']},
+ {k:'source_type',l:'Source — type',t:'stype',g:'Sources',syn:['sourcetype','typesource','typedesource']},
+ {k:'source_date',l:'Source — date',t:'sdate',g:'Sources',syn:['sourcedate','datesource','date','datemaj','miseajour','updated','updatedat','lastupdate','dateconsultation','consulte']},
+ {k:'description',l:'Description (texte long)',t:'extra',long:true,g:'Textes longs',syn:['description','desc','about','resume','summary','histoire','history','texte','text','presentation','avis','review','reviews','commentaire','commentaires','comment','comments','notes','note','opinion','temoignage']},
+ {k:'photos',l:'Photo (URL)',t:'extra',photo:true,g:'Textes longs',syn:['photo','photos','image','images','img','picture','pictures','imageurl','photourl','urlimage','urlphoto','thumbnail','vignette','visuel']}
+];
+var FBY={};FIELDS.forEach(function(f){FBY[f.k]=f;});
+var LIST_FIELDS=['alias','parents','terpenes','effets','effets_indesirables','gouts'];
+var SCALARS=['source_id','nom','type','dominante','breeder_createur','thc_min','thc_max','cbd_min','cbd_max','floraison_sem_min','floraison_sem_max','autofloraison','difficulte','hauteur','rendement','resistance_moisissure','indoor','outdoor','serre'];
+
+var ENUMS={
+ difficulte:[['facile',['facile','easy','debutant','debutants','beginner','beginners','simple','novice','tres facile','very easy']],['moyenne',['moyen','moyenne','medium','moderate','modere','moderee','intermediaire','intermediate','normal','normale','moderately easy']],['difficile',['difficile','difficult','hard','expert','experts','avance','advanced','complique','tres difficile','very hard']]],
+ hauteur:[['compacte',['compacte','compact','petite','petit','small','short','basse','bas','courte','court','low','naine']],['moyenne',['moyenne','moyen','medium','average','normal','normale','moderate']],['grande',['grande','grand','tall','haute','haut','high','large','big','xl','xxl','geante','tres grande','very tall']]],
+ rendement:[['faible',['faible','low','petit','small','bas','basse','modeste']],['moyen',['moyen','moyenne','medium','average','normal','normale','moderate','correct','bon']],['eleve',['eleve','elevee','high','haut','gros','grosse','large','big','heavy','xl','xxl','tres eleve','very high','abondant','genereux','tres bon','excellent']]],
+ source_type:[['breeder',['breeder','createur','obtenteur','officiel','official','officielle']],['seedbank',['seedbank','banque','banque de graines','shop','boutique','store','vendeur','revendeur','retailer','magasin']],['base',['base','database','base de donnees','bdd','encyclopedie','wiki','reference','db']],['communaute',['communaute','community','forum','avis','review','reddit','growdiary','journal','journal de culture']]]
+};
+var DOMAINS={
+ base:['leafly.','seedfinder.','allbud.','wikileaf.','cannaconnection.','weedmaps.','kannapedia.','hytiva.','strainsdb'],
+ communaute:['growdiaries.','rollitup.','cannaweed.','reddit.','420magazine.','thcfarmer.','icmag.','overgrow.','grasscity.','growweedeasy.'],
+ seedbank:['seedsman.','zamnesia.','herbiesheadshop.','cannapot.','attitudeseedbank.','seedsupreme.','neptuneseedbank.','choiceseeds.','oaseeds.','cropkingseeds.','seedcity.','alchimiaweb.','growbarato.'],
+ breeder:['barneysfarm.','royalqueenseeds.','dutch-passion.','sensiseeds.','fastbuds','2fast4buds','dinafem.','seedjunky','compoundgenetics.','sweetseeds.','paradise-seeds.','greenhouseseeds.','serious-seeds.','humboldtseed','exoticgenetix','cannarado','ethosgenetics','delicious-seeds.','kannabia.','advancedseeds.','philosopherseeds.','pyramidseeds.','originalsensibleseeds.','mephistogenetics.','ripperseeds.','eliteseeds.','buddhaseedbank.','seedstockers.','fastbuds.','humboldtseedcompany.']
+};
+var EMPTY_RE=/^(null|nil|none|nan|n\/?a|na|nc|n\.c\.?|-+|—|–|\?+|inconnu|inconnue|unknown|non renseigne|non renseignee|aucun|aucune|undefined|\[\])$/i;
+var IMG_RE=/\.(jpe?g|png|gif|webp|avif|svg|bmp)(\?|#|$)/i;
+
+/* ── état ── */
+var S={file:null,buf:null,enc:null,sep:null,headers:[],rows:[],stats:[],map:[],src:[],saved:null,ignoreLong:true,ignorePhotos:false,conv:null,index:null,indexLoaded:false,docCache:{},analysis:null,busy:false};
+function $(id){return document.getElementById(id);}
+function show(id,on){var e=$(id);if(e)e.style.display=on?'':'none';}
+function h(t){return esc(t).replace(/"/g,'&quot;');}
+
+/* ═══ 1. LECTURE DU FICHIER ═══ */
+window.vdbPickFile=function(){var i=$('vdbFile');i.value='';i.click();};
+window.vdbOnFile=function(input){
+  var f=input.files&&input.files[0];if(!f)return;
+  S.file=f;
+  var r=new FileReader();
+  r.onload=function(e){S.buf=new Uint8Array(e.target.result);S.enc=detectEncoding(S.buf);S.sep=null;parseAndAnalyse();};
+  r.onerror=function(){toast('Lecture du fichier impossible','error');};
+  r.readAsArrayBuffer(f);
+};
+window.vdbReparse=function(){if(!S.buf)return;S.enc=$('vdbEnc').value;S.sep=$('vdbSep').value;parseAndAnalyse(true);};
+
+function detectEncoding(b){
+  if(b[0]===0xEF&&b[1]===0xBB&&b[2]===0xBF)return 'utf-8';
+  if(b[0]===0xFF&&b[1]===0xFE)return 'utf-16le';
+  try{new TextDecoder('utf-8',{fatal:true}).decode(b);return 'utf-8';}catch(e){return 'windows-1252';}
+}
+function decode(b,enc){var t=new TextDecoder(enc).decode(b);return t.charCodeAt(0)===0xFEFF?t.slice(1):t;}
+function detectSep(text){
+  var lines=text.split(/\r?\n/).filter(function(l){return l.trim();}).slice(0,20),best=';',bestScore=-1;
+  [';',',','\t'].forEach(function(sep){
+    var counts=lines.map(function(l){var n=0,q=false;for(var i=0;i<l.length;i++){var c=l[i];if(c==='"')q=!q;else if(c===sep&&!q)n++;}return n;});
+    if(!counts.length||!counts[0])return;
+    var same=counts.filter(function(c){return c===counts[0];}).length/counts.length;
+    var score=counts[0]*same;
+    if(score>bestScore){bestScore=score;best=sep;}
+  });
+  return best;
+}
+
+function parseAndAnalyse(manual){
+  var text=decode(S.buf,S.enc);
+  if(!S.sep)S.sep=detectSep(text);
+  var res=Papa.parse(text,{delimiter:S.sep,skipEmptyLines:'greedy'});
+  var data=res.data||[];
+  if(data.length<2){toast('Fichier vide ou illisible','error');return;}
+  var seenH={};
+  S.headers=data[0].map(function(x,i){var n=String(x||'').trim()||('Colonne '+(i+1));if(seenH[n]){seenH[n]++;n+=' ('+seenH[n]+')';}else seenH[n]=1;return n;});
+  S.rows=data.slice(1).filter(function(r){return r.some(function(c){return String(c||'').trim();});});
+  S.parseErrors=(res.errors||[]).length;
+  S.stats=S.headers.map(function(_,ci){return colStats(ci);});
+  $('vdbEnc').value=S.enc;$('vdbSep').value=S.sep;show('vdbParseOpts',true);
+  var bad=(text.match(/\uFFFD/g)||[]).length;
+  var mojibake=(text.match(/Ã[©¨ª«´®¯§ ]/g)||[]).length;
+  $('vdbFileInfo').innerHTML='<b>'+esc(S.file.name)+'</b> · '+(S.file.size/1024).toFixed(0)+' Ko · '+S.rows.length+' lignes · '+S.headers.length+' colonnes<br>'+
+    'Encodage '+(manual?'choisi':'détecté')+' : <b>'+esc(S.enc)+'</b> · séparateur : <b>'+(S.sep===';'?'point-virgule':S.sep===','?'virgule':'tabulation')+'</b>'+
+    (S.parseErrors?' · <span style="color:var(--red)">'+S.parseErrors+' ligne(s) mal formée(s) (guillemets ou nombre de colonnes)</span>':'')+
+    ((bad||mojibake)?'<br><span style="color:var(--red)">⚠️ Des caractères semblent mal décodés ('+(bad+mojibake)+'). Essaie un autre encodage.</span>':'');
+  loadSavedMapping().then(function(){autoMap();renderAnalysis();renderMapping();show('vdbStepAnalyse',true);show('vdbStepMap',true);show('vdbStepPreview',false);show('vdbStepReport',false);});
+}
+
+function colStats(ci){
+  var n=0,len=0,maxLen=0,img=0,url=0,num=0,ex=null,distinct={};
+  S.rows.forEach(function(r){
+    var v=String(r[ci]==null?'':r[ci]).trim();
+    if(!v||EMPTY_RE.test(v))return;
+    n++;len+=v.length;if(v.length>maxLen)maxLen=v.length;
+    if(/^https?:\/\//i.test(v)||/^www\./i.test(v)){url++;if(IMG_RE.test(v.split('|')[0]))img++;}
+    if(/^[<>~≈]?\s*\d+([.,]\d+)?\s*(%|sem|semaines|weeks|w|j|jours|days)?\s*([-–à]\s*\d+([.,]\d+)?\s*(%|sem|semaines|weeks|w|j|jours|days)?)?$/i.test(v))num++;
+    if(ex===null||(ex.length<4&&v.length>ex.length))ex=v;
+    if(Object.keys(distinct).length<60)distinct[nrm(v)]=1;
+  });
+  return {filled:n,fill:S.rows.length?n/S.rows.length:0,avgLen:n?len/n:0,maxLen:maxLen,imgRatio:n?img/n:0,urlRatio:n?url/n:0,numRatio:n?num/n:0,example:ex,distinct:Object.keys(distinct).length};
+}
+
+/* ═══ 2. ANALYSE ═══ */
+function renderAnalysis(){
+  var nameCol=S.map.indexOf('nom');
+  var dupHtml='';
+  if(nameCol>-1){
+    var seen={},dups={};
+    S.rows.forEach(function(r){var k=slug(r[nameCol]);if(!k)return;seen[k]=(seen[k]||0)+1;if(seen[k]===2)dups[k]=cleanName(r[nameCol]);});
+    var dk=Object.keys(dups);
+    dupHtml='<div><b>'+dk.length+'</b> nom(s) en double dans le fichier'+(dk.length?' (fusionnés à l\'import) : '+dk.slice(0,12).map(function(k){return esc(dups[k])+' ×'+seen[k];}).join(', ')+(dk.length>12?'…':''):'')+'</div>';
+    var noName=S.rows.filter(function(r){return !String(r[nameCol]||'').trim();}).length;
+    if(noName)dupHtml+='<div><b>'+noName+'</b> ligne(s) sans nom (seront rejetées)</div>';
+  }else dupHtml='<div style="color:var(--red)">Aucune colonne de nom reconnue : choisis-la dans la correspondance ci-dessous.</div>';
+  var empty=S.stats.filter(function(s){return !s.filled;}).length;
+  var longC=S.stats.filter(function(s,i){return isLongCol(i);}).length;
+  var photoC=S.stats.filter(function(s,i){return isPhotoCol(i);}).length;
+  var urlC=S.stats.filter(function(s){return s.urlRatio>0.5&&s.imgRatio<0.5;}).length;
+  $('vdbAnalyse').innerHTML='<div class="vdb-grid">'+
+    card(S.rows.length,'Lignes')+card(S.headers.length,'Colonnes')+card(empty,'Colonnes vides')+card(longC,'Textes longs')+card(photoC,'Photos')+card(urlC,'Colonnes d\'URL')+
+    '</div><div class="vdb-info">'+dupHtml+'<div>Le taux de remplissage de chaque colonne est indiqué dans la correspondance. Les valeurs aberrantes (THC > 45 %, floraison > 30 semaines…) sont signalées dans l\'aperçu et mises à null.</div></div>';
+}
+function card(v,l){return '<div class="stat-card"><div class="stat-val">'+v+'</div><div class="stat-label">'+l+'</div></div>';}
+
+/* ═══ 3. CORRESPONDANCE ═══ */
+function isPhotoCol(ci){var s=S.stats[ci];var a=autoFieldCol(ci);return (a&&FBY[a].photo)||s.imgRatio>0.5;}
+function isLongCol(ci){var s=S.stats[ci];var a=autoFieldCol(ci);if(isPhotoCol(ci))return false;if(a&&FBY[a].long)return true;if(a)return false;return s.avgLen>LONG_LEN&&s.urlRatio<0.5;}
+function isBlocked(ci){return (S.ignoreLong&&isLongCol(ci))||(S.ignorePhotos&&isPhotoCol(ci));}
+
+function autoField(header){
+  var k=hkey(header);if(!k)return null;
+  var exact=FIELDS.filter(function(f){return f.syn.some(function(s){return hkey(s)===k;});});
+  if(exact.length===1)return exact[0].k;
+  if(exact.length>1)return null;
+  // inclusion : le synonyme le plus long gagne ; égalité entre deux champs différents = ambigu
+  var best=null,bestLen=0,tie=false;
+  FIELDS.forEach(function(f){f.syn.forEach(function(s){
+    s=hkey(s);if(s.length<4||k.indexOf(s)<0)return;
+    if(s.length>bestLen){best=f.k;bestLen=s.length;tie=false;}
+    else if(s.length===bestLen&&best!==f.k)tie=true;
+  });});
+  if(tie||!best)return null;
+  // "thc" seul dans "thcmin" etc. est déjà couvert par les synonymes min/max ; on évite les plages sur un en-tête min/max
+  if(FBY[best].t==='range'&&/(min|max)/.test(k))return null;
+  return best;
+}
+// une colonne de nombres n'est jamais reliée automatiquement à un champ texte, liste ou énumération
+var TEXTY=['text','list','parents','desc','enum','type','dom','culture','extra','surl','stype','pbrand','pname','purl'];
+function fitsColumn(ci,f){return !(f&&S.stats[ci].numRatio>0.9&&TEXTY.indexOf(FBY[f].t)>-1);}
+function autoFieldCol(ci){var a=autoField(S.headers[ci]);return fitsColumn(ci,a)?a:null;}
+function autoMap(){
+  var saved=(S.saved&&S.saved.map)||{};
+  if(S.saved&&typeof S.saved.ignoreLong==='boolean'){S.ignoreLong=S.saved.ignoreLong;$('vdbIgnoreLong').checked=S.ignoreLong;}
+  if(S.saved&&typeof S.saved.ignorePhotos==='boolean'){S.ignorePhotos=S.saved.ignorePhotos;$('vdbIgnorePhotos').checked=S.ignorePhotos;}
+  S.map=[];S.src=[];
+  S.headers.forEach(function(hd,ci){
+    var k=hkey(hd),f=null,src='';
+    if(Object.prototype.hasOwnProperty.call(saved,k)){f=saved[k]==='__ignore'?'':saved[k];src='saved';if(f&&(!FBY[f]||!fitsColumn(ci,f))){f=null;src='';}}
+    if(f===null){f=autoFieldCol(ci)||'';src=f?'auto':'';}
+    if(!S.stats[ci].filled&&src!=='saved'){f='';src='';}
+    S.map[ci]=f;S.src[ci]=src;
+  });
+  // deux colonnes sur le même champ simple : on garde la mieux remplie en auto
+  var byField={};
+  S.map.forEach(function(f,ci){if(!f||S.src[ci]!=='auto')return;var t=FBY[f].t;if(t==='list'||t==='parents'||t==='surl'||t==='extra'||t==='desc')return;
+    if(byField[f]!==undefined){var o=byField[f];if(S.stats[ci].filled>S.stats[o].filled){S.map[o]='';S.src[o]='';byField[f]=ci;}else{S.map[ci]='';S.src[ci]='';}}else byField[f]=ci;});
+}
+function optionsHtml(sel,blocked){
+  var groups={},order=[];
+  FIELDS.forEach(function(f){if((f.long&&S.ignoreLong)||(f.photo&&S.ignorePhotos))return;if(!groups[f.g]){groups[f.g]=[];order.push(f.g);}groups[f.g].push(f);});
+  return '<option value="">— ne pas importer —</option>'+order.map(function(g){return '<optgroup label="'+h(g)+'">'+groups[g].map(function(f){return '<option value="'+f.k+'"'+(f.k===sel?' selected':'')+'>'+h(f.l)+'</option>';}).join('')+'</optgroup>';}).join('');
+}
+function renderMapping(){
+  var mapped=S.map.filter(Boolean).length;
+  $('vdbMapTitle').textContent=mapped+' colonne(s) reliée(s) sur '+S.headers.length;
+  $('vdbMapBody').innerHTML=S.headers.map(function(hd,ci){
+    var s=S.stats[ci],blocked=isBlocked(ci),f=blocked?'':S.map[ci];
+    var tag=blocked?'<span class="td-badge gold">'+(isPhotoCol(ci)?'photo ignorée':'texte long ignoré')+'</span>':'';
+    if(!s.filled)tag='<span class="td-badge red">colonne vide</span>';
+    return '<tr><td><b style="font-weight:500">'+esc(hd)+'</b></td>'+
+      '<td><div class="vdb-ex" title="'+h(s.example||'')+'">'+(s.example?esc(s.example.slice(0,120)):'<span class="vdb-null">vide</span>')+'</div></td>'+
+      '<td style="white-space:nowrap"><span class="vdb-fill"><i style="width:'+Math.round(s.fill*100)+'%"></i></span>'+Math.round(s.fill*100)+' %</td>'+
+      '<td><div class="vdb-row"><select class="vdb-select '+(blocked?'':(S.src[ci]||''))+'" '+(blocked?'disabled':'')+' onchange="vdbSetMap('+ci+',this.value)">'+optionsHtml(f,blocked)+'</select>'+tag+'</div></td></tr>';
+  }).join('');
+}
+window.vdbSetMap=function(ci,val){S.map[ci]=val;S.src[ci]='manual';renderMapping();renderAnalysis();show('vdbStepPreview',false);};
+window.vdbToggleLong=function(on){S.ignoreLong=!!on;renderMapping();show('vdbStepPreview',false);};
+window.vdbTogglePhotos=function(on){S.ignorePhotos=!!on;renderMapping();show('vdbStepPreview',false);};
+window.vdbForgetMapping=async function(){
+  S.saved=null;try{localStorage.removeItem(LS_MAP);}catch(e){}
+  try{await db.collection(MAP_REF[0]).doc(MAP_REF[1]).delete();}catch(e){}
+  autoMap();renderMapping();renderAnalysis();toast('Correspondance mémorisée effacée','info');
+};
+async function loadSavedMapping(){
+  S.saved=null;
+  try{var snap=await db.collection(MAP_REF[0]).doc(MAP_REF[1]).get();if(snap.exists)S.saved=snap.data();}catch(e){}
+  if(!S.saved){try{S.saved=JSON.parse(localStorage.getItem(LS_MAP)||'null');}catch(e){}}
+  if(S.saved&&S.saved.v!==MAP_V)S.saved=null;
+}
+async function saveMapping(){
+  var map=Object.assign({},(S.saved&&S.saved.v===MAP_V&&S.saved.map)||{});
+  S.headers.forEach(function(hd,ci){if(isBlocked(ci)||!S.stats[ci].filled)return;map[hkey(hd)]=S.map[ci]||'__ignore';});
+  var data={v:MAP_V,map:map,ignoreLong:S.ignoreLong,ignorePhotos:S.ignorePhotos,updatedAt:Date.now()};
+  S.saved=data;
+  try{localStorage.setItem(LS_MAP,JSON.stringify(data));}catch(e){}
+  try{await db.collection(MAP_REF[0]).doc(MAP_REF[1]).set(data);}catch(e){console.warn('[varietes] mapping non enregistré',e&&e.message);}
+}
+
+/* ═══ 4. CONVERSION ═══ */
+function blank(){
+  var r={id:null,nom:null,alias:[],type:null,dominante:null,breeder_createur:null,parents:[],descendants:[],
+    thc_min:null,thc_max:null,cbd_min:null,cbd_max:null,terpenes:[],effets:[],effets_indesirables:[],gouts:[],
+    floraison_sem_min:null,floraison_sem_max:null,autofloraison:null,difficulte:null,hauteur:null,rendement:null,
+    resistance_moisissure:null,indoor:null,outdoor:null,serre:null,sources:[],produits:[],source_id:null};
+  if(!S.ignoreLong)r.description=null;
+  if(!S.ignorePhotos)r.photos=[];
+  return r;
+}
+function splitList(v){
+  var s=String(v||'').trim();if(!s)return [];
+  if(s.charAt(0)==='['){try{var j=JSON.parse(s);if(Array.isArray(j))return j.map(function(x){return String(x).trim();}).filter(Boolean);}catch(e){}}
+  var parts=s.indexOf('|')>-1?s.split('|'):(S.sep!==';'&&s.indexOf(';')>-1)?s.split(';'):s.split(/,(?!\d)/);
+  return parts.map(function(x){return x.trim().replace(/^["'\[\]\s]+|["'\[\]\s]+$/g,'');}).filter(function(x){return x&&!EMPTY_RE.test(x);});
+}
+function toNum(x){var n=parseFloat(String(x).replace(',','.'));return isFinite(n)?n:null;}
+function roundHalf(n){return Math.round(n*2)/2;}
+// "18-22 %", "20%", "<1%", "8 à 10 semaines", "56-63 jours" → {min,max}
+function parseRange(v,weeks,forceDays){
+  var s=nrm(v);
+  var raw=String(v).toLowerCase();
+  var nums=(String(v).replace(/(\d),(\d)/g,'$1.$2').match(/\d+(?:\.\d+)?/g)||[]).map(Number);
+  if(!nums.length)return null;
+  var days=weeks&&(forceDays||/(jour|day|\bj\b|\bd\b)/.test(s));
+  var months=weeks&&/(mois|month)/.test(s);
+  if(months)return null;
+  var conv=function(n){return days?roundHalf(n/7):n;};
+  var lt=/^\s*(<|≤|moins de|jusqu|up to|max|under|inf)/.test(raw), gt=/^\s*(>|≥|plus de|over|min|sup|au moins|at least)/.test(raw)||/\+\s*$/.test(raw);
+  if(nums.length===1){var n=conv(nums[0]);if(lt)return {min:null,max:n};if(gt)return {min:n,max:null};return {min:n,max:n};}
+  var a=conv(nums[0]),b=conv(nums[1]);
+  return a<=b?{min:a,max:b}:{min:b,max:a};
+}
+function inLim(n,f){return n===null||(n>=f.lim[0]&&n<=f.lim[1]);}
+function parseBool(v,f){
+  var n=nrm(v);
+  if(f&&f.auto){if(/^(auto|autoflowering|autoflower|autofloraison|autoflorissante|automatique)/.test(n))return true;if(/^(photo|photoperiod|photoperiodique|photoperiodic|feminis|feminiz|reguliere|regular)/.test(n))return false;}
+  if(f&&f.mold){if(/^(haute|elevee|eleve|high|bonne|good|forte|strong|excellente|excellent|tres bonne|very good|resistante|resistant)/.test(n))return true;if(/^(faible|low|weak|sensible|mauvaise|poor|basse|tres faible)/.test(n))return false;}
+  if(/^(oui|yes|true|vrai|1|x|o|y|ok)$/.test(n))return true;
+  if(/^(non|no|false|faux|0|n)$/.test(n))return false;
+  return undefined;
+}
+function enumOf(key,v){
+  var n=nrm(v);if(!n)return undefined;
+  var hits=[];
+  ENUMS[key].forEach(function(e){if(e[1].indexOf(n)>-1)hits.push(e[0]);});
+  if(hits.length===1)return hits[0];
+  hits=[];
+  var words=' '+n+' ';
+  ENUMS[key].forEach(function(e){if(e[1].some(function(sy){return words.indexOf(' '+sy+' ')>-1;}))hits.push(e[0]);});
+  return hits.length===1?hits[0]:undefined;
+}
+// "Indica", "Hybride à dominante sativa", "60% indica / 40% sativa", "Auto indica"…
+function parseType(v){
+  var n=nrm(v),r={type:undefined,dom:undefined,auto:undefined};if(!n)return r;
+  if(/\bauto/.test(n))r.auto=true;
+  var pi=n.match(/(\d+)\s*(?:pc|pct|percent|pourcent)?\s*indica/)||n.match(/indica\s*(\d+)/);
+  var ps=n.match(/(\d+)\s*(?:pc|pct|percent|pourcent)?\s*sativa/)||n.match(/sativa\s*(\d+)/);
+  var hasI=/indica/.test(n),hasS=/sativa/.test(n),hyb=/hybri|mixte|\bmix\b|equilibr|balanced|50 50/.test(n),dom=/domin|mostly|majoritair|principal|lean|heavy|tendance/.test(n);
+  if(pi&&ps){r.type='hybride';var a=+pi[1],b=+ps[1];r.dom=a>b?'indica':b>a?'sativa':'equilibree';}
+  else if(hasI&&hasS){r.type='hybride';var m=n.match(/(indica|sativa)\s+(?:\w+\s+)?domin/)||n.match(/domin\w*\s+(?:\w+\s+)?(indica|sativa)/);if(m)r.dom=m[1];else if(/equilibr|balanced|50 50/.test(n))r.dom='equilibree';}
+  else if(hasI){if(dom||hyb){r.type='hybride';r.dom='indica';}else r.type='indica';}
+  else if(hasS){if(dom||hyb){r.type='hybride';r.dom='sativa';}else r.type='sativa';}
+  else if(hyb){r.type='hybride';if(/equilibr|balanced|50 50/.test(n))r.dom='equilibree';}
+  else if(/^(i|ind)$/.test(n))r.type='indica';
+  else if(/^(s|sat)$/.test(n))r.type='sativa';
+  else if(/^(h|hyb)$/.test(n))r.type='hybride';
+  return r;
+}
+function parseDom(v){var r=parseType(v);if(r.dom)return r.dom;if(r.type==='indica'||r.type==='sativa')return r.type;return undefined;}
+function splitCross(s){return s.split(/\s+[x×]\s+|\s*×\s*|\s+\+\s+/i).map(function(x){return x.replace(/^[(\s]+|[)\s]+$/g,'').trim();}).filter(Boolean);}
+function parseDesc(item){
+  var m=item.match(/^(.*?)\s*(?:\(\s*)?(?:×|\s[x×]\s|:|\bavec\b|\bwith\b)\s*(.+?)\)?\s*$/i);
+  if(m&&m[1].trim())return {nom:cleanName(m[1]),autre_parent:cleanName(m[2])||null};
+  return {nom:cleanName(item),autre_parent:null};
+}
+function normUrl(u){
+  u=String(u||'').trim().replace(/^<|>$/g,'');if(!u)return null;
+  if(/^www\./i.test(u)||/^[a-z0-9-]+(\.[a-z0-9-]+)+\/\S*/i.test(u))u='https://'+u;
+  return /^https?:\/\/[^\s/]+\.[^\s]+/i.test(u)?u:null;
+}
+function domainType(u){var d=u.toLowerCase();for(var t in DOMAINS){if(DOMAINS[t].some(function(x){return d.indexOf(x)>-1;}))return t;}return null;}
+function parseDate(v){
+  var s=String(v).trim(),m;
+  if((m=s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/)))return fmtDate(m[1],m[2],m[3]);
+  if((m=s.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})/)))return fmtDate(m[3],m[2],m[1]);
+  return null;
+}
+function fmtDate(y,mo,d){mo=+mo;d=+d;if(mo<1||mo>12||d<1||d>31)return null;return y+'-'+(mo<10?'0':'')+mo+'-'+(d<10?'0':'')+d;}
+
+function convertAll(){
+  var out={records:[],rejected:[],warnings:{},lines:S.rows.length};
+  var pending=[];
+  function warn(field,val,why){pending.push([field,val,why]);}
+  function flush(){pending.forEach(function(p){var w=out.warnings[p[0]]||(out.warnings[p[0]]={count:0,ex:[],why:p[2]});w.count++;if(w.ex.length<4)w.ex.push(String(p[1]).slice(0,40));});pending=[];}
+  var active=S.map.map(function(f,ci){return (isBlocked(ci)||(f&&FBY[f].long&&S.ignoreLong)||(f&&FBY[f].photo&&S.ignorePhotos))?'':f;});
+  S.rows.forEach(function(row,ri){
+    var line=ri+2,r=blank(),cx={urls:[],stype:null,sdate:null,pb:[],pn:[],pu:[]};pending=[];
+    active.forEach(function(fk,ci){
+      if(!fk)return;
+      var v=String(row[ci]==null?'':row[ci]).trim();
+      if(!v||EMPTY_RE.test(v))return;
+      applyValue(r,FBY[fk],v,cx,warn);
+    });
+    if(!r.nom){out.rejected.push({line:line,nom:r.id||'',why:'nom manquant'});return;}
+    if(/^https?:|^www\./i.test(r.nom)||r.nom.length>100){out.rejected.push({line:line,nom:r.nom.slice(0,60),why:'nom invalide (URL ou texte trop long)'});return;}
+    if(!/[a-z]/i.test(nrm(r.nom))){out.rejected.push({line:line,nom:r.nom,why:'nom invalide (aucune lettre)'});return;}
+    r.id=r.id||slug(r.nom);
+    if(!r.id){out.rejected.push({line:line,nom:r.nom,why:'identifiant impossible à calculer'});return;}
+    // sources
+    var singleType=cx.urls.length===1?cx.stype:null;
+    r.sources=uniq(cx.urls,function(u){return u.toLowerCase();}).map(function(u){return {url:u,type:singleType||domainType(u),date:cx.sdate};});
+    // nettoyage des listes et cohérence
+    LIST_FIELDS.forEach(function(k){r[k]=uniq(r[k]);});
+    r.alias=r.alias.filter(function(a){return nrm(a)!==nrm(r.nom);});
+    r.descendants=uniq(r.descendants,function(d){return nrm(d.nom);});
+    [['thc_min','thc_max'],['cbd_min','cbd_max'],['floraison_sem_min','floraison_sem_max']].forEach(function(p){
+      if(r[p[0]]!==null&&r[p[1]]!==null&&r[p[0]]>r[p[1]]){warn(p[0],r[p[0]]+' > '+r[p[1]],'min supérieur au max : valeurs inversées');var t=r[p[0]];r[p[0]]=r[p[1]];r[p[1]]=t;}
+    });
+    // produits : les listes banques | noms | URL sont associées position par position quand elles ont la même longueur
+    if(cx.pb.length||cx.pn.length||cx.pu.length){
+      var n=Math.max(cx.pb.length,cx.pn.length,cx.pu.length);
+      var aligned=[cx.pb,cx.pn,cx.pu].every(function(l){return !l.length||l.length===n;});
+      if(!aligned){warn('produit_breeder',cx.pb.length+' banques / '+cx.pn.length+' noms / '+cx.pu.length+' URL','listes de longueurs différentes : seules les banques sont gardées');n=cx.pb.length;}
+      for(var pi=0;pi<n;pi++){
+        var pr={breeder:cx.pb[pi]||null,nom_commercial:aligned?(cx.pn[pi]||null):null,url:aligned?(cx.pu[pi]||null):null};
+        if(pr.breeder||pr.nom_commercial||pr.url)r.produits.push(pr);
+      }
+      r.produits=uniq(r.produits,function(p){return nrm((p.breeder||'')+' '+(p.nom_commercial||''))+'|'+(p.url||'');});
+    }
+    r._lines=[line];
+    flush();
+    out.records.push(r);
+  });
+  var m=mergeRecords(out.records);
+  out.records=m.records;out.merged=m.merged;out.conflicts=m.conflicts;
+  return out;
+}
+function applyValue(r,f,v,cx,warn){
+  switch(f.t){
+    case 'text':{var t=cleanName(v);if(f.k==='nom'){if(!r.nom)r.nom=t;else if(nrm(t)!==nrm(r.nom))r.alias.push(t);}else if(!r[f.k])r[f.k]=t;break;}
+    // un identifiant purement numérique (base d'origine) est gardé à part : l'id reste le nom en minuscules avec tirets
+    case 'id':{if(/^\d+$/.test(v)){if(r.source_id===null)r.source_id=v;}else if(!r.id)r.id=slug(v);break;}
+    case 'list':r[f.k]=r[f.k].concat(splitList(v).map(cleanName));break;
+    case 'parents':{var items=splitList(v);if(items.length===1)items=splitCross(items[0]);r.parents=r.parents.concat(items.map(cleanName));break;}
+    case 'desc':r.descendants=r.descendants.concat(splitList(v).map(parseDesc).filter(function(d){return d.nom;}));break;
+    case 'range':case 'num':{
+      var rg=parseRange(v,f.weeks,f.days);
+      if(!rg){warn(f.k,v,'valeur non numérique');break;}
+      var lo=rg.min,hi=rg.max,lim=f;
+      if(!inLim(lo,lim)||!inLim(hi,lim)){warn(f.k,v,'valeur aberrante (hors '+f.lim[0]+'–'+f.lim[1]+')');break;}
+      if(f.t==='range'){if(r[f.to[0]]===null)r[f.to[0]]=lo;if(r[f.to[1]]===null)r[f.to[1]]=hi;}
+      else{var n=/_min$/.test(f.k)?(lo!==null?lo:hi):(hi!==null?hi:lo);if(r[f.k]===null)r[f.k]=n;}
+      break;}
+    case 'bool':{var b=parseBool(v,f);if(b===undefined){warn(f.k,v,'ni oui ni non');break;}if(r[f.k]===null)r[f.k]=b;break;}
+    case 'enum':{var e=enumOf(f.k,v);if(e===undefined){warn(f.k,v,'valeur non reconnue');break;}if(r[f.k]===null)r[f.k]=e;break;}
+    case 'type':{var p=parseType(v);if(p.type===undefined&&!p.auto){warn('type',v,'valeur non reconnue');break;}if(p.type&&r.type===null)r.type=p.type;if(p.dom&&r.dominante===null)r.dominante=p.dom;if(p.auto&&r.autofloraison===null)r.autofloraison=true;break;}
+    case 'dom':{var d=parseDom(v);if(d===undefined){warn('dominante',v,'valeur non reconnue');break;}if(r.dominante===null)r.dominante=d;break;}
+    case 'culture':{var any=false;splitList(v).forEach(function(it){var n=nrm(it);
+        if(/indoor|interieur|\bint\b|placard|tente|grow ?box/.test(n)){r.indoor=true;any=true;}
+        if(/outdoor|exterieur|\bext\b|plein air|jardin|balcon/.test(n)){r.outdoor=true;any=true;}
+        if(/serre|greenhouse/.test(n)){r.serre=true;any=true;}
+        if(/^(les deux|both|indoor outdoor|tous|all)$/.test(n)){r.indoor=true;r.outdoor=true;any=true;}});
+      if(!any)warn('culture',v,'environnement non reconnu');break;}
+    case 'pbrand':cx.pb=cx.pb.concat(splitList(v).map(cleanName));break;
+    case 'pname':cx.pn=cx.pn.concat(splitList(v).map(cleanName));break;
+    case 'purl':splitList(v.replace(/\s+(?=https?:)/g,'|')).forEach(function(u){cx.pu.push(normUrl(u));});break;
+    case 'surl':{splitList(v.replace(/\s+(?=https?:)/g,'|')).forEach(function(u){var x=normUrl(u);if(!x){warn('source_url',u,'URL invalide');return;}if(IMG_RE.test(x)){if(r.photos)r.photos.push(x);return;}cx.urls.push(x);});break;}
+    case 'stype':{var st=enumOf('source_type',v);if(st===undefined){warn('source_type',v,'type de source non reconnu');break;}cx.stype=st;break;}
+    case 'sdate':{var dt=parseDate(v);if(!dt){warn('source_date',v,'date illisible');break;}cx.sdate=dt;break;}
+    case 'extra':{if(f.photo){splitList(v.replace(/\s+(?=https?:)/g,'|')).forEach(function(u){var x=normUrl(u);if(x)r.photos.push(x);});}else{r.description=r.description?r.description+'\n'+v:v;}break;}
+  }
+}
+// doublons et alias : même id, ou nom/alias déjà vu → une seule fiche
+function mergeRecords(recs){
+  var byId={},owner={},order=[],merged=[],conflicts=[];
+  function keysOf(r){return [r.id].concat([r.nom].concat(r.alias).map(slug)).filter(function(k){return k&&k.length>=3;});}
+  function claim(r){keysOf(r).forEach(function(k){if(!owner[k])owner[k]=r.id;});}
+  recs.forEach(function(r){
+    var target=owner[r.id]||null;
+    if(!target){var ks=keysOf(r);for(var i=0;i<ks.length;i++){if(owner[ks[i]]){target=owner[ks[i]];break;}}}
+    if(!target){byId[r.id]=r;order.push(r.id);claim(r);return;}
+    var a=byId[target];
+    mergeInto(a,r,conflicts);
+    merged.push({line:r._lines[0],nom:r.nom,into:a.nom});
+    claim(a);
+  });
+  return {records:order.map(function(id){return byId[id];}),merged:merged,conflicts:conflicts};
+}
+function mergeInto(a,b,conflicts){
+  SCALARS.concat(S.ignoreLong?[]:['description']).forEach(function(k){
+    if(k==='nom')return;
+    if(a[k]===null||a[k]===undefined)a[k]=b[k];
+    else if(b[k]!==null&&b[k]!==undefined&&a[k]!==b[k])conflicts.push({nom:a.nom,champ:k,garde:a[k],ignore:b[k],line:b._lines[0]});
+  });
+  if(nrm(b.nom)!==nrm(a.nom))a.alias.push(b.nom);
+  LIST_FIELDS.forEach(function(k){a[k]=uniq(a[k].concat(b[k]));});
+  a.alias=a.alias.filter(function(x){return nrm(x)!==nrm(a.nom);});
+  a.descendants=uniq(a.descendants.concat(b.descendants),function(d){return nrm(d.nom);});
+  a.sources=uniq(a.sources.concat(b.sources),function(s){return s.url.toLowerCase();});
+  if(a.photos&&b.photos)a.photos=uniq(a.photos.concat(b.photos),function(u){return u;});
+  a.produits=uniq((a.produits||[]).concat(b.produits||[]),function(p){return nrm((p.breeder||'')+' '+(p.nom_commercial||''))+'|'+(p.url||'');});
+  a._lines=a._lines.concat(b._lines);
+}
+
+/* ── aperçu ── */
+function fmtRange(a,b){if(a===null&&b===null)return '<span class="vdb-null">null</span>';if(a===b)return esc(a);if(a===null)return '≤ '+esc(b);if(b===null)return '≥ '+esc(a);return esc(a)+'–'+esc(b);}
+function fmtList(l,n){return l&&l.length?esc(l.slice(0,n||3).join(', '))+(l.length>(n||3)?' …':''):'<span class="vdb-null">—</span>';}
+function fmtVal(v){return v===null||v===undefined?'<span class="vdb-null">null</span>':esc(v===true?'oui':v===false?'non':v);}
+function detailHtml(r){
+  var rows=[['Identifiant',fmtVal(r.id)],['Alias',fmtList(r.alias,20)],['Type',fmtVal(r.type)+' · dominante '+fmtVal(r.dominante)],['Breeder / créateur',fmtVal(r.breeder_createur)],
+    ['Parents',r.parents&&r.parents.length?esc(r.parents.join(' × ')):'<span class="vdb-null">—</span>'],
+    ['Descendants',r.descendants&&r.descendants.length?esc(r.descendants.map(function(d){return d.nom+(d.autre_parent?' (× '+d.autre_parent+')':'');}).join(', ')):'<span class="vdb-null">—</span>'],
+    ['THC / CBD',fmtRange(r.thc_min,r.thc_max)+' % · '+fmtRange(r.cbd_min,r.cbd_max)+' %'],['Terpènes',fmtList(r.terpenes,20)],['Effets',fmtList(r.effets,20)],['Effets indésirables',fmtList(r.effets_indesirables,20)],['Goûts',fmtList(r.gouts,20)],
+    ['Floraison',fmtRange(r.floraison_sem_min,r.floraison_sem_max)+' sem. · auto '+fmtVal(r.autofloraison)],
+    ['Culture','difficulté '+fmtVal(r.difficulte)+' · hauteur '+fmtVal(r.hauteur)+' · rendement '+fmtVal(r.rendement)+' · moisissure '+fmtVal(r.resistance_moisissure)],
+    ['Environnement','indoor '+fmtVal(r.indoor)+' · outdoor '+fmtVal(r.outdoor)+' · serre '+fmtVal(r.serre)],
+    ['Banques de graines',r.produits&&r.produits.length?r.produits.slice(0,30).map(function(p){var t=esc(p.breeder||'?')+(p.nom_commercial?' — '+esc(p.nom_commercial):'');return p.url?'<a href="'+h(p.url)+'" target="_blank" rel="noopener">'+t+'</a>':t;}).join(' · ')+(r.produits.length>30?' …':''):'<span class="vdb-null">—</span>'],
+    ['Sources',r.sources&&r.sources.length?r.sources.map(function(s){return '<a href="'+h(s.url)+'" target="_blank" rel="noopener">'+esc(s.url.replace(/^https?:\/\/(www\.)?/,'').slice(0,60))+'</a> · '+fmtVal(s.type)+' · '+fmtVal(s.date);}).join('<br>'):'<span style="color:var(--red)">aucune</span>']];
+  if(r.description!==undefined)rows.push(['Description',r.description?esc(r.description.slice(0,300))+(r.description.length>300?'…':''):'<span class="vdb-null">null</span>']);
+  if(r.photos!==undefined)rows.push(['Photo',r.photos&&r.photos.length?'<img src="'+h(r.photos[0])+'" alt="" width="72" height="72" loading="lazy" referrerpolicy="no-referrer" style="object-fit:cover;border-radius:8px;vertical-align:middle;margin-right:8px" onerror="this.replaceWith(document.createTextNode(\'image inaccessible \'))"> '+(r.photos.length>1?r.photos.length+' photos':''):'<span class="vdb-null">—</span>']);
+  if(r._lines)rows.push(['Ligne(s) du CSV',esc(r._lines.slice(0,10).join(', '))]);
+  return '<div class="vdb-detail">'+rows.map(function(x){return '<div><b>'+x[0]+' :</b> '+x[1]+'</div>';}).join('')+'</div>';
+}
+function previewRow(r,i,prefix){
+  return '<tr><td><b style="font-weight:500">'+esc(r.nom)+'</b></td><td>'+fmtList(r.alias,2)+'</td><td>'+fmtVal(r.type)+(r.dominante?' <span class="vdb-note">('+esc(r.dominante)+')</span>':'')+(r.autofloraison?' <span class="td-badge gold">auto</span>':'')+'</td>'+
+    '<td>'+fmtRange(r.thc_min,r.thc_max)+'</td><td>'+fmtRange(r.cbd_min,r.cbd_max)+'</td><td>'+fmtRange(r.floraison_sem_min,r.floraison_sem_max)+'</td>'+
+    '<td>'+(r.parents.length?esc(r.parents.slice(0,3).join(' × ')):'<span class="vdb-null">—</span>')+'</td>'+
+    '<td>'+(r.produits.length?esc(uniq(r.produits.map(function(p){return p.breeder;}).filter(Boolean)).slice(0,3).join(', '))+(r.produits.length>3?' …':''):'<span class="vdb-null">—</span>')+'</td>'+
+    '<td>'+(r.sources.length?'<span class="td-badge green">'+r.sources.length+'</span>':'<span class="td-badge red">aucune</span>')+'</td>'+
+    '<td><button class="btn btn-secondary" style="height:26px;padding:0 9px" onclick="vdbToggleDetail(\''+prefix+'\','+i+')">détails</button></td></tr>'+
+    '<tr id="'+prefix+'-d'+i+'" style="display:none"><td colspan="10" style="padding:0">'+detailHtml(r)+'</td></tr>';
+}
+window.vdbToggleDetail=function(prefix,i){var e=$(prefix+'-d'+i);if(e)e.style.display=e.style.display==='none'?'':'none';};
+
+window.vdbPreview=async function(){
+  if(S.map.indexOf('nom')<0){toast('⚠️ Relie une colonne au champ « Nom »','error');return;}
+  S.conv=convertAll();
+  saveMapping();
+  await loadIndex();
+  var c=S.conv,recs=c.records;
+  var existing=recs.filter(function(r){return findExisting(r);}).length;
+  var noSrc=recs.filter(function(r){return !r.sources.length;}).length;
+  var wk=Object.keys(c.warnings);
+  $('vdbPreviewInfo').innerHTML='<div class="vdb-grid">'+card(recs.length,'Fiches valides')+card(recs.length-existing,'Nouvelles')+card(existing,'Déjà en base (mise à jour)')+card(c.rejected.length,'Rejetées')+card(c.merged.length,'Doublons fusionnés')+card(noSrc,'Sans source')+'</div>'+
+    (wk.length?'<div class="vdb-info"><div class="vdb-sub">Valeurs mises à null (non converties)</div><ul class="vdb-list">'+wk.map(function(k){var w=c.warnings[k];return '<li><b>'+esc((FBY[k]||{l:k}).l)+'</b> : '+w.count+' valeur(s) — '+esc(w.why)+' (ex. « '+w.ex.map(esc).join(' », « ')+' »)</li>';}).join('')+'</ul></div>':'<div class="vdb-info">Toutes les valeurs reliées ont été converties.</div>')+
+    (c.conflicts.length?'<div class="vdb-info"><div class="vdb-sub">Doublons avec des valeurs différentes ('+c.conflicts.length+') — la première valeur est gardée</div><ul class="vdb-list">'+c.conflicts.slice(0,15).map(function(x){return '<li>'+esc(x.nom)+' · '+esc(x.champ)+' : gardé « '+esc(x.garde)+' », ignoré « '+esc(x.ignore)+' » (ligne '+x.line+')</li>';}).join('')+(c.conflicts.length>15?'<li>…</li>':'')+'</ul></div>':'');
+  $('vdbPreviewBody').innerHTML=recs.slice(0,PREVIEW_N).map(function(r,i){return previewRow(r,i,'vdbp');}).join('')||'<tr><td colspan="10"><div class="empty-state">Aucune fiche valide</div></td></tr>';
+  $('vdbBtnTest').disabled=!recs.length;$('vdbBtnAll').disabled=!recs.length;
+  $('vdbBtnAll').innerHTML='💾 Tout importer ('+recs.length+')';
+  show('vdbStepPreview',true);show('vdbStepReport',false);
+  $('vdbStepPreview').scrollIntoView({behavior:'smooth',block:'start'});
+};
+
+/* ═══ 5. INDEX ET ÉCRITURE FIRESTORE ═══ */
+async function loadIndex(force){
+  if(S.indexLoaded&&!force)return S.index;
+  var list=[];
+  try{
+    var meta=await db.collection(IDX).doc('meta').get();
+    var parts=meta.exists?(meta.data().parts||0):0;
+    var snaps=await Promise.all(Array.from({length:parts},function(_,i){return db.collection(IDX).doc('part_'+i).get();}));
+    snaps.forEach(function(s){if(!s.exists)return;(s.data().entries||[]).forEach(function(e){var p=String(e).split('|');list.push({id:p[0],nom:p[1]||p[0],alias:p.slice(2).filter(Boolean),type:null});});});
+    S.indexMeta=meta.exists?meta.data():null;
+    var fparts=(S.indexMeta&&S.indexMeta.fparts)||0,facets={};
+    var fsnaps=await Promise.all(Array.from({length:fparts},function(_,i){return db.collection(IDX).doc('f_'+i).get();}));
+    fsnaps.forEach(function(s){if(!s.exists)return;(s.data().entries||[]).forEach(function(e){facets[String(e).split('|')[0]]=e;});});
+    S.facets=facets;
+  }catch(e){console.warn('[varietes] index illisible',e&&e.message);}
+  S.index=list;S.indexLoaded=true;
+  S.byKey={};list.forEach(function(e){[e.id].concat([e.nom].concat(e.alias).map(slug)).forEach(function(k){if(k&&!S.byKey[k])S.byKey[k]=e;});});
+  return list;
+}
+function findExisting(r){
+  if(!S.byKey)return null;
+  if(S.byKey[r.id])return S.byKey[r.id];
+  var ks=[r.nom].concat(r.alias).map(slug);
+  for(var i=0;i<ks.length;i++)if(ks[i]&&S.byKey[ks[i]])return S.byKey[ks[i]];
+  return null;
+}
+function cleanForWrite(r){var o={};Object.keys(r).forEach(function(k){if(k.charAt(0)!=='_')o[k]=r[k]===undefined?null:r[k];});return o;}
+function nonEmpty(o){var out={};Object.keys(o).forEach(function(k){var v=o[k];if(v===null||v===undefined)return;if(Array.isArray(v)&&!v.length)return;out[k]=v;});return out;}
+
+window.vdbImport=async function(test){
+  if(S.busy||!S.conv)return;
+  var recs=test?S.conv.records.slice(0,TEST_N):S.conv.records;
+  if(!recs.length)return;
+  // confirmation dans la page : les fenêtres confirm() peuvent être bloquées par le navigateur
+  if(!test&&!S.armed){
+    S.armed=true;var btn=$('vdbBtnAll');btn.innerHTML='⚠️ Cliquer encore pour importer '+recs.length+' fiches';
+    clearTimeout(S.armTimer);S.armTimer=setTimeout(function(){S.armed=false;btn.innerHTML='💾 Tout importer ('+recs.length+')';},8000);
+    return;
+  }
+  S.armed=false;clearTimeout(S.armTimer);
+  S.busy=true;$('vdbBtnTest').disabled=true;$('vdbBtnAll').disabled=true;
+  show('vdbStepReport',true);
+  $('vdbReport').innerHTML='<div class="vdb-info" id="vdbProgTxt">Préparation…</div><div class="vdb-progress"><i id="vdbProg"></i></div>';
+  $('vdbStepReport').scrollIntoView({behavior:'smooth',block:'start'});
+  await loadIndex(true);
+  var now=Date.now(),FV=firebase.firestore.FieldValue,ops=[],rep={test:!!test,file:S.file.name,date:new Date().toLocaleString('fr-FR'),created:[],updated:[],rejected:S.conv.rejected,merged:S.conv.merged,conflicts:S.conv.conflicts,warnings:S.conv.warnings,noSource:[],written:0,error:null};
+  var idxMap={};(S.index||[]).forEach(function(e){idxMap[e.id]={nom:e.nom,alias:e.alias.slice()};});
+  var facetMap=Object.assign({},S.facets||{});
+  recs.forEach(function(r){
+    var ex=findExisting(r),data=cleanForWrite(r);
+    data.updatedAt=now;data.importFile=S.file.name;
+    if(!r.sources.length)rep.noSource.push(r.nom);
+    if(!ex){
+      data.importedAt=now;
+      ops.push({id:r.id,data:data,merge:false});
+      rep.created.push(r.nom);
+      idxMap[r.id]={nom:r.nom,alias:r.alias.slice()};
+      facetMap[r.id]=facetOf(r);
+    }else{
+      // réimport : les valeurs du fichier remplacent les anciennes, une valeur vide n'efface rien ; alias et sources s'ajoutent
+      var upd=nonEmpty(data),extraAlias=r.alias.slice();
+      if(nrm(r.nom)!==nrm(ex.nom)){extraAlias.push(r.nom);delete upd.nom;}
+      delete upd.alias;delete upd.id;
+      if(extraAlias.length)upd.alias=FV.arrayUnion.apply(FV,extraAlias);
+      // les sources s'ajoutent à celles déjà enregistrées (traçabilité entre fichiers)
+      if(upd.sources)upd.sources=FV.arrayUnion.apply(FV,upd.sources);
+      ops.push({id:ex.id,data:upd,merge:true});
+      rep.updated.push(r.nom+(ex.id!==r.id?' → '+ex.nom:''));
+      facetMap[ex.id]=mergeFacet(facetMap[ex.id],facetOf(Object.assign({},r,{id:ex.id})));
+      var e=idxMap[ex.id]||(idxMap[ex.id]={nom:ex.nom,alias:[]});
+      e.alias=uniq(e.alias.concat(extraAlias)).filter(function(a){return nrm(a)!==nrm(e.nom);});
+    }
+  });
+  try{
+    for(var i=0;i<ops.length;i+=BATCH){
+      var b=db.batch();
+      ops.slice(i,i+BATCH).forEach(function(o){var ref=db.collection(COL).doc(o.id);if(o.merge)b.set(ref,o.data,{merge:true});else b.set(ref,o.data);});
+      await b.commit();
+      rep.written=Math.min(ops.length,i+BATCH);
+      $('vdbProg').style.width=Math.round(rep.written/ops.length*95)+'%';
+      $('vdbProgTxt').textContent='Écriture… '+rep.written+' / '+ops.length+' fiches';
+    }
+    $('vdbProgTxt').textContent='Mise à jour de l\'index des noms…';
+    await writeIndex(idxMap,now,facetMap);
+    $('vdbProg').style.width='100%';
+  }catch(e){rep.error=e&&e.message||String(e);}
+  S.lastReport=rep;S.busy=false;
+  $('vdbBtnTest').disabled=false;$('vdbBtnAll').disabled=false;$('vdbBtnAll').innerHTML='💾 Tout importer ('+S.conv.records.length+')';
+  renderReport(rep);
+  S.docCache={};await loadIndex(true);vdbSearch();
+  toast(rep.error?'Import interrompu : '+rep.error:(test?'🧪 Test : ':'✅ ')+rep.written+' fiches enregistrées',rep.error?'error':'info');
+};
+/* ── facettes : faits compacts par fiche, lus par le chat pour la recherche par critères ──
+   id|type|dominante|thcMin|thcMax|cbdMax|floMin|floMax|auto|difficulté|hauteur|rendement|env|moisissure|nbBanques|effets|indésirables|goûts|terpènes */
+function fTok(l,n){return uniq((l||[]).map(function(x){return nrm(x);}).filter(Boolean)).slice(0,n).join(',');}
+function fNum(v){return v===null||v===undefined?'':String(v);}
+function fBool(v){return v===true?'1':v===false?'0':'';}
+function facetOf(r){
+  return [r.id,
+    ({indica:'i',sativa:'s',hybride:'h'})[r.type]||'',({indica:'i',sativa:'s',equilibree:'e'})[r.dominante]||'',
+    fNum(r.thc_min),fNum(r.thc_max!=null?r.thc_max:r.thc_min),fNum(r.cbd_max!=null?r.cbd_max:r.cbd_min),
+    fNum(r.floraison_sem_min),fNum(r.floraison_sem_max),fBool(r.autofloraison),
+    ({facile:'f',moyenne:'m',difficile:'d'})[r.difficulte]||'',({compacte:'c',moyenne:'m',grande:'g'})[r.hauteur]||'',({faible:'f',moyen:'m',eleve:'e'})[r.rendement]||'',
+    (r.indoor?'i':'')+(r.outdoor?'o':'')+(r.serre?'s':''),fBool(r.resistance_moisissure),String((r.produits||[]).length||''),
+    fTok(r.effets,8),fTok(r.effets_indesirables,5),fTok(r.gouts,8),fTok(r.terpenes,5)].join('|');
+}
+// mise à jour : comme pour la fiche, une valeur vide n'efface pas l'ancienne
+function mergeFacet(oldF,newF){if(!oldF)return newF;var o=oldF.split('|'),n=newF.split('|');return n.map(function(v,i){return i===0?v:(v!==''?v:(o[i]||''));}).join('|');}
+
+async function writeIndex(idxMap,now,facetMap){
+  var ids=Object.keys(idxMap).sort(),entries=ids.map(function(id){var e=idxMap[id];return [id,String(e.nom||id).replace(/\|/g,'/')].concat((e.alias||[]).map(function(a){return String(a).replace(/\|/g,'/');})).join('|');});
+  var parts=Math.max(1,Math.ceil(entries.length/IDX_PART)),old=(S.indexMeta&&S.indexMeta.parts)||0;
+  var b=db.batch(),n=0;
+  for(var p=0;p<parts;p++){b.set(db.collection(IDX).doc('part_'+p),{entries:entries.slice(p*IDX_PART,(p+1)*IDX_PART)});n++;}
+  for(var q=parts;q<old;q++){b.delete(db.collection(IDX).doc('part_'+q));n++;}
+  var facets=Object.keys(facetMap||{}).filter(function(id){return idxMap[id];}).sort().map(function(id){return facetMap[id];});
+  var fparts=facets.length?Math.ceil(facets.length/FACET_PART):0,oldF=(S.indexMeta&&S.indexMeta.fparts)||0;
+  for(var fp=0;fp<fparts;fp++){b.set(db.collection(IDX).doc('f_'+fp),{entries:facets.slice(fp*FACET_PART,(fp+1)*FACET_PART)});}
+  for(var fq=fparts;fq<oldF;fq++){b.delete(db.collection(IDX).doc('f_'+fq));}
+  b.set(db.collection(IDX).doc('meta'),{parts:parts,count:entries.length,fparts:fparts,facets:facets.length,updatedAt:now,file:S.file?S.file.name:null});
+  await b.commit();
+}
+
+/* ── rapport ── */
+function renderReport(r){
+  var rejList=r.rejected.slice(0,200).map(function(x){return '<li>Ligne '+x.line+(x.nom?' · '+esc(x.nom):'')+' — '+esc(x.why)+'</li>';}).join('');
+  var wk=Object.keys(r.warnings);
+  $('vdbReport').innerHTML=
+    (r.error?'<div class="vdb-info" style="color:var(--red)">❌ Import interrompu après '+r.written+' fiche(s) : '+esc(r.error)+'<br>Vérifie les règles Firestore de la collection <code>'+COL+'</code>.</div>':'')+
+    '<div class="vdb-info">'+(r.test?'🧪 <b>Import de test</b> (20 premières fiches) · ':'')+esc(r.file)+' · '+esc(r.date)+'</div>'+
+    '<div class="vdb-grid">'+card(r.created.length,'Importées')+card(r.updated.length,'Mises à jour')+card(r.rejected.length,'Rejetées')+card(r.merged.length,'Doublons fusionnés')+card(r.noSource.length,'Sans source')+'</div>'+
+    (r.rejected.length?'<div class="vdb-info"><div class="vdb-sub">Fiches rejetées</div><ul class="vdb-list">'+rejList+(r.rejected.length>200?'<li>…</li>':'')+'</ul></div>':'')+
+    (r.noSource.length?'<div class="vdb-info"><div class="vdb-sub">Fiches sans source ('+r.noSource.length+')</div><ul class="vdb-list">'+r.noSource.slice(0,200).map(function(n){return '<li>'+esc(n)+'</li>';}).join('')+(r.noSource.length>200?'<li>…</li>':'')+'</ul></div>':'')+
+    (r.merged.length?'<div class="vdb-info"><div class="vdb-sub">Doublons et alias fusionnés</div><ul class="vdb-list">'+r.merged.slice(0,100).map(function(m){return '<li>Ligne '+m.line+' · '+esc(m.nom)+' → '+esc(m.into)+'</li>';}).join('')+'</ul></div>':'')+
+    (wk.length?'<div class="vdb-info"><div class="vdb-sub">Valeurs mises à null</div><ul class="vdb-list">'+wk.map(function(k){return '<li>'+esc((FBY[k]||{l:k}).l)+' : '+r.warnings[k].count+' — '+esc(r.warnings[k].why)+'</li>';}).join('')+'</ul></div>':'')+
+    '<div class="vdb-row"><button class="btn btn-gold" onclick="vdbDownloadReport()">📤 Télécharger le rapport (CSV)</button>'+(r.test&&!r.error?'<span class="vdb-note">Test réussi : clique sur « Tout importer » au-dessus pour la suite.</span>':'')+'</div>';
+}
+window.vdbDownloadReport=function(){
+  var r=S.lastReport;if(!r)return;
+  var q=function(v){return '"'+String(v==null?'':v).replace(/"/g,'""')+'"';};
+  var lines=[['categorie','ligne','nom','detail'].join(';')];
+  r.created.forEach(function(n){lines.push(['importee','',q(n),''].join(';'));});
+  r.updated.forEach(function(n){lines.push(['mise_a_jour','',q(n),''].join(';'));});
+  r.rejected.forEach(function(x){lines.push(['rejetee',x.line,q(x.nom),q(x.why)].join(';'));});
+  r.noSource.forEach(function(n){lines.push(['sans_source','',q(n),''].join(';'));});
+  r.merged.forEach(function(m){lines.push(['fusionnee',m.line,q(m.nom),q('fusionnée dans '+m.into)].join(';'));});
+  r.conflicts.forEach(function(c){lines.push(['conflit',c.line,q(c.nom),q(c.champ+' : gardé '+c.garde+', ignoré '+c.ignore)].join(';'));});
+  var blob=new Blob(['﻿'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='rapport-import-varietes-'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);},2000);
+};
+
+/* ═══ LISTE CONSULTABLE ═══ */
+window.vdbOpen=async function(force){
+  $('vdbListCount').textContent='Chargement…';
+  await loadIndex(!!force);
+  if(force)S.docCache={};
+  vdbSearch();
+};
+var searchTimer=null;
+window.vdbSearch=function(){clearTimeout(searchTimer);searchTimer=setTimeout(renderList,180);};
+async function renderList(){
+  var list=S.index||[],q=nrm(($('vdbSearch')||{}).value||'');
+  var hits=q?list.filter(function(e){return nrm(e.nom).indexOf(q)>-1||e.alias.some(function(a){return nrm(a).indexOf(q)>-1;});}):list.slice();
+  hits.sort(function(a,b){if(q){var as=nrm(a.nom).indexOf(q)===0?0:1,bs=nrm(b.nom).indexOf(q)===0?0:1;if(as!==bs)return as-bs;}return a.nom.localeCompare(b.nom,'fr');});
+  $('vdbListCount').textContent=list.length?(q?hits.length+' résultat(s) sur '+list.length+' fiches':list.length+' fiches'+(hits.length>LIST_N?' · '+LIST_N+' premières affichées':'')):'Aucune fiche';
+  var shown=hits.slice(0,LIST_N);
+  if(!shown.length){$('vdbListBody').innerHTML='<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">🌿</div>'+(list.length?'Aucune fiche ne correspond':'Aucune fiche pour le moment')+'</div></td></tr>';return;}
+  var docs=await Promise.all(shown.map(function(e){
+    if(S.docCache[e.id])return S.docCache[e.id];
+    return db.collection(COL).doc(e.id).get().then(function(s){var d=s.exists?s.data():null;S.docCache[e.id]=d;return d;}).catch(function(){return null;});
+  }));
+  S.listShown=docs;
+  $('vdbListBody').innerHTML=shown.map(function(e,i){
+    var d=docs[i];
+    if(!d)return '<tr><td>'+esc(e.nom)+'</td><td colspan="7"><span class="vdb-null">fiche introuvable</span></td></tr>';
+    return '<tr><td><b style="font-weight:500">'+esc(d.nom||e.nom)+'</b></td><td>'+fmtList(d.alias,2)+'</td><td>'+fmtVal(d.type)+'</td><td>'+fmtRange(d.thc_min,d.thc_max)+'</td><td>'+fmtRange(d.floraison_sem_min,d.floraison_sem_max)+'</td>'+
+      '<td>'+((d.produits||[]).length?'<span class="td-badge gold">'+d.produits.length+'</span>':'<span class="vdb-null">—</span>')+'</td>'+
+      '<td>'+((d.sources||[]).length?'<span class="td-badge green">'+d.sources.length+'</span>':'<span class="td-badge red">aucune</span>')+'</td>'+
+      '<td><button class="btn btn-secondary" style="height:26px;padding:0 9px" onclick="vdbToggleDetail(\'vdbl\','+i+')">détails</button></td></tr>'+
+      '<tr id="vdbl-d'+i+'" style="display:none"><td colspan="8" style="padding:0">'+detailHtml(Object.assign({descendants:[],alias:[],parents:[],terpenes:[],effets:[],effets_indesirables:[],gouts:[],sources:[],produits:[]},d))+'</td></tr>';
+  }).join('');
+}
+
+/* ── reconstruire l'index des noms et des critères à partir des fiches enregistrées ── */
+window.vdbRebuild=async function(){
+  var btn=$('vdbBtnRebuild');if(S.busy)return;
+  S.busy=true;btn.disabled=true;
+  var idxMap={},facetMap={},n=0,last=null;
+  try{
+    await loadIndex(true);
+    while(true){
+      var q=db.collection(COL).orderBy(firebase.firestore.FieldPath.documentId()).limit(500);
+      if(last)q=q.startAfter(last);
+      var snap=await q.get();
+      if(snap.empty)break;
+      snap.forEach(function(d){var r=Object.assign({},d.data(),{id:d.id});idxMap[d.id]={nom:r.nom||d.id,alias:r.alias||[]};facetMap[d.id]=facetOf(r);});
+      n+=snap.size;last=snap.docs[snap.docs.length-1];btn.innerHTML='Lecture… '+n;
+    }
+    btn.innerHTML='Écriture de l\'index…';
+    await writeIndex(idxMap,Date.now(),facetMap);
+    toast('✅ Index reconstruit : '+n+' fiches','info');
+  }catch(e){toast('Erreur : '+(e&&e.message),'error');}
+  S.busy=false;btn.disabled=false;btn.innerHTML='⟳ Reconstruire l\'index';
+  S.docCache={};await loadIndex(true);renderList();
+};
+
+/* ── vider la collection (avant un réimport propre) ── */
+window.vdbClear=async function(){
+  var btn=$('vdbBtnClear');
+  if(S.busy)return;
+  if(!S.clearArmed){
+    S.clearArmed=true;btn.innerHTML='⚠️ Cliquer encore pour tout supprimer';
+    clearTimeout(S.clearTimer);S.clearTimer=setTimeout(function(){S.clearArmed=false;btn.innerHTML='🗑 Vider la base';},8000);
+    return;
+  }
+  S.clearArmed=false;clearTimeout(S.clearTimer);S.busy=true;btn.disabled=true;
+  var n=0;
+  try{
+    while(true){
+      var snap=await db.collection(COL).limit(BATCH).get();
+      if(snap.empty)break;
+      var b=db.batch();snap.forEach(function(d){b.delete(d.ref);});await b.commit();
+      n+=snap.size;btn.innerHTML='Suppression… '+n;
+    }
+    var idx=await db.collection(IDX).get(),b2=db.batch();idx.forEach(function(d){b2.delete(d.ref);});await b2.commit();
+    toast('🗑 '+n+' fiches supprimées','info');
+  }catch(e){toast('Erreur : '+(e&&e.message),'error');}
+  S.busy=false;btn.disabled=false;btn.innerHTML='🗑 Vider la base';
+  S.docCache={};S.indexMeta=null;await loadIndex(true);renderList();
+};
+
+/* (tests) exposé pour la console : window.__vdb */
+window.__vdb={parseRange:parseRange,parseType:parseType,autoField:autoField,enumOf:enumOf,parseBool:parseBool,splitList:splitList,slug:slug,state:S};
+})();
 </script>
 </body>
 </html>

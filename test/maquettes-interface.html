@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Maquettes — directions visuelles</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Figtree:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Atkinson+Hyperlegible:wght@400;700&family=Outfit:wght@400;500;600&family=Unbounded:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&family=Archivo:wght@400;600;700&family=Archivo+Black&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#d9dcd6;font-family:Figtree,system-ui,sans-serif;color:#1a1f1c;padding:28px 16px 60px}
+.intro{max-width:1180px;margin:0 auto 22px;font-size:14px;line-height:1.6;color:#3b423d}
+.intro h1{font-family:'Bricolage Grotesque';font-size:26px;font-weight:800;margin-bottom:6px;color:#1a1f1c}
+.grid{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,540px),1fr));gap:22px}
+.dir-name{font-size:13px;color:#3b423d;margin:0 0 8px 4px}
+.dir-name b{font-size:16px;color:#1a1f1c}
+
+/* ═══════════ DIRECTION A — Sachet de graines (Pays Basque) ═══════════ */
+.A{--paper:#fbfaf7;--ink:#17201b;--muted:#5a625c;--line:#e3e1da;--red:#c8102e;--green:#00703c;--indica:#43307a;--sativa:#d99a00;--hybride:#2f7d4f;
+  background:var(--paper);border-radius:18px;overflow:hidden;font-family:Figtree,sans-serif;color:var(--ink);box-shadow:0 1px 0 #0001}
+.A .top{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line)}
+.A .logo{font-family:'Bricolage Grotesque';font-weight:800;font-size:19px;letter-spacing:-.02em}
+.A .logo i{font-style:normal;color:var(--red)}
+.A .shop{font-size:12px;color:var(--muted);margin-left:auto}
+.A .modes{display:flex;gap:4px;padding:10px 18px 0}
+.A .modes span{font-size:13px;padding:6px 12px;border-radius:99px;color:var(--muted)}
+.A .modes span.on{background:var(--ink);color:#fff}
+.A .thread{padding:16px 18px 6px;display:flex;flex-direction:column;gap:12px}
+.A .me{align-self:flex-end;background:var(--green);color:#fff;padding:9px 14px;border-radius:16px 16px 4px 16px;font-size:14px;max-width:80%}
+.A .strip{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
+.A .chip{font-size:12px;padding:3px 10px;border-radius:99px;border:1.5px solid currentColor;display:inline-flex;gap:6px;align-items:center}
+.A .chip button{all:unset;cursor:pointer;font-weight:600;line-height:1}
+.A .c-eff{color:var(--green)}.A .c-gout{color:#9a6a00}.A .c-cult{color:var(--indica)}
+.A .count{font-weight:600;color:var(--ink)}
+.A .card{border-radius:16px;overflow:hidden;border:1px solid var(--line);background:#fff}
+.A .band{background:var(--indica);color:#fff;padding:16px 18px 14px;position:relative}
+.A .band .kind{font-size:12px;opacity:.85}
+.A .band h3{font-family:'Bricolage Grotesque';font-weight:800;font-size:30px;line-height:1;letter-spacing:-.03em;margin-top:4px}
+.A .band .from{font-size:13px;opacity:.9;margin-top:6px}
+.A .stamp{position:absolute;top:14px;right:14px;background:#fff;color:var(--green);font-weight:600;font-size:12px;padding:5px 10px;border-radius:99px;display:flex;gap:6px;align-items:center}
+.A .stamp:before{content:'';width:7px;height:7px;border-radius:50%;background:var(--green)}
+.A .specs{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line)}
+.A .spec{padding:12px 14px;border-right:1px solid var(--line)}
+.A .spec:last-child{border-right:0}
+.A .spec b{display:block;font-family:'Bricolage Grotesque';font-size:24px;font-weight:600;letter-spacing:-.02em}
+.A .spec small{font-size:12px;color:var(--muted)}
+.A .body{padding:14px 18px;display:grid;gap:10px;font-size:14px;line-height:1.5}
+.A .row{display:grid;grid-template-columns:96px 1fr;gap:10px}
+.A .row span:first-child{color:var(--muted);font-size:13px}
+.A .bars{display:grid;gap:5px}
+.A .bar{display:grid;grid-template-columns:86px 1fr;align-items:center;gap:8px;font-size:13px}
+.A .bar i{height:8px;border-radius:4px;background:#ecebe5;position:relative;overflow:hidden}
+.A .bar i:after{content:'';position:absolute;inset:0;width:var(--v);background:var(--green);border-radius:4px}
+.A .acts{display:flex;gap:8px;padding:0 18px 16px;flex-wrap:wrap}
+.A .btn{font:500 13px Figtree;padding:8px 14px;border-radius:99px;border:1.5px solid var(--ink);background:none;color:var(--ink)}
+.A .btn.main{background:var(--ink);color:#fff}
+.A .say{font-size:14px;line-height:1.6;color:#2b322d}
+.A .input{margin:8px 18px 18px;border:1.5px solid var(--ink);border-radius:16px;padding:10px 12px 10px 16px;display:flex;flex-direction:column;gap:8px}
+.A .input .q{font-size:14px;color:var(--muted)}
+.A .quick{display:flex;gap:6px;flex-wrap:wrap}
+.A .quick span{font-size:12px;padding:4px 10px;border-radius:99px;background:#f0efe9;color:var(--ink)}
+.A .send{align-self:flex-end;background:var(--red);color:#fff;border:0;border-radius:99px;padding:8px 16px;font:600 13px Figtree;flex-shrink:0}
+
+/* ═══════════ DIRECTION B — Herbier / fiche botanique ═══════════ */
+.B{--paper:#eef1ec;--card:#f9faf7;--ink:#1f3a2e;--muted:#4f6359;--line:#cdd6cf;--moss:#5f7f1f;--rust:#a4472a;
+  background:var(--paper);border-radius:18px;overflow:hidden;font-family:'Atkinson Hyperlegible',sans-serif;color:var(--ink)}
+.B .top{display:flex;align-items:baseline;gap:10px;padding:16px 20px;border-bottom:1px solid var(--line)}
+.B .logo{font-family:Fraunces;font-size:22px;font-weight:600}
+.B .shop{font-size:12px;color:var(--muted);margin-left:auto}
+.B .modes{display:flex;gap:18px;padding:10px 20px 0;font-size:14px;color:var(--muted)}
+.B .modes span.on{color:var(--ink);border-bottom:2px solid var(--moss);padding-bottom:4px}
+.B .thread{padding:16px 20px 6px;display:flex;flex-direction:column;gap:12px}
+.B .me{align-self:flex-end;background:var(--ink);color:#f3f6f1;padding:9px 14px;border-radius:14px 14px 3px 14px;font-size:14px;max-width:80%}
+.B .strip{font-size:13px;color:var(--muted);line-height:1.9}
+.B .strip u{text-decoration:none;border-bottom:1.5px solid var(--moss);color:var(--ink);margin-right:8px}
+.B .strip s{color:var(--rust);margin-right:8px}
+.B .card{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:16px 18px;display:grid;gap:14px}
+.B .head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.B h3{font-family:Fraunces;font-size:28px;font-weight:400;line-height:1.05}
+.B .latin{font-size:13px;color:var(--muted);margin-top:4px}
+.B .stock{font-size:13px;color:var(--moss);font-weight:700;white-space:nowrap}
+.B .tree{display:grid;grid-template-columns:1fr 24px 1fr;align-items:center;font-size:13px;color:var(--muted)}
+.B .tree div{border:1px solid var(--line);border-radius:4px;padding:6px 8px;background:#fff;color:var(--ink)}
+.B .tree em{font-style:normal;text-align:center;color:var(--moss);font-size:16px}
+.B .facts{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.B .fact{padding:10px 0;border-right:1px dotted var(--line);padding-left:10px}
+.B .fact:first-child{padding-left:0}.B .fact:last-child{border-right:0}
+.B .fact b{display:block;font-family:Fraunces;font-size:22px;font-weight:400}
+.B .fact small{font-size:12px;color:var(--muted)}
+.B dl{display:grid;grid-template-columns:110px 1fr;gap:6px 12px;font-size:14px;line-height:1.5}
+.B dt{color:var(--muted)}
+.B .acts{display:flex;gap:16px;font-size:14px}
+.B .acts a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--moss)}
+.B .say{font-family:Fraunces;font-size:15px;line-height:1.65;color:#2a4136}
+.B .input{margin:8px 20px 20px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;gap:10px;align-items:center}
+.B .input .q{flex:1;font-size:14px;color:var(--muted)}
+.B .send{background:var(--moss);color:#fff;border:0;border-radius:6px;padding:8px 14px;font:700 13px 'Atkinson Hyperlegible'}
+@media (max-width:560px){.A .specs,.B .facts{grid-template-columns:repeat(2,1fr)}.A .spec:nth-child(2){border-right:0}.A .spec:nth-child(-n+2){border-bottom:1px solid var(--line)}}
+
+/* ═══════════ DIRECTION C — Côte basque / surf report ═══════════ */
+.C{--sand:#f4efe6;--ocean:#0b4f6c;--deep:#073246;--foam:#e3f1f4;--sun:#f28c28;--ink:#10222b;--muted:#4e6670;--line:#d9d2c4;
+  background:var(--sand);border-radius:22px;overflow:hidden;font-family:'Outfit',sans-serif;color:var(--ink)}
+.C .top{background:var(--ocean);color:#fff;padding:16px 20px 22px;position:relative}
+.C .top:after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:14px;background:var(--sand);
+  -webkit-mask:radial-gradient(14px 10px at 14px 0,#0000 98%,#000) 0 0/28px 14px repeat-x;mask:radial-gradient(14px 10px at 14px 0,#0000 98%,#000) 0 0/28px 14px repeat-x}
+.C .logo{font-family:'Unbounded';font-weight:700;font-size:18px}
+.C .shop{font-size:12px;opacity:.8;margin-top:2px}
+.C .modes{display:flex;gap:6px;margin-top:12px}
+.C .modes span{font-size:12px;padding:5px 11px;border-radius:99px;border:1px solid #ffffff55}
+.C .modes span.on{background:#fff;color:var(--ocean);border-color:#fff}
+.C .thread{padding:14px 20px 6px;display:flex;flex-direction:column;gap:12px}
+.C .me{align-self:flex-end;background:var(--deep);color:#fff;padding:9px 14px;border-radius:18px 18px 4px 18px;font-size:14px;max-width:80%}
+.C .strip{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--muted)}
+.C .strip span{background:var(--foam);color:var(--ocean);padding:4px 10px;border-radius:99px}
+.C .strip b{color:var(--ink);font-weight:600}
+.C .card{background:#fff;border-radius:18px;padding:16px;display:grid;gap:12px;border:1px solid var(--line)}
+.C .h{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.C h3{font-family:'Unbounded';font-weight:600;font-size:21px;line-height:1.15}
+.C .sub{font-size:13px;color:var(--muted);margin-top:4px}
+.C .stock{background:var(--sun);color:#fff;font-weight:600;font-size:12px;padding:6px 10px;border-radius:10px;white-space:nowrap}
+.C .tide{display:grid;gap:6px}
+.C .tide small{font-size:12px;color:var(--muted)}
+.C .weeks{display:grid;grid-template-columns:repeat(12,1fr);gap:3px}
+.C .weeks i{height:20px;border-radius:4px;background:var(--foam)}
+.C .weeks i.f{background:var(--ocean)}
+.C .weeks i.h{background:var(--sun)}
+.C .gauges{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.C .g{background:var(--sand);border-radius:12px;padding:10px}
+.C .g b{font-family:'Unbounded';font-size:18px;font-weight:600;display:block}
+.C .g small{font-size:12px;color:var(--muted)}
+.C .meter{height:6px;border-radius:3px;background:#e6dfd2;margin-top:6px;overflow:hidden}
+.C .meter i{display:block;height:6px;background:var(--ocean);width:var(--v)}
+.C .tags{font-size:13px;line-height:1.6}
+.C .tags b{font-weight:600}
+.C .acts{display:flex;gap:8px;flex-wrap:wrap}
+.C .acts span{font-size:13px;padding:7px 12px;border-radius:12px;background:var(--foam);color:var(--ocean);font-weight:500}
+.C .say{font-size:14px;line-height:1.6}
+.C .input{margin:8px 20px 20px;background:#fff;border-radius:18px;padding:8px 8px 8px 16px;display:flex;align-items:center;gap:8px;border:1px solid var(--line)}
+.C .input .q{flex:1;font-size:14px;color:var(--muted)}
+.C .send{background:var(--sun);border:0;color:#fff;font:600 13px Outfit;border-radius:12px;padding:9px 16px}
+
+/* ═══════════ DIRECTION D — Carnet de culture (papier millimétré, données) ═══════════ */
+.D{--paper:#fdfdfb;--grid:#e8eef0;--ink:#16252b;--muted:#566870;--blue:#1d5fa8;--green:#2b7a3d;--red:#b3261e;--line:#cfd8dc;
+  background:var(--paper);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:16px 16px;
+  border-radius:10px;overflow:hidden;font-family:'IBM Plex Sans',sans-serif;color:var(--ink);border:1px solid var(--line)}
+.D .top{display:flex;align-items:center;gap:10px;padding:12px 18px;background:var(--paper);border-bottom:2px solid var(--ink)}
+.D .logo{font-family:'IBM Plex Sans Condensed';font-weight:700;font-size:20px;letter-spacing:-.01em}
+.D .shop{font-size:12px;color:var(--muted);margin-left:auto}
+.D .modes{display:flex;border-bottom:1px solid var(--line);background:var(--paper)}
+.D .modes span{font-size:13px;padding:8px 14px;color:var(--muted);border-right:1px solid var(--line)}
+.D .modes span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 -3px 0 var(--blue)}
+.D .thread{padding:14px 18px 6px;display:flex;flex-direction:column;gap:12px}
+.D .me{align-self:flex-end;background:var(--ink);color:#fff;padding:8px 13px;border-radius:4px;font-size:14px;max-width:80%}
+.D .strip{font-size:13px;background:var(--paper);border:1px dashed var(--line);padding:8px 10px;border-radius:4px;line-height:1.8}
+.D .strip code{font-family:'IBM Plex Sans Condensed';font-weight:600;background:#e8f0f8;color:var(--blue);padding:1px 6px;border-radius:3px;margin-right:4px}
+.D .card{background:var(--paper);border:1.5px solid var(--ink);border-radius:4px}
+.D .h{display:flex;justify-content:space-between;align-items:baseline;padding:12px 14px;border-bottom:1px solid var(--line)}
+.D h3{font-family:'IBM Plex Sans Condensed';font-size:24px;font-weight:700}
+.D .stock{font-size:12px;font-weight:600;color:var(--green);border:1.5px solid var(--green);padding:3px 8px;border-radius:3px}
+.D .split{display:grid;grid-template-columns:150px 1fr;border-bottom:1px solid var(--line)}
+.D svg{display:block;margin:auto}
+.D .radar{border-right:1px solid var(--line);padding:8px}
+.D table{width:100%;border-collapse:collapse;font-size:13px}
+.D td{padding:6px 12px;border-bottom:1px solid var(--grid)}
+.D td:first-child{color:var(--muted);width:42%}
+.D td b{font-family:'IBM Plex Sans Condensed';font-size:16px}
+.D .lin{padding:10px 14px;font-size:13px;border-bottom:1px solid var(--line)}
+.D .lin span{color:var(--muted)}
+.D .acts{display:flex;font-size:13px}
+.D .acts span{flex:1;text-align:center;padding:9px;border-right:1px solid var(--line);font-weight:500}
+.D .acts span:last-child{border-right:0}
+.D .say{font-size:14px;line-height:1.6;background:var(--paper);padding:2px 0}
+.D .input{margin:8px 18px 18px;background:var(--paper);border:1.5px solid var(--ink);border-radius:4px;display:flex}
+.D .input .q{flex:1;padding:11px 12px;font-size:14px;color:var(--muted)}
+.D .send{background:var(--blue);color:#fff;border:0;font:600 13px 'IBM Plex Sans';padding:0 18px}
+
+/* ═══════════ DIRECTION E — Affiche risographie (deux encres) ═══════════ */
+.E{--paper:#f7f3ea;--pink:#ff48b0;--blue:#0078bf;--ink:#1d1a2f;--muted:#5d5870;
+  background:var(--paper);border-radius:8px;overflow:hidden;font-family:'Archivo',sans-serif;color:var(--ink)}
+.E .top{display:flex;align-items:center;justify-content:space-between;padding:14px 18px}
+.E .logo{font-family:'Archivo Black';font-size:22px;color:var(--blue);text-transform:none;letter-spacing:-.02em}
+.E .logo i{font-style:normal;color:var(--pink);mix-blend-mode:multiply}
+.E .shop{font-size:12px;color:var(--muted)}
+.E .modes{display:flex;gap:16px;padding:0 18px 8px;font-size:14px;font-weight:600}
+.E .modes span{color:var(--muted)}
+.E .modes span.on{color:var(--ink);text-decoration:underline wavy var(--pink);text-underline-offset:5px}
+.E .thread{padding:10px 18px 6px;display:flex;flex-direction:column;gap:12px}
+.E .me{align-self:flex-end;background:var(--blue);color:#fff;padding:9px 14px;font-size:14px;max-width:80%;border-radius:2px;transform:rotate(-.6deg)}
+.E .strip{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12px}
+.E .strip span{border:2px solid var(--ink);padding:2px 9px;font-weight:600;border-radius:2px;background:#fff}
+.E .strip em{font-style:normal;color:var(--muted);margin-left:4px}
+.E .card{position:relative;background:#fff;border:2px solid var(--ink);border-radius:2px;overflow:hidden}
+.E .poster{position:relative;height:130px;background:var(--paper);overflow:hidden;border-bottom:2px solid var(--ink)}
+.E .poster .b1{position:absolute;width:150px;height:150px;border-radius:50%;background:var(--pink);right:-20px;top:-30px;mix-blend-mode:multiply;opacity:.9}
+.E .poster .b2{position:absolute;width:120px;height:120px;border-radius:50%;background:var(--blue);right:70px;top:30px;mix-blend-mode:multiply;opacity:.85}
+.E .poster h3{position:absolute;left:14px;bottom:12px;font-family:'Archivo Black';font-size:30px;line-height:.95;max-width:70%;letter-spacing:-.02em}
+.E .poster .kind{position:absolute;left:14px;top:12px;font-size:12px;font-weight:700;color:var(--blue)}
+.E .stamp{position:absolute;right:12px;bottom:12px;background:var(--ink);color:#fff;font-weight:700;font-size:12px;padding:6px 10px;transform:rotate(3deg)}
+.E .nums{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:2px solid var(--ink)}
+.E .num{padding:10px 12px;border-right:2px solid var(--ink)}
+.E .num:last-child{border-right:0}
+.E .num b{font-family:'Archivo Black';font-size:26px;display:block;color:var(--pink);mix-blend-mode:multiply}
+.E .num small{font-size:12px;font-weight:600}
+.E .info{padding:12px 14px;font-size:14px;line-height:1.6}
+.E .info b{font-weight:700}
+.E .acts{display:flex;gap:8px;padding:0 14px 14px;flex-wrap:wrap}
+.E .acts span{font-size:13px;font-weight:700;padding:6px 12px;border:2px solid var(--ink);border-radius:2px}
+.E .acts span.main{background:var(--pink);border-color:var(--pink);color:#fff}
+.E .say{font-size:14px;line-height:1.6}
+.E .input{margin:8px 18px 18px;border:2px solid var(--ink);background:#fff;display:flex;border-radius:2px}
+.E .input .q{flex:1;padding:11px 12px;font-size:14px;color:var(--muted)}
+.E .send{background:var(--ink);color:#fff;border:0;font:700 13px Archivo;padding:0 18px}
+@media (max-width:560px){.C .gauges{grid-template-columns:1fr 1fr}.D .split{grid-template-columns:1fr}.D .radar{border-right:0;border-bottom:1px solid var(--line)}}
+</style>
+</head>
+<body>
+<div class="intro">
+  <h1>Cinq directions pour StrainSage</h1>
+  Même contenu fictif dans chaque maquette : une demande, le bandeau des critères compris, une carte de variété et la zone de saisie. Les maquettes sont statiques, aucune donnée réelle.
+</div>
+<div class="grid">
+
+<!-- ═══ A ═══ -->
+<div>
+  <p class="dir-name"><b>A · Sachet de graines</b> : franc, coloré, lisible au comptoir</p>
+  <div class="A">
+    <div class="top"><span class="logo">Strain<i>Sage</i></span><span class="shop">Culture Indoor Anglet</span></div>
+    <div class="modes"><span class="on">Conseil</span><span>Culture</span><span>Comparer</span><span>Mes stats</span></div>
+    <div class="thread">
+      <div class="me">Une variété relaxante pour dormir, goût fruité, floraison courte</div>
+      <div class="strip">
+        <span class="chip c-eff">relaxant <button aria-label="Retirer relaxant">×</button></span>
+        <span class="chip c-eff">sommeil <button aria-label="Retirer sommeil">×</button></span>
+        <span class="chip c-gout">fruité <button aria-label="Retirer fruité">×</button></span>
+        <span class="chip c-cult">floraison ≤ 8 sem. <button aria-label="Retirer floraison">×</button></span>
+        <span class="count">54 variétés cochent tout</span>
+      </div>
+      <div class="card">
+        <div class="band">
+          <div class="kind">Indica · autofloraison non</div>
+          <h3>EXEMPLE Nuit Violette</h3>
+          <div class="from">EXEMPLE Parent Gamma × EXEMPLE Parent Delta</div>
+          <span class="stamp">En stock · 39 €</span>
+        </div>
+        <div class="specs">
+          <div class="spec"><b>24 %</b><small>THC</small></div>
+          <div class="spec"><b>0,5 %</b><small>CBD</small></div>
+          <div class="spec"><b>8–9</b><small>semaines de floraison</small></div>
+          <div class="spec"><b>Moyen</b><small>rendement</small></div>
+        </div>
+        <div class="body">
+          <div class="bars">
+            <div class="bar">Relaxant<i style="--v:92%"></i></div>
+            <div class="bar">Sommeil<i style="--v:78%"></i></div>
+            <div class="bar">Euphorique<i style="--v:40%"></i></div>
+          </div>
+          <div class="row"><span>Goûts</span><span>Raisin, baie, terreux</span></div>
+          <div class="row"><span>Dispo chez</span><span>EX Seeds, EX Bank, +3</span></div>
+        </div>
+        <div class="acts"><button class="btn main">Ajouter aux favoris</button><button class="btn">Comparer</button><button class="btn">Source : leafly.com</button></div>
+      </div>
+      <p class="say">Elle coche tes quatre critères, et on l'a en rayon. Si tu débutes, prends-la en photopériode plutôt qu'en auto : elle pardonne plus.</p>
+    </div>
+    <div class="input">
+      <span class="q">Décris ce que tu cherches…</span>
+      <div style="display:flex;gap:10px;align-items:center"><div class="quick" style="flex:1"><span>+ relaxant</span><span>+ énergisant</span><span>+ fruité</span><span>+ auto</span><span>+ débutant</span><span>+ en stock</span></div><button class="send">Envoyer</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ B ═══ -->
+<div>
+  <p class="dir-name"><b>B · Herbier</b> : calme, botanique, axé sur la génétique</p>
+  <div class="B">
+    <div class="top"><span class="logo">StrainSage</span><span class="shop">Culture Indoor Anglet</span></div>
+    <div class="modes"><span class="on">Conseil</span><span>Culture</span><span>Comparer</span><span>Mes stats</span></div>
+    <div class="thread">
+      <div class="me">Une variété relaxante pour dormir, goût fruité, floraison courte</div>
+      <div class="strip">Compris : <u>relaxant</u><u>sommeil</u><u>fruité</u><u>floraison ≤ 8 sem.</u> — 54 variétés de la base cochent tout.</div>
+      <div class="card">
+        <div class="head">
+          <div><h3>EXEMPLE Nuit Violette</h3><div class="latin">Indica · créée par EXEMPLE Breeder</div></div>
+          <span class="stock">● En stock, 39 €</span>
+        </div>
+        <div class="tree"><div>EXEMPLE Parent Gamma</div><em>×</em><div>EXEMPLE Parent Delta</div></div>
+        <div class="facts">
+          <div class="fact"><b>24 %</b><small>THC</small></div>
+          <div class="fact"><b>0,5 %</b><small>CBD</small></div>
+          <div class="fact"><b>8–9 sem.</b><small>floraison</small></div>
+          <div class="fact"><b>moyen</b><small>rendement</small></div>
+        </div>
+        <dl><dt>Effets</dt><dd>Relaxant, sommeil, euphorique</dd><dt>Goûts</dt><dd>Raisin, baie, terreux</dd><dt>Dispo chez</dt><dd>EX Seeds, EX Bank et 3 autres</dd></dl>
+        <div class="acts"><a href="#">Ajouter aux favoris</a><a href="#">Comparer</a><a href="#">Source : leafly.com</a></div>
+      </div>
+      <p class="say">Elle coche tes quatre critères, et on l'a en rayon. Si tu débutes, prends-la en photopériode plutôt qu'en auto : elle pardonne plus.</p>
+    </div>
+    <div class="input"><span class="q">Décris ce que tu cherches…</span><button class="send">Envoyer</button></div>
+  </div>
+</div>
+
+
+<!-- ═══ C ═══ -->
+<div>
+  <p class="dir-name"><b>C · Côte basque</b> : océan et sable d'Anglet, floraison lue comme un bulletin de surf</p>
+  <div class="C">
+    <div class="top"><div class="logo">StrainSage</div><div class="shop">Culture Indoor Anglet</div>
+      <div class="modes"><span class="on">Conseil</span><span>Culture</span><span>Comparer</span><span>Mes stats</span></div></div>
+    <div class="thread">
+      <div class="me">Une variété relaxante pour dormir, goût fruité, floraison courte</div>
+      <div class="strip"><span>relaxant ×</span><span>sommeil ×</span><span>fruité ×</span><span>floraison ≤ 8 sem. ×</span><b>54 variétés cochent tout</b></div>
+      <div class="card">
+        <div class="h"><div><h3>EXEMPLE Nuit Violette</h3><div class="sub">Indica · EXEMPLE Parent Gamma × EXEMPLE Parent Delta</div></div><span class="stock">En stock · 39 €</span></div>
+        <div class="tide"><small>Floraison : 8 à 9 semaines</small><div class="weeks"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="h"></i><i></i><i></i><i></i></div></div>
+        <div class="gauges">
+          <div class="g"><b>24 %</b><small>THC</small><div class="meter"><i style="--v:80%"></i></div></div>
+          <div class="g"><b>0,5 %</b><small>CBD</small><div class="meter"><i style="--v:6%"></i></div></div>
+          <div class="g"><b>Moyen</b><small>rendement</small><div class="meter"><i style="--v:55%"></i></div></div>
+        </div>
+        <div class="tags"><b>Effets</b> relaxant, sommeil, euphorique<br><b>Goûts</b> raisin, baie, terreux<br><b>Dispo chez</b> EX Seeds, EX Bank et 3 autres</div>
+        <div class="acts"><span>♡ Favori</span><span>Comparer</span><span>Source : leafly.com</span></div>
+      </div>
+      <p class="say">Elle coche tes quatre critères, et on l'a en rayon. Si tu débutes, prends-la en photopériode plutôt qu'en auto : elle pardonne plus.</p>
+    </div>
+    <div class="input"><span class="q">Décris ce que tu cherches…</span><button class="send">Envoyer</button></div>
+  </div>
+</div>
+
+<!-- ═══ D ═══ -->
+<div>
+  <p class="dir-name"><b>D · Carnet de culture</b> : papier millimétré, profil d'effets en radar, tout en chiffres</p>
+  <div class="D">
+    <div class="top"><span class="logo">StrainSage</span><span class="shop">Culture Indoor Anglet</span></div>
+    <div class="modes"><span class="on">Conseil</span><span>Culture</span><span>Comparer</span><span>Mes stats</span></div>
+    <div class="thread">
+      <div class="me">Une variété relaxante pour dormir, goût fruité, floraison courte</div>
+      <div class="strip">Filtres appliqués : <code>relaxant</code><code>sommeil</code><code>fruité</code><code>floraison ≤ 8 sem.</code> → 54 résultats</div>
+      <div class="card">
+        <div class="h"><h3>EXEMPLE Nuit Violette</h3><span class="stock">En stock · 39 €</span></div>
+        <div class="split">
+          <div class="radar">
+            <svg width="130" height="130" viewBox="0 0 130 130" role="img" aria-label="Profil d'effets">
+              <polygon points="65,15 112.6,49.5 94.4,105.5 35.6,105.5 17.4,49.5" fill="none" stroke="#cfd8dc"/>
+              <polygon points="65,40 88.8,57.3 79.7,85.2 50.3,85.2 41.2,57.3" fill="none" stroke="#e1e7ea"/>
+              <polygon points="65,19 102.1,53 76.8,81.2 57.7,75.1 60.2,63.5" fill="#1d5fa833" stroke="#1d5fa8" stroke-width="1.5"/>
+              <text x="65" y="10" font-size="9" text-anchor="middle" fill="#566870">relax</text>
+              <text x="118" y="47" font-size="9" fill="#566870">sommeil</text>
+              <text x="100" y="118" font-size="9" fill="#566870">euphor.</text>
+              <text x="8" y="118" font-size="9" fill="#566870">créatif</text>
+              <text x="0" y="45" font-size="9" fill="#566870">énergie</text>
+            </svg>
+          </div>
+          <table>
+            <tr><td>Type</td><td>Indica</td></tr>
+            <tr><td>THC</td><td><b>24 %</b></td></tr>
+            <tr><td>CBD</td><td><b>0,5 %</b></td></tr>
+            <tr><td>Floraison</td><td><b>8–9</b> sem.</td></tr>
+            <tr><td>Rendement</td><td>moyen</td></tr>
+            <tr><td>Goûts</td><td>raisin, baie, terreux</td></tr>
+          </table>
+        </div>
+        <div class="lin"><span>Lignée</span> EXEMPLE Parent Gamma × EXEMPLE Parent Delta · <span>Dispo chez</span> EX Seeds, EX Bank +3</div>
+        <div class="acts"><span>Favori</span><span>Comparer</span><span>Source</span></div>
+      </div>
+      <p class="say">Elle coche tes quatre critères, et on l'a en rayon. Si tu débutes, prends-la en photopériode plutôt qu'en auto : elle pardonne plus.</p>
+    </div>
+    <div class="input"><span class="q">Décris ce que tu cherches…</span><button class="send">Envoyer</button></div>
+  </div>
+</div>
+
+<!-- ═══ E ═══ -->
+<div>
+  <p class="dir-name"><b>E · Affiche risographie</b> : deux encres rose et bleu, culture street et sachets de breeders</p>
+  <div class="E">
+    <div class="top"><span class="logo">Strain<i>Sage</i></span><span class="shop">Culture Indoor Anglet</span></div>
+    <div class="modes"><span class="on">Conseil</span><span>Culture</span><span>Comparer</span><span>Mes stats</span></div>
+    <div class="thread">
+      <div class="me">Une variété relaxante pour dormir, goût fruité, floraison courte</div>
+      <div class="strip"><span>relaxant</span><span>sommeil</span><span>fruité</span><span>floraison ≤ 8 sem.</span><em>54 variétés cochent tout</em></div>
+      <div class="card">
+        <div class="poster"><div class="b1"></div><div class="b2"></div><span class="kind">Indica</span><h3>EXEMPLE Nuit Violette</h3><span class="stamp">En stock · 39 €</span></div>
+        <div class="nums"><div class="num"><b>24%</b><small>THC</small></div><div class="num"><b>8–9</b><small>semaines</small></div><div class="num"><b>0,5%</b><small>CBD</small></div></div>
+        <div class="info"><b>Effets</b> relaxant, sommeil, euphorique · <b>Goûts</b> raisin, baie, terreux<br><b>Lignée</b> EXEMPLE Parent Gamma × EXEMPLE Parent Delta<br><b>Dispo chez</b> EX Seeds, EX Bank et 3 autres</div>
+        <div class="acts"><span class="main">Favori</span><span>Comparer</span><span>Source</span></div>
+      </div>
+      <p class="say">Elle coche tes quatre critères, et on l'a en rayon. Si tu débutes, prends-la en photopériode plutôt qu'en auto : elle pardonne plus.</p>
+    </div>
+    <div class="input"><span class="q">Décris ce que tu cherches…</span><button class="send">Envoyer</button></div>
+  </div>
+</div>
+
+</div>
+</body>
+</html>

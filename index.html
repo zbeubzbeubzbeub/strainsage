@@ -3,470 +3,590 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#f6f5f1">
 <title>StrainSage Pro</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2048%2048%22%3E%3Crect%20x%3D%222%22%20y%3D%222%22%20width%3D%2244%22%20height%3D%2244%22%20rx%3D%2212%22%20fill%3D%22%2317201b%22/%3E%3Cg%20transform%3D%22translate%289%209%29%20scale%281%29%22%3E%3Cpath%20d%3D%22M15%2030V17.6%22%20stroke%3D%22%234cc38a%22%20stroke-width%3D%223%22%20stroke-linecap%3D%22round%22/%3E%3Cpath%20d%3D%22M14.6%2018.8C9.6%2019.8%202.6%2016.8.8%207.6%208.4%206.2%2013.8%2010.8%2014.6%2018.8Z%22%20fill%3D%22%234cc38a%22/%3E%3Cpath%20d%3D%22M15.4%2018.8C16.2%2010.8%2021.6%206.2%2029.2%207.6%2027.4%2016.8%2020.4%2019.8%2015.4%2018.8Z%22%20fill%3D%22%234cc38a%22/%3E%3Cpath%20d%3D%22M15%2017.8C12.4%2013.8%2012.6%205.8%2015%201%2017.4%205.8%2017.6%2013.8%2015%2017.8Z%22%20fill%3D%22%23a8e6c4%22/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
 /* ══════════════════════════════════════════
-   THÈMES — LIGHT (Option C) & DARK (Option D)
+   STRAINSAGE — système visuel « Sachet basque »
+   Une carte de variété traitée comme un sachet de graines : bandeau à la couleur du type,
+   gros chiffres, frise de floraison, tampon de stock. Le reste de l'interface reste sobre.
+   Polices : Bricolage Grotesque (titres, chiffres) · Figtree (texte, interface)
 ══════════════════════════════════════════ */
 :root,[data-theme="light"]{
-  --bg:#faf7f2;
-  --bg2:#f4f0e8;
-  --bg3:#ffffff;
-  --bg4:#f0ece4;
-  --panel:#ffffff;
-  --accent:#2d6b26;
-  --accent2:#3d8a33;
-  --accent3:#6aaa60;
-  --accent-fg:#e8f5e5;
-  --gold:#8a6a1e;
-  --gold2:#a07c28;
-  --gold3:#c49a3c;
-  --goldfog:rgba(138,106,30,0.08);
-  --goldfog2:rgba(138,106,30,0.12);
-  --text1:#1c1c14;
-  --text2:#4a4a3a;
-  --text3:#8a8a72;
-  --border:rgba(0,0,0,0.07);
-  --border2:rgba(0,0,0,0.12);
-  --bordergold:rgba(138,106,30,0.2);
-  --shadow:0 2px 12px rgba(0,0,0,0.07);
-  --shadow2:0 4px 24px rgba(0,0,0,0.1);
-  --fog:rgba(0,0,0,0.03);
-  --fog2:rgba(0,0,0,0.05);
-  --pill-thc-bg:rgba(138,106,30,0.1);
-  --pill-thc-border:rgba(138,106,30,0.22);
-  --pill-thc-color:#7a5c14;
-  --pill-cbd-bg:rgba(45,107,38,0.1);
-  --pill-cbd-border:rgba(45,107,38,0.22);
-  --pill-cbd-color:#2d6b26;
-  --pill-flower-bg:rgba(100,50,130,0.08);
-  --pill-flower-border:rgba(100,50,130,0.18);
-  --pill-flower-color:#6a3290;
-  --pill-yield-bg:rgba(30,90,160,0.08);
-  --pill-yield-border:rgba(30,90,160,0.18);
-  --pill-yield-color:#1a5aa0;
-  --instock-bg:rgba(45,107,38,0.1);
-  --instock-border:rgba(45,107,38,0.22);
-  --instock-color:#2d6b26;
-  --outstock-bg:rgba(180,40,40,0.08);
-  --outstock-border:rgba(180,40,40,0.18);
-  --outstock-color:#b02828;
-  --card-bg:#ffffff;
-  --modal-bg:rgba(250,247,242,0.96);
-  --r:10px;--rl:14px;--rxl:18px;
-  --transition:all 0.25s ease;
-}
+  color-scheme:light;
+  --paper:#f6f5f1;          /* fond de page */
+  --surface:#ffffff;        /* panneaux, cartes */
+  --sunken:#eeede7;         /* champs, zones en retrait */
+  --ink:#17201b;            /* texte principal */
+  --ink2:#424b45;           /* texte secondaire (contraste ≥ 7:1) */
+  --ink3:#5c655f;           /* texte discret (contraste ≥ 5:1) */
+  --line:#e2e0d8;
+  --line2:#cbc8bd;
+  --green:#00703c;          /* vert basque : stock, validation, accent */
+  --green-tint:#e2f0e7;
+  --red:#c8102e;            /* rouge basque : action principale */
+  --red-tint:#fbe8eb;
+  --ocean:#0b5f73;          /* bleu côte : infos chimiques */
+  --ocean-tint:#e1eff2;
+  --ochre:#8a5a00;
+  --ochre-tint:#f6ecd8;
+  --t-indica:#4a3486;       /* couleurs de type (bandeau des cartes, texte blanc ≥ 4.5:1) */
+  --t-sativa:#9a5f00;
+  --t-hybride:#0b5f73;
+  --t-unknown:#46504a;
+  --focus:0 0 0 3px rgba(0,112,60,.35);
+  --shadow:0 1px 2px rgba(23,32,27,.06),0 4px 14px rgba(23,32,27,.05);
+  --shadow2:0 2px 6px rgba(23,32,27,.08),0 12px 32px rgba(23,32,27,.10);
+  --r:10px;--rl:16px;--rxl:20px;
+  --font-ui:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-display:'Bricolage Grotesque','Figtree',system-ui,sans-serif;
 
+  /* alias historiques encore lus par le code (stats, toasts, admin) */
+  --bg:var(--paper);--bg2:var(--paper);--bg3:var(--surface);--bg4:var(--sunken);--panel:var(--surface);--card-bg:var(--surface);
+  --accent:var(--green);--accent2:#005c31;--accent3:#3f9b6b;--accent-fg:var(--green-tint);
+  --gold:var(--ochre);--gold2:var(--ochre);--gold3:#b07a14;--goldfog:var(--ochre-tint);--goldfog2:var(--ochre-tint);--bordergold:#e4cf9f;
+  --text1:var(--ink);--text2:var(--ink2);--text3:var(--ink3);--border:var(--line);--border2:var(--line2);
+  --fog:rgba(23,32,27,.025);--fog2:rgba(23,32,27,.05);
+  --pill-thc-bg:var(--ochre-tint);--pill-thc-border:#e4cf9f;--pill-thc-color:var(--ochre);
+  --pill-cbd-bg:var(--green-tint);--pill-cbd-border:#b7dcc5;--pill-cbd-color:var(--green);
+  --pill-flower-bg:#ece8f6;--pill-flower-border:#cfc6ea;--pill-flower-color:var(--t-indica);
+  --pill-yield-bg:var(--ocean-tint);--pill-yield-border:#b9dbe3;--pill-yield-color:var(--ocean);
+  --instock-bg:var(--green-tint);--instock-border:#b7dcc5;--instock-color:var(--green);
+  --outstock-bg:var(--red-tint);--outstock-border:#f2c2ca;--outstock-color:#a50d26;
+  --modal-bg:rgba(246,245,241,.96);
+}
 [data-theme="dark"]{
-  --bg:#0e1117;
-  --bg2:#111418;
-  --bg3:#161b22;
-  --bg4:#1c2330;
-  --panel:#0e1117;
-  --accent:#4ade80;
-  --accent2:#22c55e;
-  --accent3:#16a34a;
-  --accent-fg:rgba(74,222,128,0.1);
-  --gold:#fbbf24;
-  --gold2:#f59e0b;
-  --gold3:#d97706;
-  --goldfog:rgba(251,191,36,0.08);
-  --goldfog2:rgba(251,191,36,0.12);
-  --text1:rgba(255,255,255,0.92);
-  --text2:rgba(255,255,255,0.55);
-  --text3:rgba(255,255,255,0.28);
-  --border:rgba(255,255,255,0.07);
-  --border2:rgba(255,255,255,0.12);
-  --bordergold:rgba(251,191,36,0.2);
-  --shadow:0 2px 12px rgba(0,0,0,0.4);
-  --shadow2:0 4px 24px rgba(0,0,0,0.5);
-  --fog:rgba(255,255,255,0.03);
-  --fog2:rgba(255,255,255,0.06);
-  --pill-thc-bg:rgba(251,191,36,0.1);
-  --pill-thc-border:rgba(251,191,36,0.22);
-  --pill-thc-color:#fbbf24;
-  --pill-cbd-bg:rgba(74,222,128,0.1);
-  --pill-cbd-border:rgba(74,222,128,0.22);
-  --pill-cbd-color:#4ade80;
-  --pill-flower-bg:rgba(167,139,250,0.1);
-  --pill-flower-border:rgba(167,139,250,0.22);
-  --pill-flower-color:#a78bfa;
-  --pill-yield-bg:rgba(96,165,250,0.1);
-  --pill-yield-border:rgba(96,165,250,0.22);
-  --pill-yield-color:#60a5fa;
-  --instock-bg:rgba(74,222,128,0.1);
-  --instock-border:rgba(74,222,128,0.22);
-  --instock-color:#4ade80;
-  --outstock-bg:rgba(248,113,113,0.1);
-  --outstock-border:rgba(248,113,113,0.22);
-  --outstock-color:#f87171;
-  --card-bg:#161b22;
-  --modal-bg:rgba(14,17,23,0.97);
+  color-scheme:dark;
+  --paper:#111513;
+  --surface:#1a1f1c;
+  --sunken:#232925;
+  --ink:#eef1ec;
+  --ink2:#c3cbc5;
+  --ink3:#9aa59d;
+  --line:#2b322e;
+  --line2:#3c4540;
+  --green:#4cc38a;
+  --green-tint:rgba(76,195,138,.13);
+  --red:#cc2741;
+  --red-tint:rgba(224,50,75,.15);
+  --ocean:#5fb7cc;
+  --ocean-tint:rgba(95,183,204,.13);
+  --ochre:#e2ac4a;
+  --ochre-tint:rgba(226,172,74,.13);
+  --t-indica:#5a43a0;
+  --t-sativa:#94600a;
+  --t-hybride:#0f6a80;
+  --t-unknown:#3c4540;
+  --focus:0 0 0 3px rgba(76,195,138,.4);
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25);
+  --shadow2:0 2px 6px rgba(0,0,0,.35),0 12px 32px rgba(0,0,0,.4);
+  --accent2:#38a974;--accent3:#2f8a5f;
+  --bordergold:rgba(226,172,74,.3);
+  --fog:rgba(255,255,255,.025);--fog2:rgba(255,255,255,.05);
+  --pill-thc-border:rgba(226,172,74,.3);--pill-cbd-border:rgba(76,195,138,.3);
+  --pill-flower-bg:rgba(160,140,230,.13);--pill-flower-border:rgba(160,140,230,.3);--pill-flower-color:#b9a9f0;
+  --pill-yield-border:rgba(95,183,204,.3);
+  --instock-border:rgba(76,195,138,.3);--outstock-border:rgba(224,50,75,.35);--outstock-color:#ff8a9b;
+  --modal-bg:rgba(17,21,19,.97);
 }
-
-/* ══ TRANSITION THÈME ══ */
-html{transition:background-color .25s,color .25s}
-*{transition:background-color .2s,border-color .2s,color .15s,box-shadow .2s}
-img,button,input,textarea,select{transition:none!important}
 
 /* ══ BASE ══ */
-html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text1);overflow:hidden}
+html,body{height:100%;font-family:var(--font-ui);background:var(--paper);color:var(--ink);overflow:hidden;-webkit-font-smoothing:antialiased}
+body{transition:background-color .25s,color .2s}
 .app{display:flex;height:100vh;height:100dvh}
+button{font-family:inherit;color:inherit;touch-action:manipulation}
+html{-webkit-tap-highlight-color:rgba(0,112,60,.12)}
+:focus-visible{outline:none;box-shadow:var(--focus)!important;border-radius:8px}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 
 /* ══ PROFILE MODAL ══ */
-.profile-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:250;padding:20px;backdrop-filter:blur(8px)}
-.profile-modal{background:var(--panel);border-radius:20px;padding:28px;max-width:440px;width:100%;border:1px solid var(--border2);box-shadow:0 30px 80px rgba(0,0,0,.25)}
-[data-theme="dark"] .profile-modal{box-shadow:0 30px 80px rgba(0,0,0,.6)}
-.profile-modal h3{font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--text1);font-weight:600;margin-bottom:4px}
-.profile-modal p{font-size:12px;color:var(--text3);margin-bottom:20px;line-height:1.6}
+.profile-modal-bg{position:fixed;inset:0;background:rgba(17,21,19,.55);display:flex;align-items:center;justify-content:center;z-index:250;padding:20px;backdrop-filter:blur(6px)}
+.profile-modal{background:var(--surface);border-radius:var(--rxl);padding:28px;max-width:460px;width:100%;border:1px solid var(--line);box-shadow:var(--shadow2);max-height:calc(100dvh - 40px);overflow-y:auto}
+.profile-modal h3{font-family:var(--font-display);font-size:24px;font-weight:700;letter-spacing:-.02em;margin-bottom:6px}
+.profile-modal p{font-size:14px;color:var(--ink2);margin-bottom:22px;line-height:1.55}
 .profile-section{margin-bottom:18px}
-.profile-section-label{font-size:9.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:8px;display:block}
+.profile-section-label{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:8px;display:block}
 .profile-pills{display:flex;gap:6px;flex-wrap:wrap}
-.profile-pill{padding:6px 14px;border-radius:20px;font-size:12px;cursor:pointer;border:1px solid var(--border2);background:var(--bg4);color:var(--text2);transition:all .15s}
-.profile-pill:hover{border-color:var(--accent);color:var(--accent)}
-.profile-pill.selected{background:var(--accent-fg);border-color:var(--accent);color:var(--accent);font-weight:500}
-[data-theme="dark"] .profile-pill.selected{background:rgba(74,222,128,0.1);border-color:rgba(74,222,128,0.3);color:#4ade80}
-.profile-textarea{width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:12.5px;color:var(--text1);background:var(--bg4);outline:none;resize:none;line-height:1.55;min-height:64px}
-[data-theme="light"] .profile-textarea{background:#f8f5f0}
-.profile-textarea:focus{border-color:var(--accent)}
-.profile-textarea::placeholder{color:var(--text3)}
-.profile-save-btn{width:100%;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;margin-top:4px}
-[data-theme="dark"] .profile-save-btn{background:linear-gradient(135deg,#166534,#16a34a)}
-.profile-save-btn:hover{opacity:.88}
-.profile-skip{display:block;text-align:center;font-size:11px;color:var(--text3);margin-top:10px;cursor:pointer;background:none;border:none;width:100%}
-.profile-skip:hover{color:var(--text2)}
-/* Badge profil dans sidebar */
-.sb-profile-btn{margin:0 10px 6px;padding:8px 12px;background:var(--fog2);border:1px solid var(--border);border-radius:9px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all .15s}
-.sb-profile-btn:hover{border-color:var(--border2);background:var(--fog)}
-.sb-profile-icon{font-size:13px}
+.profile-pill{padding:8px 14px;border-radius:99px;font-size:13px;cursor:pointer;border:1.5px solid var(--line2);background:var(--surface);color:var(--ink2);transition:border-color .15s,background .15s;min-height:36px}
+.profile-pill:hover{border-color:var(--ink)}
+.profile-pill.selected{background:var(--ink);border-color:var(--ink);color:var(--surface);font-weight:600}
+.profile-textarea{width:100%;padding:11px 13px;border:1.5px solid var(--line2);border-radius:12px;font-family:var(--font-ui);font-size:14px;color:var(--ink);background:var(--surface);outline:none;resize:none;line-height:1.5;min-height:72px}
+.profile-textarea:focus{border-color:var(--green);box-shadow:var(--focus)}
+.profile-textarea::placeholder{color:var(--ink3)}
+.profile-save-btn{width:100%;padding:13px;background:var(--ink);color:var(--surface);border:none;border-radius:99px;font-size:14px;font-weight:600;cursor:pointer;margin-top:6px}
+.profile-save-btn:hover{opacity:.9}
+.profile-skip{display:block;text-align:center;font-size:13px;color:var(--ink3);margin-top:12px;cursor:pointer;background:none;border:none;width:100%;padding:6px}
+.profile-skip:hover{color:var(--ink)}
+
+/* Profil dans la barre latérale */
+.sb-profile-btn{margin:4px 12px 4px;padding:10px 12px;background:var(--sunken);border:1px solid transparent;border-radius:12px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:border-color .15s}
+.sb-profile-btn:hover{border-color:var(--line2)}
+.sb-profile-icon{font-size:15px}
 .sb-profile-info{flex:1;min-width:0}
-.sb-profile-level{font-size:11px;color:var(--text2);font-weight:500}
-.sb-profile-detail{font-size:9.5px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
-.theme-toggle{width:36px;height:20px;border-radius:10px;background:var(--bg4);border:1px solid var(--border2);cursor:pointer;position:relative;flex-shrink:0;transition:background .2s}
-.theme-toggle::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--accent);transition:transform .22s cubic-bezier(.4,0,.2,1),background .2s}
-[data-theme="dark"] .theme-toggle::after{transform:translateX(16px)}
-.theme-toggle-wrap{display:flex;align-items:center;gap:7px;flex-shrink:0}
-.theme-toggle-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;white-space:nowrap}
+.sb-profile-level{font-size:13px;color:var(--ink);font-weight:600}
+.sb-profile-detail{font-size:12px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+
+/* Interrupteur de thème */
+.theme-toggle{width:40px;height:22px;border-radius:99px;background:var(--sunken);border:1px solid var(--line2);cursor:pointer;position:relative;flex-shrink:0}
+.theme-toggle::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--ink);transition:transform .22s cubic-bezier(.4,0,.2,1)}
+[data-theme="dark"] .theme-toggle::after{transform:translateX(18px)}
+.theme-toggle-wrap{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.theme-toggle-label{font-size:13px;color:var(--ink2);white-space:nowrap}
 
 /* ══ SIDEBAR ══ */
-.sidebar{width:252px;flex-shrink:0;background:var(--panel);display:flex;flex-direction:column;border-right:1px solid var(--border);overflow:hidden;position:relative}
-[data-theme="light"] .sidebar{box-shadow:2px 0 16px rgba(0,0,0,0.04)}
-.sb-logo{padding:16px 16px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
-.sb-logo-mark{width:34px;height:34px;border-radius:10px;flex-shrink:0;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 10px rgba(45,107,38,0.25)}
-[data-theme="dark"] .sb-logo-mark{background:linear-gradient(135deg,#166534,#16a34a);box-shadow:0 2px 10px rgba(74,222,128,0.2)}
-.sb-logo h1{font-family:'Cormorant Garamond',serif;font-size:17px;color:var(--text1);font-weight:600;letter-spacing:.3px;line-height:1}
-.sb-logo-sub{font-size:8px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-top:1px}
-.sb-user{margin:10px 10px 0;padding:9px 12px;background:var(--goldfog2);border:1px solid var(--bordergold);border-radius:10px}
-.sb-user-row{display:flex;align-items:center;justify-content:space-between}
-.sb-user-name{font-size:13px;color:var(--gold2);font-weight:500}
-.sb-user-shop{font-size:9.5px;color:var(--text3);margin-top:1px}
-.sb-logout{font-size:10px;color:var(--text3);background:none;border:none;cursor:pointer;transition:color .15s}
-.sb-logout:hover{color:#e87070}
-.mode-pills{display:flex;gap:3px;padding:10px 10px;border-bottom:1px solid var(--border)}
-.mode-pill{flex:1;padding:7px 2px;text-align:center;border-radius:8px;font-size:10px;cursor:pointer;transition:all .18s;color:var(--text3);border:1px solid transparent}
-.mode-pill:hover{color:var(--accent);background:var(--fog2)}
-.mode-pill.active{background:var(--accent-fg);color:var(--accent);border-color:var(--accent);border-opacity:.2}
-[data-theme="dark"] .mode-pill.active{background:rgba(74,222,128,0.1);border-color:rgba(74,222,128,0.25)}
-.mode-pill-icon{font-size:14px;display:block;margin-bottom:2px}
-.sb-section{padding:12px 14px 4px;font-size:8px;letter-spacing:1.8px;text-transform:uppercase;color:var(--text3);font-weight:500}
-.fav-list,.hist-list{overflow-y:auto;padding:2px 7px 6px;max-height:130px}
-.fav-list::-webkit-scrollbar,.hist-list::-webkit-scrollbar{width:2px}
-.fav-list::-webkit-scrollbar-thumb,.hist-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
-.fav-item,.hist-item{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:7px;margin-bottom:1px;cursor:pointer;transition:background .14s}
-.fav-item:hover,.hist-item:hover{background:var(--fog2)}
-.fav-dot{width:5px;height:5px;border-radius:50%;background:var(--accent);flex-shrink:0}
-.fav-name,.hist-title{font-size:11.5px;color:var(--text2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.fav-type,.hist-date{font-size:9.5px;color:var(--text3)}
+.sidebar{width:264px;flex-shrink:0;background:var(--surface);display:flex;flex-direction:column;border-right:1px solid var(--line);overflow:hidden;position:relative}
+.sb-logo{padding:18px 18px 14px;display:flex;align-items:center;gap:10px}
+.sb-logo-mark{display:block;color:var(--ink);flex-shrink:0}
+.sb-logo h1{font-family:var(--font-display);font-size:26px;font-weight:800;letter-spacing:-.03em;line-height:1;color:var(--ink)}
+.sb-logo h1 em{font-style:normal;color:var(--red)}
+.sb-logo-sub{font-size:12px;color:var(--ink3);margin-top:3px}
+.sb-user{margin:0 12px 8px;padding:10px 12px;border:1px solid var(--line);border-radius:12px}
+.sb-user-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.sb-user-name{font-size:14px;color:var(--ink);font-weight:600}
+.sb-user-shop{font-size:12px;color:var(--ink3);margin-top:1px}
+.sb-logout{font-size:12px;color:var(--ink3);background:none;border:none;cursor:pointer;padding:4px 6px;border-radius:6px}
+.sb-logout:hover{color:var(--red)}
+.mode-pills{display:none;gap:4px;padding:8px 12px}
+.mode-pill{flex:1;padding:8px 2px;text-align:center;border-radius:10px;font-size:12px;cursor:pointer;color:var(--ink2);border:1px solid var(--line);background:none}
+.mode-pill.active{background:var(--ink);color:var(--surface);border-color:var(--ink);font-weight:600}
+.mode-pill-icon{font-size:15px;display:block;margin-bottom:2px}
+.sb-section{padding:16px 18px 6px;font-size:13px;color:var(--ink);font-weight:600;display:flex;align-items:center;gap:6px}
+.fav-list,.hist-list{overflow-y:auto;padding:0 10px 6px;max-height:170px}
+.fav-list::-webkit-scrollbar,.hist-list::-webkit-scrollbar{width:4px}
+.fav-list::-webkit-scrollbar-thumb,.hist-list::-webkit-scrollbar-thumb{background:var(--line2);border-radius:4px}
+.fav-item,.hist-item{display:flex;align-items:center;gap:9px;padding:8px 9px;border-radius:9px;margin-bottom:1px;cursor:pointer}
+.fav-item:hover,.hist-item:hover{background:var(--sunken)}
+.fav-dot{width:9px;height:11px;border-radius:2px;background:var(--t-unknown);flex-shrink:0}
+.fav-dot.t-indica{background:var(--t-indica)}.fav-dot.t-sativa{background:var(--t-sativa)}.fav-dot.t-hybride{background:var(--t-hybride)}
+.fav-name,.hist-title{font-size:13px;color:var(--ink);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fav-type,.hist-date{font-size:12px;color:var(--ink3)}
 .hist-item{flex-direction:column;align-items:flex-start;gap:1px}
-.fav-del{font-size:11px;color:var(--text3);cursor:pointer;opacity:0;transition:opacity .14s;padding:0 2px;background:none;border:none}
-.fav-item:hover .fav-del{opacity:1;color:#e87070}
-.sb-empty{padding:12px 6px;text-align:center;font-size:11px;color:var(--text3);line-height:1.6}
-.sb-footer{padding:8px 10px 14px;border-top:1px solid var(--border);margin-top:auto}
-.sb-new-btn{width:100%;padding:8px 10px;border-radius:8px;background:var(--goldfog2);border:1px solid var(--bordergold);color:var(--gold2);font-family:'DM Sans',sans-serif;font-size:11.5px;cursor:pointer;transition:all .18s}
-.sb-new-btn:hover{background:var(--goldfog);opacity:.88}
+.hist-item .hist-title{width:100%}
+.fav-del{font-size:13px;color:var(--ink3);cursor:pointer;opacity:0;padding:2px 6px;background:none;border:none;border-radius:6px}
+.fav-item:hover .fav-del,.fav-del:focus-visible{opacity:1}
+.fav-del:hover{color:var(--red)}
+.sb-empty{padding:10px 9px;font-size:13px;color:var(--ink3);line-height:1.5}
+.sb-footer{padding:12px 14px 16px;border-top:1px solid var(--line);margin-top:auto;display:flex;flex-direction:column;gap:12px}
+.sb-new-btn{width:100%;padding:11px 12px;border-radius:99px;background:var(--ink);border:none;color:var(--surface);font-size:14px;font-weight:600;cursor:pointer}
+.sb-new-btn:hover{opacity:.9}
 
 /* ══ MAIN ══ */
-.main{flex:1;display:flex;flex-direction:column;background:var(--bg2);overflow:hidden;min-width:0}
-[data-theme="light"] .main{background:#f4f0e8}
-[data-theme="dark"] .main{background:#0d1016}
+.main{flex:1;display:flex;flex-direction:column;background:var(--paper);overflow:hidden;min-width:0}
 
 /* ══ TOPBAR ══ */
-.topbar{padding:0 18px;height:52px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);background:var(--panel);flex-shrink:0}
-[data-theme="light"] .topbar{box-shadow:0 1px 8px rgba(0,0,0,0.04)}
-.topbar-title{font-family:'Cormorant Garamond',serif;font-size:14px;color:var(--text2);font-weight:400;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:italic}
-.topbar-modes{display:flex;gap:2px;background:var(--bg4);padding:3px;border-radius:9px;border:1px solid var(--border)}
-.tmode{padding:4px 12px;border-radius:6px;font-size:10.5px;cursor:pointer;transition:all .15s;color:var(--text3);border:none;background:none;font-family:'DM Sans',sans-serif;white-space:nowrap}
-.tmode.active{background:var(--panel);color:var(--accent);box-shadow:var(--shadow);font-weight:500}
-[data-theme="dark"] .tmode.active{background:var(--bg4);color:var(--accent)}
-.tmode:hover:not(.active){color:var(--text2)}
-.sdot-wrap{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text3);white-space:nowrap}
-.sdot{width:5px;height:5px;border-radius:50%;background:#22c55e;flex-shrink:0;animation:pulse 2.5s infinite}
-@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(34,197,94,.35)}50%{opacity:.6;box-shadow:0 0 0 4px rgba(34,197,94,0)}}
+.topbar{padding:0 22px;height:60px;display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--line);background:var(--paper);flex-shrink:0}
+.topbar-title{font-family:var(--font-display);font-weight:600;font-size:15px;letter-spacing:-.01em;color:var(--ink);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topbar-modes{display:flex;gap:2px;background:var(--sunken);padding:3px;border-radius:99px}
+.tmode{padding:7px 14px;border-radius:99px;font-size:13px;cursor:pointer;color:var(--ink2);border:none;background:none;white-space:nowrap;font-weight:500}
+.tmode.active{background:var(--ink);color:var(--surface)}
+.tmode:hover:not(.active){color:var(--ink)}
+.sdot-wrap{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink3);white-space:nowrap}
+.sdot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0}
 
 /* ══ STOCK STATUS BAR ══ */
-.stock-status-bar{padding:5px 16px;background:rgba(45,107,38,0.06);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--accent)}
-[data-theme="dark"] .stock-status-bar{background:rgba(74,222,128,0.05);color:var(--accent)}
-.stock-clear{font-size:10px;color:var(--text3);background:none;border:none;cursor:pointer;padding:1px 5px}
-.stock-clear:hover{color:#e87070}
+.stock-status-bar{padding:7px 22px;background:var(--green-tint);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;font-size:13px;color:var(--green);font-weight:500}
+.stock-clear{font-size:12px;color:var(--ink3);background:none;border:none;cursor:pointer;padding:3px 8px;border-radius:6px}
+.stock-clear:hover{color:var(--red)}
 
 /* ══ CHAT PANEL ══ */
-.chat-panel{flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:16px}
-.chat-panel::-webkit-scrollbar{width:3px}
-.chat-panel::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+.chat-panel{flex:1;overflow-y:auto;padding:26px 28px;display:flex;flex-direction:column;gap:18px;scroll-behavior:smooth}
+.chat-panel::-webkit-scrollbar{width:6px}
+.chat-panel::-webkit-scrollbar-thumb{background:var(--line2);border-radius:6px}
 
 /* ══ WELCOME ══ */
-.welcome{max-width:640px;margin:0 auto;padding:12px 0 8px;width:100%}
-.welcome-hero{display:flex;align-items:center;gap:18px;margin-bottom:20px;padding:22px;border-radius:var(--rxl);border:1px solid var(--border2);background:var(--panel);box-shadow:var(--shadow)}
-[data-theme="light"] .welcome-hero{background:linear-gradient(135deg,#fff 60%,rgba(45,107,38,0.04))}
-[data-theme="dark"] .welcome-hero{background:linear-gradient(135deg,var(--bg3) 60%,rgba(74,222,128,0.05))}
-.welcome-icon{width:50px;height:50px;border-radius:14px;flex-shrink:0;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:23px;box-shadow:0 4px 18px rgba(45,107,38,.2)}
-[data-theme="dark"] .welcome-icon{background:linear-gradient(135deg,#166534,#16a34a);box-shadow:0 4px 18px rgba(74,222,128,.15)}
-.welcome-hero h2{font-family:'Cormorant Garamond',serif;font-size:23px;color:var(--text1);font-weight:600;line-height:1.2;margin-bottom:4px}
-.welcome-hero p{font-size:12.5px;color:var(--text2);line-height:1.65}
-.welcome-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.wcard{padding:13px 15px;border-radius:var(--rl);border:1px solid var(--border);background:var(--panel);cursor:pointer;transition:all .2s;text-align:left;box-shadow:var(--shadow)}
-.wcard:hover{border-color:var(--accent);transform:translateY(-1px);box-shadow:var(--shadow2)}
-[data-theme="dark"] .wcard:hover{border-color:rgba(74,222,128,0.35)}
-.wcard-tag{font-size:8.5px;text-transform:uppercase;letter-spacing:1.3px;color:var(--accent);font-weight:500;margin-bottom:4px}
-.wcard-text{font-size:12px;color:var(--text2);line-height:1.5}
+.welcome{max-width:720px;margin:0 auto;padding:18px 0 8px;width:100%}
+.welcome-hero{margin-bottom:18px}
+.welcome-icon{display:none}
+.welcome-hero h2{font-family:var(--font-display);font-size:clamp(28px,4vw,38px);font-weight:800;letter-spacing:-.035em;line-height:1.02;margin-bottom:10px;color:var(--ink)}
+.welcome-hero p{font-size:16px;color:var(--ink2);line-height:1.55;max-width:56ch}
+.welcome-builder{background:var(--surface);border:1px solid var(--line);border-radius:var(--rxl);padding:18px 18px 14px;margin-bottom:18px;box-shadow:var(--shadow)}
+.wb-row{display:grid;grid-template-columns:92px 1fr;gap:10px;align-items:start;padding:8px 0;border-bottom:1px solid var(--line)}
+.wb-row:last-of-type{border-bottom:0}
+.wb-label{font-size:13px;color:var(--ink3);padding-top:7px}
+.wb-chips{display:flex;flex-wrap:wrap;gap:6px}
+.wb-chip{font-size:13px;padding:6px 12px;border-radius:99px;border:1.5px solid var(--line2);background:none;cursor:pointer;color:var(--ink);min-height:34px}
+.wb-chip:hover{border-color:var(--ink)}
+.wb-chip.on{background:var(--ink);border-color:var(--ink);color:var(--surface)}
+.wb-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;flex-wrap:wrap}
+.wb-preview{font-size:14px;color:var(--ink2);flex:1;min-width:200px}
+.wb-go{background:var(--red);color:#fff;border:none;border-radius:99px;padding:10px 18px;font-size:14px;font-weight:600;cursor:pointer}
+.wb-go:disabled{background:var(--sunken);color:var(--ink3);cursor:default}
+.welcome-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.wcard{padding:14px 16px;border-radius:var(--rl);border:1px solid var(--line);background:var(--surface);cursor:pointer;text-align:left;font-family:inherit;transition:border-color .15s}
+.wcard:hover{border-color:var(--ink)}
+.wcard-tag{font-size:12px;color:var(--ink3);margin-bottom:4px}
+.wcard-text{font-size:14px;color:var(--ink);line-height:1.45;font-weight:500}
+
+/* étagère des variétés les plus demandées (accueil) */
+.shelf{margin:4px 0 18px}
+.shelf-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px}
+.shelf-head h3{font-family:var(--font-display);font-size:18px;font-weight:700;letter-spacing:-.02em}
+.shelf-head span{font-size:13px;color:var(--ink3)}
+.shelf-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media(max-width:520px){.shelf-row{grid-template-columns:repeat(2,minmax(0,1fr))}.shelf-head span{display:none}.pk-img{width:38px;height:38px}}
+.pk{--band:var(--t-unknown);text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:14px;overflow:hidden;cursor:pointer;padding:0;display:flex;flex-direction:column;transition:transform .18s ease,border-color .15s}
+.pk:hover{transform:translateY(-2px);border-color:var(--ink)}
+.pk.t-indica{--band:var(--t-indica)}.pk.t-sativa{--band:var(--t-sativa)}.pk.t-hybride{--band:var(--t-hybride)}
+.pk-top{background:var(--band);color:#fff;padding:12px 12px 12px;min-height:74px;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:'kind img' 'name name';align-items:start;gap:6px 8px;position:relative}
+.pk-top::before{content:'';position:absolute;left:0;right:0;top:0;height:6px;background:radial-gradient(circle at 4px -1px,var(--surface) 3.2px,transparent 3.6px) 0 0/8px 6px repeat-x}
+.pk-kind{grid-area:kind;font-size:12px;opacity:.9;margin-top:2px}
+.pk-img{grid-area:img;width:46px;height:46px;border-radius:10px;object-fit:cover;border:2px solid rgba(255,255,255,.9);transform:rotate(3deg);background:rgba(255,255,255,.18)}
+.pk-name{grid-area:name;align-self:end;font-family:var(--font-display);font-weight:800;font-size:17px;line-height:1.05;letter-spacing:-.02em;overflow-wrap:anywhere}
+.pk-facts{display:flex;justify-content:space-between;gap:6px;padding:9px 12px;font-size:13px;color:var(--ink2);font-variant-numeric:tabular-nums}
+.pk-facts b{color:var(--ink);font-weight:600}
+.pk-facts{flex-wrap:wrap}.pk-facts>span{white-space:nowrap}
+.pk.sk{height:113px;cursor:default;background:var(--sunken);border-color:transparent;animation:skp 1.4s ease-in-out infinite}
+@keyframes skp{50%{opacity:.55}}
 
 /* ══ MESSAGES ══ */
-.msg{display:flex;gap:10px;align-items:flex-start;animation:msgIn .22s ease;max-width:860px;margin:0 auto;width:100%}
-@keyframes msgIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.msg{display:flex;gap:12px;align-items:flex-start;animation:msgIn .22s ease;max-width:820px;margin:0 auto;width:100%}
+@keyframes msgIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 .msg.user{flex-direction:row-reverse}
-.av{width:30px;height:30px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px}
-.av.ai{background:var(--accent);border:none}
-[data-theme="dark"] .av.ai{background:linear-gradient(135deg,#166534,#16a34a)}
-.av.user{background:var(--bg4);border:1px solid var(--border)}
-.bubble{max-width:82%;padding:12px 16px;border-radius:14px;font-size:13px;line-height:1.75}
-.msg.ai .bubble{background:var(--panel);color:var(--text1);border:1px solid var(--border);border-top-left-radius:4px;box-shadow:var(--shadow)}
-.msg.user .bubble{background:var(--accent);color:#fff;border-top-right-radius:4px}
-[data-theme="dark"] .msg.user .bubble{background:linear-gradient(135deg,#166534,#16a34a)}
+.av{width:32px;height:32px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px}
+.av.ai{background:var(--ink);color:var(--surface)}
+.av.user{display:none}
+.bubble{max-width:100%;font-size:15px;line-height:1.65;color:var(--ink);min-width:0}
+.msg.ai .bubble{flex:1;padding:2px 0 0}
+.msg.user .bubble{max-width:78%;background:var(--green);color:#fff;padding:11px 16px;border-radius:18px 18px 4px 18px}
+[data-theme="dark"] .msg.user .bubble{background:#1f6b45}
+.bubble strong{font-weight:600}
+
+/* réponse de l'IA mise en forme */
+.bubble p{margin:0 0 10px}
+.bubble p:last-child{margin-bottom:0}
+.bubble h4{font-family:var(--font-display);font-size:17px;font-weight:700;letter-spacing:-.01em;margin:16px 0 6px}
+.bubble ul,.bubble ol{margin:4px 0 12px;padding-left:20px}
+.bubble li{margin:4px 0;padding-left:2px}
+.bubble ul li::marker{color:var(--green)}
+.bubble ol li::marker{color:var(--ink3);font-weight:600}
+.msg.ai .bubble>p,.msg.ai .bubble>ul,.msg.ai .bubble>ol,.msg.ai .bubble>h4{max-width:68ch}
 
 /* ══ TYPING ══ */
-.typing-bub{display:flex;gap:5px;align-items:center;padding:9px 13px}
-.typing-bub span{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:tbounce 1.1s infinite;opacity:.6}
-.typing-bub span:nth-child(2){animation-delay:.2s}
-.typing-bub span:nth-child(3){animation-delay:.4s}
-@keyframes tbounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
+.typing{display:flex;align-items:center;gap:12px;padding:8px 0;font-size:14px;color:var(--ink2)}
+.typing .typing-bub{padding:0}
+.typing-bub{display:flex;gap:6px;align-items:center;padding:10px 2px}
+.typing-bub span{width:7px;height:7px;border-radius:50%;background:var(--ink3);animation:tbounce 1.1s infinite}
+.typing-bub span:nth-child(2){animation-delay:.18s}
+.typing-bub span:nth-child(3){animation-delay:.36s}
+@keyframes tbounce{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-4px);opacity:1}}
 
-/* ══ STRAIN CARD ══ */
-.sc{margin:8px 0 4px;background:var(--card-bg);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;box-shadow:var(--shadow);transition:box-shadow .2s}
-.sc:hover{box-shadow:var(--shadow2)}
-.sc-photo-wrap{position:relative;height:176px;overflow:hidden;background:var(--bg4)}
-[data-theme="light"] .sc-photo-wrap{background:linear-gradient(135deg,#e8f5e5,#c8e6c9)}
-[data-theme="dark"] .sc-photo-wrap{background:linear-gradient(135deg,#0d2010,#1a3d1a)}
-.sc-photo{width:100%;height:100%;object-fit:cover;transition:transform .4s ease,opacity .3s;opacity:0;display:block}
-.sc-photo.loaded{opacity:1}
-.sc-photo-wrap:hover .sc-photo{transform:scale(1.04)}
-.sc-photo-fallback{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
-.sc-photo-fallback-icon{font-size:40px;opacity:.2}
-.sc-photo-fallback-txt{font-size:10.5px;color:var(--text3)}
-.sc-photo-overlay{position:absolute;bottom:0;left:0;right:0;padding:28px 14px 12px;background:linear-gradient(to top,rgba(0,0,0,.82) 0%,rgba(0,0,0,.25) 60%,transparent)}
-[data-theme="light"] .sc-photo-overlay{background:linear-gradient(to top,rgba(0,0,0,.75) 0%,rgba(0,0,0,.2) 60%,transparent)}
-.sc-photo-name{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:500;color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.5);margin-bottom:2px}
-.sc-photo-type{font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:rgba(255,255,255,.7);font-weight:500}
-.sc-photo-sb{position:absolute;top:10px;right:10px;font-size:9px;padding:2px 9px;border-radius:6px;background:rgba(0,0,0,.55);color:rgba(255,255,255,.85);border:1px solid rgba(255,255,255,.12)}
-.sc-actions{display:flex;gap:5px;padding:9px 13px;border-bottom:1px solid var(--border);flex-wrap:wrap;background:var(--fog)}
-.sc-action{height:27px;padding:0 10px;border-radius:7px;border:1px solid var(--border);background:var(--panel);cursor:pointer;font-size:10.5px;display:flex;align-items:center;gap:4px;transition:all .15s;color:var(--text2);white-space:nowrap}
-a.sc-action{text-decoration:none}
-.sc-action:hover{border-color:var(--accent);color:var(--accent)}
-.sc-action.faved{color:var(--gold2);border-color:var(--bordergold);background:var(--goldfog)}
-.sc-stats{display:flex;gap:5px;flex-wrap:wrap;padding:10px 13px;border-bottom:1px solid var(--border)}
-.pill{font-size:10px;padding:2px 9px;border-radius:20px;border:1px solid;white-space:nowrap}
+/* ══ CRITÈRES COMPRIS (au-dessus de la réponse) ══ */
+.crit-strip{display:flex;flex-direction:column;gap:8px;margin:0 0 14px}
+.crit-line{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.crit-lead{font-size:13px;color:var(--ink3);margin-right:2px}
+.crit-chip{font-size:13px;line-height:1.3;padding:5px 6px 5px 11px;border-radius:99px;border:1.5px solid currentColor;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;background:none}
+.crit-chip.eff{color:var(--green)}
+.crit-chip.gout{color:var(--ochre)}
+.crit-chip.culture,.crit-chip.type{color:var(--t-indica)}
+[data-theme="dark"] .crit-chip.culture,[data-theme="dark"] .crit-chip.type{color:#b9a9f0}
+.crit-chip.chimie{color:var(--ocean)}
+.crit-chip.avoid{color:#a50d26}
+[data-theme="dark"] .crit-chip.avoid{color:#ff8a9b}
+.crit-chip.na{color:var(--ink3);border-style:dashed;padding-right:11px}
+.crit-chip.base{color:var(--ink2);padding-right:11px}
+.crit-x{border:none;background:none;cursor:pointer;font-size:15px;line-height:1;width:22px;height:22px;border-radius:50%;color:inherit;display:inline-flex;align-items:center;justify-content:center}
+.crit-x:hover{background:currentColor}
+.crit-x:hover span{color:var(--surface)}
+.crit-count{font-size:13px;color:var(--ink);margin-left:4px;font-weight:600}
+@keyframes critIn{from{opacity:0}to{opacity:1}}
+
+/* ══ CARTE VARIÉTÉ — « sachet » ══ */
+.sc{--band:var(--t-unknown);margin:12px 0 10px;background:var(--surface);border:1px solid var(--line);border-radius:var(--rl);overflow:hidden;box-shadow:var(--shadow)}
+.sc.t-indica{--band:var(--t-indica)}.sc.t-sativa{--band:var(--t-sativa)}.sc.t-hybride{--band:var(--t-hybride)}
+.sc-band{background:var(--band);color:#fff;padding:18px 20px 16px;position:relative}
+.sc-kind{font-size:13px;opacity:.9;padding-right:120px}
+.sc-name{font-family:var(--font-display);font-weight:800;font-size:clamp(26px,4.2vw,34px);line-height:1;letter-spacing:-.035em;margin-top:6px;padding-right:110px;overflow-wrap:anywhere}
+.sc-lineage{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:12px;font-size:13px}
+.sc-lineage span.p{background:rgba(255,255,255,.16);padding:3px 10px;border-radius:99px}
+.sc-lineage span.x{opacity:.8}
+.sc-lineage span.src{opacity:.75;font-size:12px}
+.sc-stamp{position:absolute;top:16px;right:16px;background:#fff;color:var(--green);font-weight:700;font-size:13px;padding:7px 12px;border-radius:10px;transform:rotate(2.5deg);box-shadow:0 2px 0 rgba(0,0,0,.15);display:flex;flex-direction:column;align-items:flex-end;line-height:1.2}
+.sc-stamp small{font-weight:600;font-size:12px;color:var(--ink2)}
+.sc-stamp.out{color:#a50d26}
+[data-theme="dark"] .sc-stamp{background:#f3f5f1}
+.sc-band.has-photo{display:grid;grid-template-columns:minmax(0,1fr) 132px;gap:18px;align-items:start}
+.sc-band.has-photo .sc-kind,.sc-band.has-photo .sc-name{padding-right:0}
+.sc-photo-win{width:132px;height:132px;border-radius:14px;overflow:hidden;background:rgba(255,255,255,.18);border:3px solid rgba(255,255,255,.92);transform:rotate(-2deg);box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.sc-photo-win img{width:100%;height:100%;object-fit:cover;display:block}
+.sc-band.has-photo .sc-stamp{top:auto;bottom:10px;right:12px;transform:rotate(3deg)}
+.sc-specs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-bottom:1px solid var(--line)}
+.sc-spec{padding:14px 16px;border-right:1px solid var(--line);min-width:0}
+.sc-spec:last-child{border-right:0}
+.sc-spec b{font-variant-numeric:tabular-nums;display:block;font-family:var(--font-display);font-size:24px;font-weight:600;letter-spacing:-.02em;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sc-spec b.na{color:var(--ink3);font-weight:400}
+.sc-spec small{font-size:12px;color:var(--ink3)}
+.sc-flo{padding:12px 20px 14px;border-bottom:1px solid var(--line)}
+.sc-flo-head{display:flex;justify-content:space-between;font-size:13px;color:var(--ink2);margin-bottom:8px}
+.sc-flo-head b{color:var(--ink);font-weight:600}
+.sc-weeks{display:grid;grid-template-columns:repeat(var(--n,12),1fr);gap:3px}
+.sc-weeks i{height:14px;border-radius:3px;background:var(--sunken)}
+.sc-weeks i.f{background:var(--band)}
+.sc-weeks i.h{background:var(--band);opacity:.45}
+.sc-weeks i.f,.sc-weeks i.h{transform-origin:left center;animation:wk .32s cubic-bezier(.2,.7,.3,1) both;animation-delay:calc(var(--i,0) * 55ms)}
+@keyframes wk{from{transform:scaleX(0)}}
+.sc-scale{display:flex;justify-content:space-between;font-size:11px;color:var(--ink3);margin-top:4px}
+.sc-body{padding:14px 20px 8px;display:grid;gap:10px}
+.sc-row{display:grid;grid-template-columns:104px 1fr;gap:12px;align-items:baseline}
+.sc-label{font-size:13px;color:var(--ink3)}
+.sc-val{font-size:14.5px;color:var(--ink);line-height:1.55}
+.sc-row.why .sc-val{font-size:15px}
+.sc-actions{display:flex;gap:8px;padding:12px 20px 16px;flex-wrap:wrap;border-top:1px solid var(--line)}
+.sc-action{min-height:36px;padding:0 14px;border-radius:99px;border:1.5px solid var(--line2);background:none;cursor:pointer;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px;color:var(--ink);white-space:nowrap;text-decoration:none}
+.sc-action:hover{border-color:var(--ink)}
+.sc-action.faved{background:var(--ink);border-color:var(--ink);color:var(--surface)}
+.sc-action.primary{background:var(--ink);border-color:var(--ink);color:var(--surface)}
+.sc-stats{display:none}
+.pill{font-size:12px;padding:3px 10px;border-radius:99px;border:1px solid;white-space:nowrap}
 .pill.thc{background:var(--pill-thc-bg);border-color:var(--pill-thc-border);color:var(--pill-thc-color)}
 .pill.cbd{background:var(--pill-cbd-bg);border-color:var(--pill-cbd-border);color:var(--pill-cbd-color)}
 .pill.flower{background:var(--pill-flower-bg);border-color:var(--pill-flower-border);color:var(--pill-flower-color)}
 .pill.yield{background:var(--pill-yield-bg);border-color:var(--pill-yield-border);color:var(--pill-yield-color)}
-.pill.sb{background:var(--goldfog);border-color:var(--bordergold);color:var(--gold2)}
-.sc-body{padding:10px 13px 6px}
-.sc-row{display:flex;gap:8px;margin-bottom:7px;align-items:baseline}
-.sc-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;min-width:66px;flex-shrink:0;padding-top:2px}
-.sc-val{font-size:12.5px;color:var(--text1);line-height:1.55}
-.sc-genetics{padding:8px 13px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:baseline}
-.gen-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;min-width:66px;flex-shrink:0}
-.gen-val{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:13.5px;color:var(--text1);line-height:1.5}
-.gen-cross{color:var(--gold2);font-style:normal;font-family:'DM Sans',sans-serif;font-size:10.5px;margin:0 4px;opacity:.7}
-.gen-unknown{font-size:11.5px;color:var(--text3);font-style:normal}
-.gen-src{font-size:9px;color:var(--text3);margin-left:6px;font-style:normal;font-family:'DM Sans',sans-serif}
-.terp-section{padding:10px 13px;border-top:1px solid var(--border)}
-.terp-title{font-size:8.5px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:10px;font-weight:500}
-.terp-row{display:flex;align-items:center;gap:10px;margin-bottom:7px}
-.terp-name{font-size:11px;color:var(--text1);min-width:98px;flex-shrink:0}
-.terp-track{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden}
-.terp-fill{height:4px;border-radius:2px;background:var(--accent);transition:width 1.2s cubic-bezier(.4,0,.2,1)}
-[data-theme="dark"] .terp-fill{background:linear-gradient(90deg,#16a34a,#4ade80)}
-.terp-note{font-size:9.5px;color:var(--text3);min-width:70px;text-align:right}
-.sc-tags{display:flex;flex-wrap:wrap;gap:4px;padding:9px 13px 12px;border-top:1px solid var(--border)}
-.mtag{font-size:10px;padding:2px 9px;border-radius:6px;background:var(--accent-fg);border:1px solid var(--accent);border-opacity:.15;color:var(--accent)}
-[data-theme="dark"] .mtag{background:rgba(74,222,128,0.1);border-color:rgba(74,222,128,0.2);color:#4ade80}
-.sc-rating{padding:9px 13px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px}
-.rating-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.7px}
-.stars{display:flex;gap:3px}
-.star{font-size:16px;cursor:pointer;opacity:.25;transition:opacity .15s;background:none;border:none;padding:0;line-height:1;color:var(--gold2)}
-.star.on{opacity:1}
-.rating-saved{font-size:10px;color:var(--accent);margin-left:4px;opacity:0;transition:opacity .3s}
+.pill.sb{background:var(--ochre-tint);border-color:var(--bordergold);color:var(--ochre)}
+.sc-genetics{display:none}
+.gen-cross{margin:0 2px}
+.terp-section{padding:12px 20px 14px;border-top:1px solid var(--line)}
+.terp-title{font-size:13px;color:var(--ink3);margin-bottom:10px}
+.terp-title small{font-size:12px}
+.terp-row{display:grid;grid-template-columns:110px 1fr minmax(0,140px);align-items:center;gap:10px;margin-bottom:7px}
+.terp-name{font-size:13px;color:var(--ink)}
+.terp-track{height:6px;background:var(--sunken);border-radius:3px;overflow:hidden}
+.terp-fill{height:6px;border-radius:3px;background:var(--band,var(--green));transition:width 1s cubic-bezier(.4,0,.2,1)}
+.terp-note{font-size:12px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sc-tags{display:flex;flex-wrap:wrap;gap:6px;padding:0 20px 16px}
+.mtag{font-size:12px;padding:3px 10px;border-radius:99px;background:var(--sunken);color:var(--ink2)}
+.sc-rating{padding:10px 20px 14px;display:flex;align-items:center;gap:10px;border-top:1px solid var(--line)}
+.rating-label{font-size:13px;color:var(--ink3)}
+.stars{display:flex;gap:2px}
+.star{font-size:20px;cursor:pointer;color:var(--line2);background:none;border:none;padding:2px;line-height:1;border-radius:6px}
+.star.on{color:var(--ochre)}
+.star:hover{color:var(--ochre)}
+.rating-saved{font-size:12px;color:var(--green);opacity:0;transition:opacity .3s}
 .rating-saved.show{opacity:1}
-.stock-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 9px;border-radius:6px;font-weight:500;white-space:nowrap;border:1px solid}
+.stock-bar{display:none}
+.stock-badge{display:inline-flex;align-items:center;gap:4px;font-size:12px;padding:3px 10px;border-radius:99px;font-weight:600;white-space:nowrap;border:1px solid}
 .stock-badge.instock{background:var(--instock-bg);border-color:var(--instock-border);color:var(--instock-color)}
 .stock-badge.outstock{background:var(--outstock-bg);border-color:var(--outstock-border);color:var(--outstock-color)}
-.stock-badge.unknown{background:var(--fog2);color:var(--text3);border-color:var(--border)}
-.stock-price{font-family:'Cormorant Garamond',serif;font-size:19px;color:var(--gold2);font-weight:500}
-.stock-bar{padding:8px 13px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--fog)}
+.stock-badge.unknown{background:var(--sunken);color:var(--ink3);border-color:var(--line)}
+.stock-price{font-family:var(--font-display);font-size:18px;font-weight:600}
+
+
+/* ══ ARBRE GÉNÉALOGIQUE (dans la carte) ══ */
+.sc-tree{border-top:1px solid var(--line);padding:14px 20px 16px}
+.sc-tree-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:12px}
+.sc-tree-head b{font-family:var(--font-display);font-size:16px;font-weight:700;letter-spacing:-.01em}
+.sc-tree-head span{font-size:12px;color:var(--ink3)}
+.lt-scroll{overflow-x:auto;padding:4px 2px 8px;scrollbar-width:thin}
+.lt-node{display:flex;align-items:center}
+.lt-kids{position:relative;display:flex;flex-direction:column;gap:10px;margin-left:16px;padding-left:18px}
+.lt-kids::before{content:'';position:absolute;left:-16px;top:50%;width:16px;border-top:2px solid var(--line2)}
+.lt-kids>.lt-node{position:relative}
+.lt-kids>.lt-node::before{content:'';position:absolute;left:-18px;top:50%;width:18px;border-top:2px solid var(--line2)}
+.lt-kids>.lt-node::after{content:'';position:absolute;left:-18px;top:-5px;bottom:-5px;border-left:2px solid var(--line2)}
+.lt-kids>.lt-node:first-child::after{top:50%}
+.lt-kids>.lt-node:last-child::after{bottom:50%}
+.lt-kids>.lt-node:only-child::after{display:none}
+.lt-pill{--tc:var(--t-unknown);display:inline-flex;align-items:center;gap:9px;padding:5px 14px 5px 5px;border-radius:99px;background:var(--sunken);border:1.5px solid transparent;cursor:pointer;font:600 14px var(--font-ui);color:var(--ink);white-space:nowrap;flex-shrink:0;min-height:44px}
+.lt-pill:hover{border-color:var(--ink)}
+.lt-pill.t-indica{--tc:var(--t-indica)}.lt-pill.t-sativa{--tc:var(--t-sativa)}.lt-pill.t-hybride{--tc:var(--t-hybride)}
+.lt-ph{width:34px;height:34px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2.5px solid var(--tc);background:var(--surface)}
+.lt-dot{width:34px;height:34px;border-radius:50%;flex-shrink:0;background:var(--tc);opacity:.85}
+.lt-pill.root{background:var(--tc);color:#fff;font-family:var(--font-display);font-weight:800;font-size:16px;letter-spacing:-.01em;cursor:default}
+.lt-pill.root .lt-ph{border-color:#fff}
+.lt-pill.unknown{background:none;border:1.5px dashed var(--line2);color:var(--ink2);font-weight:500;cursor:default}
+.lt-pill.unknown .lt-dot{opacity:.25}
+.lt-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--ink3)}
+.lt-legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+.lt-loading{font-size:14px;color:var(--ink2);display:flex;align-items:center;gap:10px}
 
 /* ══ COMPARE ══ */
-.compare-panel{background:var(--card-bg);border:1px solid var(--border);border-radius:var(--rl);margin:8px 0 4px;overflow:hidden;box-shadow:var(--shadow)}
-.compare-header{padding:10px 15px;background:var(--fog);border-bottom:1px solid var(--border);font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--accent);font-weight:500}
+.compare-panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--rl);margin:12px 0 10px;overflow:hidden;box-shadow:var(--shadow)}
+.compare-header{padding:12px 18px;border-bottom:1px solid var(--line);font-size:13px;color:var(--ink2);font-weight:600}
 .compare-cols{display:grid;grid-template-columns:1fr 1fr}
-.compare-col{padding:13px 15px}
-.compare-col:first-child{border-right:1px solid var(--border)}
-.cmp-photo{height:82px;border-radius:8px;overflow:hidden;margin-bottom:10px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:22px;opacity:.3}
-.cmp-photo img{width:100%;height:100%;object-fit:cover;display:block;opacity:0;transition:opacity .3s}
-.cmp-photo img.loaded{opacity:1}
-.compare-col-name{font-family:'Cormorant Garamond',serif;font-size:15px;font-weight:500;color:var(--text1);margin-bottom:1px}
-.compare-col-type{font-size:9px;color:var(--accent);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px}
-.cmp-stat{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)}
+.compare-col{padding:0 0 12px;min-width:0}
+.compare-col:first-child{border-right:1px solid var(--line)}
+.cmp-photo{display:none}
+.cmp-band{--band:var(--t-unknown);background:var(--band);color:#fff;padding:14px 16px 12px;margin-bottom:6px}
+.cmp-band.t-indica{--band:var(--t-indica)}.cmp-band.t-sativa{--band:var(--t-sativa)}.cmp-band.t-hybride{--band:var(--t-hybride)}
+.compare-col-name{font-family:var(--font-display);font-size:22px;font-weight:800;letter-spacing:-.03em;line-height:1.05}
+.compare-col-type{font-size:13px;opacity:.9;margin-bottom:4px}
+.cmp-stat{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:8px 16px;border-bottom:1px solid var(--line)}
 .cmp-stat:last-child{border:none}
-.cmp-stat-l{font-size:10.5px;color:var(--text3)}
-.cmp-stat-v{font-size:11px;font-weight:500;color:var(--text1)}
-.cmp-win{color:var(--accent)!important}
-.cmp-verdict{padding:12px 15px;background:var(--goldfog);border-top:1px solid var(--border);font-size:12.5px;color:var(--text2);line-height:1.65}
-.cmp-verdict strong{color:var(--gold2)}
+.cmp-stat-l{font-size:13px;color:var(--ink3)}
+.cmp-stat-v{font-size:14px;font-weight:600;color:var(--ink);text-align:right}
+.cmp-win{color:var(--green)!important}
+.cmp-win::before{content:'✓ '}
+.cmp-verdict{padding:14px 18px;background:var(--sunken);font-size:14.5px;color:var(--ink);line-height:1.6}
+.cmp-verdict strong{color:var(--ink)}
 
 /* ══ STATS ══ */
-.stats-panel{max-width:640px;margin:0 auto;width:100%}
-.stats-header{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--text1);margin-bottom:18px;font-weight:500}
-.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:22px}
-.stat-card{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);padding:16px;box-shadow:var(--shadow)}
-.stat-card-val{font-family:'Cormorant Garamond',serif;font-size:30px;color:var(--gold2);font-weight:500;line-height:1}
-[data-theme="dark"] .stat-card-val{color:var(--accent)}
-.stat-card-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-top:4px}
-.stats-section-title{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:10px;font-weight:500}
-.top-strain-item{display:flex;align-items:center;gap:10px;padding:10px 13px;background:var(--panel);border:1px solid var(--border);border-radius:9px;margin-bottom:6px;box-shadow:var(--shadow)}
-.top-strain-rank{font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--gold2);min-width:26px;font-weight:500}
-[data-theme="dark"] .top-strain-rank{color:var(--accent)}
-.top-strain-name{font-size:13px;color:var(--text1);flex:1}
-.top-strain-count{font-size:10px;color:var(--text3);background:var(--bg4);padding:2px 9px;border-radius:10px;border:1px solid var(--border)}
-.top-strain-rating{font-size:11px;color:var(--gold2)}
+.stats-panel{max-width:720px;margin:0 auto;width:100%}
+.stats-header{font-family:var(--font-display);font-size:32px;font-weight:800;letter-spacing:-.03em;margin-bottom:18px}
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:26px}
+.stat-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--rl);padding:16px 18px}
+.stat-card-val{font-variant-numeric:tabular-nums;font-family:var(--font-display);font-size:36px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink)}
+.stat-card-label{font-size:13px;color:var(--ink3);margin-top:6px}
+.stats-section-title{font-size:15px;font-weight:600;margin-bottom:10px}
+.top-strain-item{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface);border:1px solid var(--line);border-radius:12px;margin-bottom:6px}
+.top-strain-rank{font-family:var(--font-display);font-size:20px;font-weight:700;color:var(--ink3);min-width:26px}
+.top-strain-name{font-size:14px;color:var(--ink);flex:1;font-weight:500}
+.top-strain-count{font-size:12px;color:var(--ink2);background:var(--sunken);padding:3px 10px;border-radius:99px}
+.top-strain-rating{font-size:13px;color:var(--ochre);font-weight:600}
 
 /* ══ INPUT ══ */
-.input-area{padding:10px 20px 14px;flex-shrink:0;border-top:1px solid var(--border);background:var(--panel)}
-[data-theme="light"] .input-area{box-shadow:0 -1px 8px rgba(0,0,0,0.04)}
-.input-box{background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:10px 12px;display:flex;gap:8px;align-items:flex-end;transition:border-color .2s,box-shadow .2s}
-[data-theme="light"] .input-box{background:#fff}
-.input-box:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(45,107,38,0.1)}
-[data-theme="dark"] .input-box:focus-within{box-shadow:0 0 0 3px rgba(74,222,128,0.08)}
-#inp{flex:1;background:none;border:none;outline:none;resize:none;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text1);min-height:20px;max-height:110px;line-height:1.55}
-#inp::placeholder{color:var(--text3)}
-.input-right{display:flex;gap:6px;align-items:center;flex-shrink:0}
-.mode-badge{font-size:9.5px;padding:2px 8px;border-radius:6px;background:var(--fog2);border:1px solid var(--border);color:var(--accent);font-weight:500;white-space:nowrap}
-#sbtn{width:34px;height:34px;border-radius:9px;border:none;background:var(--accent);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .18s;flex-shrink:0;box-shadow:0 2px 8px rgba(45,107,38,.2)}
-[data-theme="dark"] #sbtn{background:linear-gradient(135deg,#166534,#16a34a);box-shadow:0 2px 8px rgba(74,222,128,.15)}
-#sbtn:hover{transform:scale(1.05);opacity:.9}
-#sbtn:disabled{opacity:.3;cursor:default;transform:none;box-shadow:none}
-.input-hint{font-size:9.5px;color:var(--text3);margin-top:6px;text-align:center}
+.input-area{padding:10px 28px 16px;flex-shrink:0;background:var(--paper)}
+.quick-row{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 10px;max-width:820px;margin:0 auto;scrollbar-width:none}
+.quick-row::-webkit-scrollbar{display:none}
+.main:has(#welcome) .quick-row{display:none}
+.quick-chip{flex-shrink:0;font-size:13px;padding:6px 12px;border-radius:99px;background:var(--surface);border:1px solid var(--line);color:var(--ink);cursor:pointer;min-height:32px}
+.quick-chip:hover{border-color:var(--ink)}
+.input-box{max-width:820px;margin:0 auto;background:var(--surface);border:1.5px solid var(--line2);border-radius:20px;padding:12px 12px 12px 18px;display:flex;gap:10px;align-items:flex-end;box-shadow:var(--shadow);transition:border-color .2s,box-shadow .2s}
+.input-box:focus-within{border-color:var(--ink)}
+#inp{flex:1;background:none;border:none;outline:none;resize:none;font-family:var(--font-ui);font-size:15px;color:var(--ink);min-height:24px;max-height:140px;line-height:1.55;padding-top:6px}
+#inp::placeholder{color:var(--ink3)}
+#inp:focus-visible{box-shadow:none!important}
+#inp{scrollbar-width:none}#inp::-webkit-scrollbar{display:none}
+.input-box:focus-within{box-shadow:var(--focus)}
+.input-right{display:flex;gap:8px;align-items:center;flex-shrink:0}
+.mode-badge{font-size:12px;padding:4px 10px;border-radius:99px;background:var(--sunken);color:var(--ink2);font-weight:500;white-space:nowrap}
+#sbtn{height:40px;min-width:40px;padding:0 16px;border-radius:99px;border:none;background:var(--red);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;flex-shrink:0;gap:6px}
+#sbtn:hover{filter:brightness(1.07)}
+#sbtn:disabled{background:var(--sunken);color:var(--ink3);cursor:default}
+.input-hint{font-size:12px;color:var(--ink3);margin-top:8px;text-align:center}
 
 /* ══ MODAL LOGIN ══ */
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:300;padding:20px;backdrop-filter:blur(10px)}
-[data-theme="light"] .modal-bg{background:rgba(250,247,242,.7)}
-.modal{background:var(--panel);border-radius:20px;padding:30px;max-width:420px;width:100%;border:1px solid var(--border2);box-shadow:0 30px 80px rgba(0,0,0,.2)}
-[data-theme="dark"] .modal{box-shadow:0 30px 80px rgba(0,0,0,.6)}
-.modal-logo{display:flex;align-items:center;gap:13px;margin-bottom:22px}
-.modal-logo-mark{width:44px;height:44px;border-radius:13px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:21px;box-shadow:0 4px 16px rgba(45,107,38,.2)}
-[data-theme="dark"] .modal-logo-mark{background:linear-gradient(135deg,#166534,#16a34a)}
-.modal-logo h2{font-family:'Cormorant Garamond',serif;font-size:21px;color:var(--text1);font-weight:600}
-.modal-logo-sub{font-size:9.5px;color:var(--text3);opacity:.8;letter-spacing:1.2px;text-transform:uppercase;display:block;margin-top:1px}
-.modal p{font-size:12.5px;color:var(--text2);line-height:1.65;margin-bottom:16px}
-.modal-err{font-size:11.5px;color:#dc2626;margin-bottom:10px;display:none;padding:8px 12px;background:rgba(220,38,38,.07);border-radius:8px;border:1px solid rgba(220,38,38,.15)}
-.modal input{width:100%;padding:11px 14px;border:1px solid var(--border2);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text1);background:var(--bg4);outline:none;margin-bottom:10px;transition:border-color .2s}
-[data-theme="light"] .modal input{background:#f8f5f0}
-.modal input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(45,107,38,.08)}
-.modal input::placeholder{color:var(--text3)}
-.modal-lbl{font-size:9.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px;display:block}
-.modal-btn{width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:opacity .18s;box-shadow:0 4px 14px rgba(45,107,38,.2)}
-[data-theme="dark"] .modal-btn{background:linear-gradient(135deg,#166534,#16a34a)}
-.modal-btn:hover{opacity:.88}
-.modal-note{font-size:10px;color:var(--text3);text-align:center;margin-top:10px;line-height:1.5}
+.modal-bg{position:fixed;inset:0;background:var(--paper);display:flex;align-items:center;justify-content:center;z-index:300;padding:20px}
+.modal{background:var(--surface);border-radius:24px;padding:34px 32px 28px;max-width:430px;width:100%;border:1px solid var(--line);box-shadow:var(--shadow2);position:relative;overflow:hidden}
+.modal::before{content:'';position:absolute;left:0;right:0;top:0;height:8px;background:linear-gradient(90deg,var(--t-indica) 0 33.3%,var(--t-hybride) 33.3% 66.6%,var(--t-sativa) 66.6%)}
+.modal-logo{display:block;margin-bottom:18px}
+.modal-logo-mark{display:none}
+.modal-logo h2{font-family:var(--font-display);font-size:44px;font-weight:800;letter-spacing:-.04em;line-height:1}
+.modal-logo h2 em{font-style:normal;color:var(--red)}
+.modal-logo-sub{font-size:14px;color:var(--ink2);display:block;margin-top:6px}
+.modal p{font-size:14.5px;color:var(--ink2);line-height:1.55;margin-bottom:18px}
+.modal-err{font-size:13px;color:#a50d26;margin-bottom:12px;display:none;padding:10px 12px;background:var(--red-tint);border-radius:10px}
+.modal input{width:100%;padding:13px 15px;border:1.5px solid var(--line2);border-radius:12px;font-family:var(--font-ui);font-size:15px;color:var(--ink);background:var(--surface);outline:none;margin-bottom:14px}
+.modal input:focus{border-color:var(--green);box-shadow:var(--focus)}
+.modal input::placeholder{color:var(--ink3)}
+.modal-lbl{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:6px;display:block}
+.modal-btn{width:100%;padding:14px;background:var(--red);color:#fff;border:none;border-radius:99px;font-size:15px;font-weight:600;cursor:pointer;margin-top:4px}
+.modal-btn:hover{filter:brightness(1.07)}
+.modal-note{font-size:12px;color:var(--ink3);text-align:center;margin-top:14px;line-height:1.5}
 
 /* ══ TOAST ══ */
-.toast{position:fixed;bottom:18px;right:18px;z-index:400;background:var(--panel);color:var(--text1);padding:10px 15px;border-radius:10px;font-size:12px;box-shadow:var(--shadow2);animation:toastIn .22s ease;border:1px solid var(--border2);border-left:3px solid var(--gold2);max-width:260px}
+.toast{position:fixed;bottom:20px;right:20px;z-index:400;background:var(--ink);color:var(--surface);padding:12px 16px;border-radius:12px;font-size:14px;box-shadow:var(--shadow2);animation:toastIn .22s ease;border-left:4px solid var(--green);max-width:300px}
 @keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
 /* ══ HAMBURGER & MOBILE ══ */
-.hamburger{display:none;align-items:center;justify-content:center;width:34px;height:34px;background:none;border:1px solid var(--border);border-radius:8px;color:var(--text2);font-size:16px;cursor:pointer;flex-shrink:0;transition:all .15s}
-.hamburger:hover{background:var(--fog2);color:var(--text1)}
+.hamburger{display:none;align-items:center;justify-content:center;width:40px;height:40px;background:none;border:1px solid var(--line2);border-radius:12px;color:var(--ink);font-size:17px;cursor:pointer;flex-shrink:0}
+.hamburger:hover{background:var(--sunken)}
+@media(max-width:860px){
+  .sdot-wrap{display:none}
+}
 @media(max-width:680px){
-  .sidebar{display:none;position:fixed;top:0;left:0;bottom:0;z-index:200;width:268px;box-shadow:4px 0 24px rgba(0,0,0,.15)}
-  [data-theme="dark"] .sidebar{box-shadow:4px 0 24px rgba(0,0,0,.5)}
+  .sidebar{display:none;position:fixed;top:0;left:0;bottom:0;z-index:200;width:min(300px,86vw);box-shadow:var(--shadow2)}
   .sidebar.open{display:flex}
-  .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:199}
-  [data-theme="dark"] .sidebar-overlay{background:rgba(0,0,0,.6)}
+  .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(17,21,19,.45);z-index:199}
   .sidebar-overlay.open{display:block}
-  .chat-panel{padding:14px 12px}
-  .input-area{padding:8px 12px 12px}
+  .mode-pills{display:flex}
+  .chat-panel{padding:18px 14px}
+  .input-area{padding:8px 12px 12px;padding-bottom:max(12px,env(safe-area-inset-bottom))}
+  .input-hint{display:none}
+  .mode-badge{display:none}
+  .input-box{padding:8px 8px 8px 14px;border-radius:18px}
+  #inp{font-size:16px}
   .welcome-grid{grid-template-columns:1fr}
-  .topbar{padding:0 10px}
+  .wb-row{grid-template-columns:1fr;gap:6px}
+  .wb-label{padding-top:0}
+  .topbar{padding:0 12px;height:56px;gap:10px}
   .topbar-title{display:none}
+  .topbar .theme-toggle-wrap{display:none}
+  .topbar-modes{flex:1;justify-content:space-between}
+  .tmode{padding:7px 10px;font-size:13px;flex:1}
   .compare-cols{grid-template-columns:1fr}
-  .compare-col:first-child{border-right:none;border-bottom:1px solid var(--border)}
-  .tmode{padding:4px 8px;font-size:9.5px}
+  .compare-col:first-child{border-right:none;border-bottom:1px solid var(--line)}
   .stats-grid{grid-template-columns:repeat(2,1fr)}
   .hamburger{display:flex}
+  .msg{gap:0}
+  .av.ai{display:none}
+  .sc-band{padding:16px 16px 14px}
+  .sc-kind,.sc-name{padding-right:0}
+  .sc-band.has-photo{grid-template-columns:minmax(0,1fr) 92px;gap:12px}
+  .sc-photo-win{width:92px;height:92px;border-width:2px}
+  .sc-band.has-photo .sc-stamp{grid-column:1/-1}
+  .sc-stamp{position:static;transform:none;display:inline-flex;flex-direction:row;gap:6px;align-items:baseline;margin-top:12px;box-shadow:none}
+  .sc-specs{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .sc-spec:nth-child(2){border-right:0}
+  .sc-spec:nth-child(-n+2){border-bottom:1px solid var(--line)}
+  .sc-flo,.sc-body,.sc-actions,.terp-section,.sc-rating{padding-left:16px;padding-right:16px}
+  .sc-tags{padding:0 16px 14px}
+  .sc-row{grid-template-columns:1fr;gap:2px}
+  .terp-row{grid-template-columns:96px 1fr}
+  .terp-note{display:none}
 }
+
+/* ══ LOGO : « strainsage », le point du i est une jeune pousse ══ */
+.sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.logo-wm{font-family:'Bricolage Grotesque','Figtree',system-ui,sans-serif;font-weight:800;letter-spacing:-.05em;line-height:1;color:var(var(--ink));display:inline-block;white-space:nowrap}
+.logo-i{position:relative;display:inline-block}
+.logo-sprout{position:absolute;left:50%;top:-.23em;width:.86em;height:.69em;transform:translateX(-50%);overflow:visible}
+.lf1{fill:#00703c}.lf2{fill:#2f9a5f}.lst{stroke:#00703c;stroke-width:2.6;stroke-linecap:round;fill:none}
+.lmr{stroke:var(--surface);stroke-width:1.4;stroke-linecap:round;fill:none}
+[data-theme="dark"] .lf1,[data-theme="dark"] .lst{fill:#4cc38a}[data-theme="dark"] .lst{fill:none;stroke:#4cc38a}[data-theme="dark"] .lf2{fill:#8fe0b4}
 </style>
 </head>
 <body>
 
 <div class="modal-bg" id="loginModal">
-  <div class="modal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
     <div class="modal-logo">
       <div class="modal-logo-mark">🌿</div>
-      <div><h2>StrainSage Pro</h2><span class="modal-logo-sub">Culture Indoor Anglet</span></div>
+      <div><h2 id="loginTitle"><span class="logo-wm logo-login"><span class="sr-only">StrainSage</span><span aria-hidden="true">stra<span class="logo-i">ı<svg class="logo-sprout" viewBox="0 0 30 24" aria-hidden="true"><path class="lst" d="M15 24V17.6"/><path class="lf1" d="M14.6 18.8C9.6 19.8 2.6 16.8.8 7.6 8.4 6.2 13.8 10.8 14.6 18.8Z"/><path class="lf1" d="M15.4 18.8C16.2 10.8 21.6 6.2 29.2 7.6 27.4 16.8 20.4 19.8 15.4 18.8Z"/><path class="lf2" d="M15 17.8C12.4 13.8 12.6 5.8 15 1 17.4 5.8 17.6 13.8 15 17.8Z"/><path class="lmr" d="M13.6 17.8C10.6 15.2 7 12.2 3.6 9.2M16.4 17.8C19.4 15.2 23 12.2 26.4 9.2M15 15.6V5"/></svg></span>nsage</span></span></h2><span class="modal-logo-sub">Le conseil variétés de Culture Indoor Anglet</span></div>
     </div>
-    <p>Connectez-vous avec votre prénom et le code du magasin pour accéder à vos recommandations personnalisées.</p>
+    <p>Entre ton prénom et le code du magasin pour retrouver tes favoris et tes conversations.</p>
     <div class="modal-err" id="loginErr">Code magasin incorrect ou prénom manquant.</div>
-    <label class="modal-lbl">Votre prénom ou pseudo</label>
-    <input type="text" id="usernameInput" placeholder="Ex : Jean, Marie, Grower42…" autocomplete="off" maxlength="30"/>
-    <label class="modal-lbl">Code magasin</label>
-    <input type="password" id="shopCodeInput" placeholder="Code fourni par le magasin" autocomplete="off"/>
-    <button class="modal-btn" onclick="loginUser()">Accéder à StrainSage →</button>
-    <p class="modal-note">🔒 Vos données sont privées et sauvegardées sur votre profil</p>
+    <label class="modal-lbl" for="usernameInput">Prénom ou pseudo</label>
+    <input type="text" id="usernameInput" spellcheck="false" autocapitalize="words" placeholder="Jean, Marie, Grower42…" autocomplete="off" maxlength="30"/>
+    <label class="modal-lbl" for="shopCodeInput">Code magasin</label>
+    <input type="password" id="shopCodeInput" spellcheck="false" placeholder="Code fourni par le magasin" autocomplete="off"/>
+    <button class="modal-btn" onclick="loginUser()">Entrer</button>
+    <p class="modal-note">Tes favoris et ton historique restent liés à ton prénom.</p>
   </div>
 </div>
 
 <!-- PROFILE MODAL -->
 <div class="profile-modal-bg" id="profileModal" style="display:none">
-  <div class="profile-modal">
-    <h3>🌿 Votre profil grower</h3>
+  <div class="profile-modal" role="dialog" aria-modal="true" aria-labelledby="profileTitle">
+    <h3 id="profileTitle">🌿 Votre profil grower</h3>
     <p>Ces informations nous permettent de personnaliser chaque recommandation. Vous pouvez les modifier à tout moment.</p>
     <div class="profile-section">
       <span class="profile-section-label">Votre niveau</span>
       <div class="profile-pills" id="pp-level">
-        <div class="profile-pill" data-val="débutant" onclick="selectPill('level',this)">🌱 Débutant</div>
-        <div class="profile-pill" data-val="intermédiaire" onclick="selectPill('level',this)">🌿 Intermédiaire</div>
-        <div class="profile-pill" data-val="expert" onclick="selectPill('level',this)">🔥 Expert</div>
+        <button type="button" class="profile-pill" data-val="débutant" onclick="selectPill('level',this)">🌱 Débutant</button>
+        <button type="button" class="profile-pill" data-val="intermédiaire" onclick="selectPill('level',this)">🌿 Intermédiaire</button>
+        <button type="button" class="profile-pill" data-val="expert" onclick="selectPill('level',this)">🔥 Expert</button>
       </div>
     </div>
     <div class="profile-section">
       <span class="profile-section-label">Mode de culture</span>
       <div class="profile-pills" id="pp-cultivation">
-        <div class="profile-pill" data-val="indoor" onclick="selectPill('cultivation',this)">🏠 Indoor</div>
-        <div class="profile-pill" data-val="outdoor" onclick="selectPill('cultivation',this)">☀️ Outdoor</div>
-        <div class="profile-pill" data-val="indoor & outdoor" onclick="selectPill('cultivation',this)">🔄 Les deux</div>
-        <div class="profile-pill" data-val="je consomme seulement" onclick="selectPill('cultivation',this)">🛒 Consommateur</div>
+        <button type="button" class="profile-pill" data-val="indoor" onclick="selectPill('cultivation',this)">🏠 Indoor</button>
+        <button type="button" class="profile-pill" data-val="outdoor" onclick="selectPill('cultivation',this)">☀️ Outdoor</button>
+        <button type="button" class="profile-pill" data-val="indoor & outdoor" onclick="selectPill('cultivation',this)">🔄 Les deux</button>
+        <button type="button" class="profile-pill" data-val="je consomme seulement" onclick="selectPill('cultivation',this)">🛒 Consommateur</button>
       </div>
     </div>
     <div class="profile-section">
       <span class="profile-section-label">Budget pour 5-10 graines</span>
       <div class="profile-pills" id="pp-budget">
-        <div class="profile-pill" data-val="moins de 30€" onclick="selectPill('budget',this)">< 30€</div>
-        <div class="profile-pill" data-val="30-60€" onclick="selectPill('budget',this)">30–60€</div>
-        <div class="profile-pill" data-val="60-100€" onclick="selectPill('budget',this)">60–100€</div>
-        <div class="profile-pill" data-val="pas de limite" onclick="selectPill('budget',this)">Premium</div>
+        <button type="button" class="profile-pill" data-val="moins de 30€" onclick="selectPill('budget',this)">< 30€</button>
+        <button type="button" class="profile-pill" data-val="30-60€" onclick="selectPill('budget',this)">30–60€</button>
+        <button type="button" class="profile-pill" data-val="60-100€" onclick="selectPill('budget',this)">60–100€</button>
+        <button type="button" class="profile-pill" data-val="pas de limite" onclick="selectPill('budget',this)">Premium</button>
       </div>
     </div>
     <div class="profile-section">
@@ -480,10 +600,10 @@ a.sc-action{text-decoration:none}
 
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 <div class="app">
-  <div class="sidebar">
+  <aside class="sidebar" aria-label="Menu">
     <div class="sb-logo">
-      <div class="sb-logo-mark">🌿</div>
-      <div><h1>StrainSage</h1><div class="sb-logo-sub">Pro Edition</div></div>
+      
+      <div><h1><span class="logo-wm logo-sb"><span class="sr-only">StrainSage</span><span aria-hidden="true">stra<span class="logo-i">ı<svg class="logo-sprout" viewBox="0 0 30 24" aria-hidden="true"><path class="lst" d="M15 24V17.6"/><path class="lf1" d="M14.6 18.8C9.6 19.8 2.6 16.8.8 7.6 8.4 6.2 13.8 10.8 14.6 18.8Z"/><path class="lf1" d="M15.4 18.8C16.2 10.8 21.6 6.2 29.2 7.6 27.4 16.8 20.4 19.8 15.4 18.8Z"/><path class="lf2" d="M15 17.8C12.4 13.8 12.6 5.8 15 1 17.4 5.8 17.6 13.8 15 17.8Z"/><path class="lmr" d="M13.6 17.8C10.6 15.2 7 12.2 3.6 9.2M16.4 17.8C19.4 15.2 23 12.2 26.4 9.2M15 15.6V5"/></svg></span>nsage</span></span></h1><div class="sb-logo-sub">Conseil variétés · Culture Indoor Anglet</div></div>
     </div>
     <div class="sb-user">
       <div class="sb-user-row">
@@ -492,34 +612,34 @@ a.sc-action{text-decoration:none}
       </div>
     </div>
     <div class="mode-pills">
-      <div class="mode-pill active" id="pill-chat" onclick="setMode('chat')"><span class="mode-pill-icon">💬</span>Chat</div>
-      <div class="mode-pill" id="pill-culture" onclick="setMode('culture')"><span class="mode-pill-icon">🌱</span>Culture</div>
-      <div class="mode-pill" id="pill-compare" onclick="setMode('compare')"><span class="mode-pill-icon">⚖️</span>Compare</div>
-      <div class="mode-pill" id="pill-stats" onclick="setMode('stats')"><span class="mode-pill-icon">📊</span>Stats</div>
+      <button type="button" class="mode-pill active" id="pill-chat" onclick="setMode('chat')"><span class="mode-pill-icon">💬</span>Chat</button>
+      <button type="button" class="mode-pill" id="pill-culture" onclick="setMode('culture')"><span class="mode-pill-icon">🌱</span>Culture</button>
+      <button type="button" class="mode-pill" id="pill-compare" onclick="setMode('compare')"><span class="mode-pill-icon">⚖️</span>Compare</button>
+      <button type="button" class="mode-pill" id="pill-stats" onclick="setMode('stats')"><span class="mode-pill-icon">📊</span>Stats</button>
     </div>
-    <div class="sb-profile-btn" id="sbProfileBtn" onclick="openProfile()">
+    <div class="sb-profile-btn" id="sbProfileBtn" onclick="openProfile()" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openProfile();}">
       <span class="sb-profile-icon">👤</span>
       <div class="sb-profile-info">
         <div class="sb-profile-level" id="sbProfileLevel">Profil non configuré</div>
         <div class="sb-profile-detail" id="sbProfileDetail">Cliquez pour personnaliser</div>
       </div>
     </div>
-    <div class="sb-section">⭐ Mes favoris</div>
+    <div class="sb-section">Mes favoris</div>
     <div class="fav-list" id="favList"><div class="sb-empty">Aucun favori.</div></div>
-    <div class="sb-section">🕐 Historique</div>
+    <div class="sb-section">Historique</div>
     <div class="hist-list" id="histList"><div class="sb-empty">Aucune conversation.</div></div>
     <div class="sb-footer">
       <div class="theme-toggle-wrap" style="margin-bottom:10px;padding:0 4px">
         <span class="theme-toggle-label" id="themeLabel">☀️ Clair</span>
-        <div class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Changer de thème"></div>
+        <div class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Changer de thème" role="switch" tabindex="0" aria-label="Thème sombre" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleTheme();}"></div>
       </div>
-      <button class="sb-new-btn" onclick="newChat()">+ Nouvelle conversation</button>
+      <button class="sb-new-btn" onclick="newChat()">Nouvelle recherche</button>
     </div>
-  </div>
+  </aside>
 
-  <div class="main">
+  <main class="main">
     <div class="topbar">
-      <button class="hamburger" id="hamburgerBtn" onclick="toggleSidebar()">☰</button>
+      <button class="hamburger" id="hamburgerBtn" onclick="toggleSidebar()" aria-label="Ouvrir le menu">☰</button>
       <div class="topbar-title" id="topTitle">Nouvelle conversation</div>
       <div class="topbar-modes">
         <button class="tmode active" id="tmode-chat" onclick="setMode('chat')">Chat</button>
@@ -529,26 +649,27 @@ a.sc-action{text-decoration:none}
       </div>
       <div class="sdot-wrap"><div class="sdot"></div>En ligne</div>
       <div class="theme-toggle-wrap" style="margin-left:6px">
-        <div class="theme-toggle" id="themeToggleTop" onclick="toggleTheme()" title="Thème clair/sombre"></div>
+        <div class="theme-toggle" id="themeToggleTop" onclick="toggleTheme()" title="Thème clair/sombre" role="switch" tabindex="0" aria-label="Thème sombre" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleTheme();}"></div>
       </div>
     </div>
     <div id="stockStatusBar" style="display:none" class="stock-status-bar">
       <span id="stockStatusText">📦 Stock chargé</span>
       <button class="stock-clear" onclick="clearStock()">✕ Effacer</button>
     </div>
-    <div class="chat-panel" id="chatPanel"></div>
+    <div class="chat-panel" id="chatPanel" aria-label="Conversation"></div>
     <div class="input-area" id="inputArea">
+      <div class="quick-row" role="group" aria-label="Ajouter un critère"><button type="button" class="quick-chip" onclick="addQuick(this.textContent)">relaxante</button><button type="button" class="quick-chip" onclick="addQuick(this.textContent)">pour dormir</button><button type="button" class="quick-chip" onclick="addQuick(this.textContent)">énergisante</button><button type="button" class="quick-chip" onclick="addQuick(this.textContent)">goût fruité</button><button type="button" class="quick-chip" onclick="addQuick(this.textContent)">agrumes</button><button type="button" class="quick-chip" onclick="addQuick(this.textContent)">diesel</button><button type="button" class="quick-chip" onclick="addQuick(this.textContent)">autofloraison</button><button type="button" class="quick-chip" onclick="addQuick(this.textContent)">facile pour débutant</button><button type="button" class="quick-chip" onclick="addQuick(this.textContent)">floraison courte</button><button type="button" class="quick-chip" onclick="addQuick(this.textContent)">riche en CBD</button><button type="button" class="quick-chip" onclick="addQuick(this.textContent)">puissante</button><button type="button" class="quick-chip" onclick="addQuick(this.textContent)">douce</button></div>
       <div class="input-box">
-        <textarea id="inp" placeholder="Décrivez ce que vous recherchez…" rows="1"></textarea>
+        <textarea id="inp" placeholder="Décris ce que tu cherches…" rows="1" aria-label="Ta demande"></textarea>
         <div class="input-right">
           <div class="mode-badge" id="modeBadge">💬 Chat</div>
-          <button id="sbtn" onclick="send()">➤</button>
+          <button id="sbtn" onclick="send()" aria-label="Envoyer">Envoyer</button>
         </div>
       </div>
       <div class="input-hint">Entrée pour envoyer · Maj+Entrée pour nouvelle ligne</div>
     </div>
     <input type="file" id="stockFileInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="importStock(this)">
-  </div>
+  </main>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
@@ -556,9 +677,12 @@ a.sc-action{text-decoration:none}
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="gd-reference.js"></script>
+<script src="varietes.js?v=20261019c"></script>
 <script>
 /* ══ THÈME ══ */
 function updateThemeLabel(t){
+  var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content',t==='dark'?'#111513':'#f6f5f1');
+  document.querySelectorAll('.theme-toggle').forEach(x=>x.setAttribute('aria-checked',t==='dark'));
   var l=document.getElementById('themeLabel');
   if(l)l.textContent=t==='dark'?'🌙 Sombre':'☀️ Clair';
 }
@@ -584,6 +708,7 @@ let db;
 document.addEventListener("DOMContentLoaded",function(){
 firebase.initializeApp({apiKey:"AIzaSyAH5m_gs2MrQLvCqOdhtLiyZjgI1A22fHs",authDomain:"test-b7b1a.firebaseapp.com",projectId:"test-b7b1a",storageBucket:"test-b7b1a.firebasestorage.app",messagingSenderId:"60234196976",appId:"1:60234196976:web:48c64cb05c7707499d5f35"});
 db=firebase.firestore();
+if(window.VarDB)window.VarDB.load(); // index des noms de la base de variétés, chargé en arrière-plan
 function doc(db,col,id){return db.collection(col).doc(id);}
 async function getDoc(ref){const snap=await ref.get();return{exists:()=>snap.exists,data:()=>snap.data(),id:snap.id};}
 async function setDoc(ref,data,opts){return opts&&opts.merge?ref.set(data,{merge:true}):ref.set(data);}
@@ -620,6 +745,7 @@ COMPORTEMENT :
 - Si la demande est floue → pose UNE seule question de clarification avant de recommander
 
 SOURCES PAR ORDRE DE FIABILITÉ :
+00. [BASE STRAINSAGE] fournie dans le contexte — base de variétés de la boutique, prioritaire sur tout le reste (THC, floraison, lignée, banques/breeders qui la vendent)
 0. [RÉFÉRENCE GROWDIARIES] et [CANDIDATS GROWDIARIES] fournis dans le contexte — données structurées, prioritaires pour lignée, breeders, THC, floraison
 1. Seedbanks officielles (barneysfarm.com, seedjunky.com, compoundgenetics.com, royalqueenseeds.com, dutch-passion.com)
 2. Bases spécialisées (leafly.com, seedfinder.eu, allbud.com)
@@ -640,7 +766,7 @@ Tu conseilles des growers sur le choix et la culture de variétés. Sois précis
 
 Adapte le niveau de détail au profil client (débutant = bases claires, expert = EC semaine par semaine, techniques avancées).
 
-SOURCES : [RÉFÉRENCE GROWDIARIES] du contexte en priorité pour la génétique, puis seedbanks officielles, growdiaries.com pour les retours terrain réels.
+SOURCES : [BASE STRAINSAGE] du contexte en priorité absolue, puis [RÉFÉRENCE GROWDIARIES] pour la génétique, puis seedbanks officielles, growdiaries.com pour les retours terrain réels.
 
 FORMAT — commence par [STRAINS_JSON] immédiatement, zéro texte avant :
 [STRAINS_JSON]
@@ -651,7 +777,7 @@ Après le JSON : conseils culture détaillés, erreurs fréquentes à éviter, t
 
 compare:`Tu es StrainSage Pro MODE COMPARAISON pour ${SHOP_NAME}.
 
-Compare objectivement 2 variétés sur tous les critères. Sois factuel, cite les sources, signale les contradictions entre sources. Adapte le verdict au profil du client s'il est connu. Utilise en priorité la [RÉFÉRENCE GROWDIARIES] fournie dans le contexte.
+Compare objectivement 2 variétés sur tous les critères. Sois factuel, cite les sources, signale les contradictions entre sources. Adapte le verdict au profil du client s'il est connu. Utilise en priorité la [BASE STRAINSAGE] fournie dans le contexte, puis la [RÉFÉRENCE GROWDIARIES].
 
 FORMAT — [STRAINS_JSON] avec EXACTEMENT 2 variétés, zéro texte avant :
 [STRAINS_JSON]
@@ -892,7 +1018,7 @@ var BADGES={chat:'💬 Chat',culture:'🌱 Culture',compare:'⚖️ Compare',sta
 function setMode(m){
   mode=m;
   document.getElementById('modeBadge').textContent=BADGES[m];
-  document.getElementById('inp').placeholder=m==='culture'?'Décrivez vos conditions de culture…':m==='compare'?'Nommez 2 variétés à comparer…':'Décrivez ce que vous recherchez…';
+  document.getElementById('inp').placeholder=m==='culture'?'Tes conditions de culture…':m==='compare'?'Nomme deux variétés à comparer…':'Décris ce que tu cherches…';
   ['chat','culture','compare','stats'].forEach(x=>{
     var p=document.getElementById('pill-'+x);if(p)p.classList.toggle('active',x===m);
     var t=document.getElementById('tmode-'+x);if(t)t.classList.toggle('active',x===m);
@@ -903,20 +1029,25 @@ function setMode(m){
   if(sb&&sb.classList.contains('open')){sb.classList.remove('open');ov.classList.remove('open');}
 };
 
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Escape')return;
+  var sb=document.querySelector('.sidebar');if(sb&&sb.classList.contains('open')){toggleSidebar();document.getElementById('hamburgerBtn').focus();return;}
+  var pm=document.getElementById('profileModal');if(pm&&pm.style.display!=='none'&&window.skipProfile)window.skipProfile();
+});
 function toggleSidebar(){var sb=document.querySelector('.sidebar'),ov=document.getElementById('sidebarOverlay');sb.classList.toggle('open');ov.classList.toggle('open');};
 function esc(t){return String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function toast(msg,type){
-  var t=document.createElement('div');t.className='toast';
+  var t=document.createElement('div');t.className='toast';t.setAttribute('role','status');t.setAttribute('aria-live','polite');
   var color=type==='error'?'#dc2626':type==='info'?'var(--accent)':'var(--gold2)';
   t.style.borderLeftColor=color;t.textContent=msg;
   document.body.appendChild(t);
-  setTimeout(()=>{t.style.opacity='0';t.style.transform='translateY(8px)';t.style.transition='all .3s';setTimeout(()=>t.remove(),300);},2500);
+  setTimeout(()=>{t.style.opacity='0';t.style.transform='translateY(8px)';t.style.transition='opacity .3s,transform .3s';setTimeout(()=>t.remove(),300);},2500);
 }
 function panel(){return document.getElementById('chatPanel');}
 function quickSend(txt){document.getElementById('inp').value=txt;send();};
 
 function addMsg(role,html){var w=document.createElement('div');w.className='msg '+role;var av=document.createElement('div');av.className='av '+role;av.textContent=role==='ai'?'🌿':'👤';var b=document.createElement('div');b.className='bubble';b.innerHTML=html;w.appendChild(av);w.appendChild(b);panel().appendChild(w);panel().scrollTop=panel().scrollHeight;}
-function showTyping(){var w=document.createElement('div');w.className='msg ai';w.id='typ';var av=document.createElement('div');av.className='av ai';av.textContent='🌿';var b=document.createElement('div');b.className='bubble';b.innerHTML='<div class="typing-bub"><span></span><span></span><span></span></div>';w.appendChild(av);w.appendChild(b);panel().appendChild(w);panel().scrollTop=panel().scrollHeight;}
+function showTyping(){var w=document.createElement('div');w.className='msg ai';w.id='typ';var av=document.createElement('div');av.className='av ai';av.textContent='🌿';var b=document.createElement('div');b.className='bubble';b.innerHTML='<div class="typing" role="status" aria-live="polite"><div class="typing-bub"><span></span><span></span><span></span></div><span id="typTxt">Je cherche dans la base de la boutique…</span></div>';w.appendChild(av);w.appendChild(b);panel().appendChild(w);panel().scrollTop=panel().scrollHeight;}
 function removeTyping(){var t=document.getElementById('typ');if(t)t.remove();}
 
 var STRAIN_PHOTOS={
@@ -949,11 +1080,20 @@ function buildPhoto(url,name,sb){
 }
 function buildCmpPhoto(url,name){if(!url||url==='null')return '<div class="cmp-photo">🌿</div>';return '<div class="cmp-photo"><img src="'+esc(url)+'" alt="'+esc(name)+'" onload="this.classList.add(\'loaded\')" onerror="this.parentElement.textContent=\'🌿\'" loading="lazy"></div>';}
 function buildGenetics(g,src){if(!g||g==='null'||(g.toLowerCase&&g.toLowerCase().includes('inconnu')))return '<div class="sc-genetics"><span class="gen-label">Lignée</span><span class="gen-unknown">Non documentée</span></div>';var fmt=esc(g).replace(/×/g,'<span class="gen-cross">×</span>').replace(/\s+x\s+/gi,'<span class="gen-cross">×</span>');return '<div class="sc-genetics"><span class="gen-label">Lignée</span><span class="gen-val">'+fmt+(src?'<span class="gen-src">· '+esc(src)+'</span>':'')+'</span></div>';}
-function buildTerps(terps){if(!terps||!terps.length)return '';var rows=terps.slice(0,5).map(t=>{var n=typeof t==='object'?t.name:t,p=typeof t==='object'?(t.pct||30):30,note=typeof t==='object'?(t.note||''):'';return '<div class="terp-row"><div class="terp-name">'+esc(n)+'</div><div class="terp-track"><div class="terp-fill" style="width:0%" data-w="'+p+'%"></div></div><div class="terp-note">'+esc(note)+'</div></div>';}).join('');return '<div class="terp-section"><div class="terp-title">Profil terpénique</div>'+rows+'</div>';}
+function buildTerps(terps){if(!terps||!terps.length)return '';var rows=terps.slice(0,5).map(t=>{var n=typeof t==='object'?t.name:t,p=typeof t==='object'?(t.pct||30):30,note=typeof t==='object'?(t.note||''):'';return '<div class="terp-row"><div class="terp-name">'+esc(n)+'</div><div class="terp-track"><div class="terp-fill" style="width:0%" data-w="'+p+'%"></div></div><div class="terp-note">'+esc(note)+'</div></div>';}).join('');return '<div class="terp-section"><div class="terp-title">Profil terpénique <small>· estimation de l\'IA</small></div>'+rows+'</div>';}
 function buildRating(name){var id='r-'+name.replace(/\W/g,'_');var stars=[1,2,3,4,5].map(i=>'<button class="star" data-v="'+i+'" data-s="'+esc(name)+'" data-id="'+id+'" onclick="rateStar(this)">★</button>').join('');return '<div class="sc-rating"><span class="rating-label">Votre avis</span><div class="stars" id="'+id+'">'+stars+'</div><span class="rating-saved" id="'+id+'-ok">Merci !</span></div>';}
 async function rateStar(btn){var v=parseInt(btn.dataset.v),s=btn.dataset.s,id=btn.dataset.id;document.querySelectorAll('#'+id+' .star').forEach((x,i)=>x.classList.toggle('on',i<v));var ok=document.getElementById(id+'-ok');ok.classList.add('show');setTimeout(()=>ok.classList.remove('show'),2000);try{var ref=doc(db,'strains',s);var snap=await getDoc(ref);if(snap.exists())await updateDoc(ref,{ratingTotal:increment(v),ratingCount:increment(1)});else await setDoc(ref,{name:s,ratingTotal:v,ratingCount:1,searchCount:0});}catch(e){}};
 
-function findInStock(name){if(!stockData.length)return null;var n=name.toLowerCase().trim();return stockData.find(s=>{var sn=(s.nom||'').toLowerCase().trim();return sn===n||sn.includes(n)||n.includes(sn);})||null;}
+function normName(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[™®©]/g,'').replace(/[^a-z0-9]+/g,' ').trim();}
+function findInStock(name){
+  if(!stockData.length||!name)return null;
+  var n=normName(name);if(!n)return null;
+  var exact=stockData.find(s=>normName(s.nom)===n);if(exact)return exact;
+  // même fiche dans la base (alias, « Auto », « Fem »…)
+  var id=window.VarDB?VarDB.idOf(name):null;
+  if(id){var viaBase=stockData.find(s=>VarDB.idOf(s.nom)===id);if(viaBase)return viaBase;}
+  return stockData.find(s=>{var sn=normName(s.nom);return sn.length>3&&n.length>3&&(sn.includes(n)||n.includes(sn));})||null;
+}
 function stockInfo(name){var s=findInStock(name);if(!s)return '';var ok=!s.dispo||/^(o|oui)$/i.test(s.dispo);return ok?'EN STOCK':'en rupture';}
 function buildStockSection(name){var s=findInStock(name);if(!s)return '';var ok=!s.dispo||(s.dispo.toUpperCase()==='O'||s.dispo.toUpperCase()==='OUI');var cls=s.dispo?(ok?'instock':'outstock'):'unknown';var txt=s.dispo?(ok?'✓ En stock':'✗ Rupture'):'? Stock inconnu';return '<div class="stock-bar"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="stock-badge '+cls+'">'+txt+'</span>'+(s.prix?'<span class="stock-price">'+s.prix+' €</span>':'')+(s.graines?'<span style="font-size:10.5px;color:var(--text2)">'+s.graines+' gr.</span>':'')+'</div><div style="text-align:right">'+(s.seedbank?'<div style="font-size:10px;color:var(--gold2)">'+esc(s.seedbank)+'</div>':'')+(s.ref?'<div style="font-size:9.5px;color:var(--text3)">Réf: '+esc(s.ref)+'</div>':'')+'</div></div>';}
 function updateStockBar(){var bar=document.getElementById('stockStatusBar');if(!bar)return;if(stockData.length){bar.style.display='flex';var ok=stockData.filter(s=>s.dispo&&(s.dispo.toUpperCase()==='O'||s.dispo.toUpperCase()==='OUI')).length;document.getElementById('stockStatusText').textContent='📦 '+stockData.length+' variétés'+(ok?' · '+ok+' en stock':'');}else bar.style.display='none';}
@@ -963,37 +1103,156 @@ function mapRow(row){var keys=Object.keys(row);function find(){for(var c of argu
 function importStock(input){var file=input.files[0];if(!file)return;var ext=file.name.split('.').pop().toLowerCase();if(ext==='csv'){var r=new FileReader();r.onload=e=>{var res=Papa.parse(e.target.result,{header:true,skipEmptyLines:true});processStock(res.data,file.name);};r.readAsText(file,'UTF-8');}else{var r2=new FileReader();r2.onload=e=>{var wb=XLSX.read(e.target.result,{type:'binary'});var ws=wb.Sheets[wb.SheetNames[0]];processStock(XLSX.utils.sheet_to_json(ws,{defval:''}),file.name);};r2.readAsBinaryString(file);}input.value='';};
 async function processStock(rows,fname){var mapped=rows.map(mapRow).filter(r=>r.nom);if(!mapped.length){toast('⚠️ Aucune variété trouvée','error');return;}stockData=mapped;updateStockBar();try{await setDoc(doc(db,'shops',SHOP_CODE),{stock:mapped,updatedAt:Date.now()},{merge:true});}catch(e){}toast('📦 '+mapped.length+' variétés importées');}
 
+/* ══ CARTE VARIÉTÉ « sachet » ══
+   Les chiffres viennent d'abord de la base de variétés ; l'estimation de l'IA ne sert que si la base n'a rien. */
+function escA(t){return esc(t).replace(/"/g,'&quot;');}
+function typeKey(t){var n=String(t||'').toLowerCase();var i=/indica/.test(n),s=/sativa/.test(n);if(/hybri/.test(n)||(i&&s))return 'hybride';if(i)return 'indica';if(s)return 'sativa';return 'unknown';}
+function capFirst(t){t=String(t||'');return t.charAt(0).toUpperCase()+t.slice(1);}
+function cleanVal(v){v=String(v==null?'':v).trim();if(!v||/^(null|undefined|n\/?a|inconnu\w*|non renseign\w*|—|-)$/i.test(v))return '';return v.replace(/\s*\(.*$/,'').slice(0,22);}
+function rangeTxt(a,b,u){if(a==null&&b==null)return '';u=u||'';var f=x=>String(x).replace('.',',');if(a===b||b==null)return f(a)+u;if(a==null)return '≤ '+f(b)+u;return f(a)+'–'+f(b)+u;}
+function nums(v){return (String(v||'').replace(/(\d),(\d)/g,'$1.$2').match(/\d+(?:\.\d+)?/g)||[]).map(Number);}
+function floraisonOf(s,fiche){
+  if(fiche&&(fiche.floraison_sem_min!=null||fiche.floraison_sem_max!=null)){var a=fiche.floraison_sem_min,b=fiche.floraison_sem_max;return {min:a!=null?a:b,max:b!=null?b:a,src:''};}
+  var n=nums(s.flowering);if(!n.length)return null;
+  if(/jour|day/i.test(s.flowering))n=n.map(x=>Math.round(x/7*2)/2);
+  var a=n[0],b=n[1]!=null?n[1]:n[0];if(a>30||b>30)return null;
+  return {min:Math.min(a,b),max:Math.max(a,b),src:'estimation IA'};
+}
+function buildFrieze(fl){
+  if(!fl)return '';
+  var total=Math.max(12,Math.ceil(fl.max)+1),cells='';
+  for(var i=1;i<=total;i++)cells+='<i class="'+(i<=Math.floor(fl.min)?'f':(i<=Math.ceil(fl.max)?'h':''))+'" style="--i:'+i+'"></i>';
+  var txt=fl.min===fl.max?String(fl.min).replace('.',',')+' semaines':String(fl.min).replace('.',',')+' à '+String(fl.max).replace('.',',')+' semaines';
+  return '<div class="sc-flo"><div class="sc-flo-head"><span>Floraison <b>'+txt+'</b></span>'+(fl.src?'<span>'+fl.src+'</span>':'')+'</div>'+
+    '<div class="sc-weeks" style="--n:'+total+'" role="img" aria-label="Floraison de '+txt+' sur '+total+' semaines">'+cells+'</div>'+
+    '<div class="sc-scale"><span>sem. 1</span><span>sem. '+total+'</span></div></div>';
+}
 function buildCard(s){
   var ref=window.GDRef?window.GDRef.get(s.name):null;
+  var fiche=window.VarDB?window.VarDB.cached(s.name):null;
   var faved=favorites.some(f=>f.name===s.name);
-  var actions='<button class="sc-action '+(faved?'faved':'')+'" data-fav="'+esc(s.name)+'" onclick="toggleFav(\''+esc(s.name)+'\',\''+esc(s.type)+'\')">⭐ '+(faved?'Favori':'Ajouter')+'</button>';
-  actions+='<button class="sc-action" onclick="quickSend(\'Donne-moi plus de détails sur '+esc(s.name)+' : génétique, culture, où trouver.\')">🔍 Détails</button>';
-  if(s.seedbank&&s.seedbank!=='null')actions+='<button class="sc-action" onclick="quickSend(\'Où acheter '+esc(s.name)+' de '+esc(s.seedbank)+' ?\')">🛒 Seedbank</button>';
-  if(ref&&ref.url)actions+='<a class="sc-action" href="'+esc(ref.url)+'" target="_blank" rel="noopener">📖 GrowDiaries</a>';
-  var stats='<span class="pill thc">THC '+esc(s.thc)+'</span><span class="pill cbd">CBD '+esc(s.cbd)+'</span><span class="pill flower">🌸 '+esc(s.flowering)+'</span>';
-  if(s.yield)stats+='<span class="pill yield">📦 '+esc(s.yield)+'</span>';
-  if(s.seedbank&&s.seedbank!=='null')stats+='<span class="pill sb">🏷 '+esc(s.seedbank)+'</span>';
-  if(ref&&ref.rating)stats+='<span class="pill sb">★ '+esc(ref.rating)+(ref.harvests?' · '+esc(ref.harvests)+' récoltes':'')+'</span>';
-  var body='<div class="sc-row"><span class="sc-label">Arômes</span><span class="sc-val">'+esc(s.flavor)+'</span></div>';
-  body+='<div class="sc-row"><span class="sc-label">Effets</span><span class="sc-val">'+(s.effects||[]).map(esc).join(', ')+'</span></div>';
-  body+='<div class="sc-row"><span class="sc-label">Pourquoi</span><span class="sc-val">'+esc(s.why)+'</span></div>';
-  if(s.culture_tips)body+='<div class="sc-row"><span class="sc-label">Culture</span><span class="sc-val">'+esc(s.culture_tips)+'</span></div>';
-  if(ref&&ref.breeders&&ref.breeders.length)body+='<div class="sc-row"><span class="sc-label">Breeders</span><span class="sc-val">'+ref.breeders.slice(0,6).map(b=>esc(b.name)).filter(Boolean).join(', ')+'</span></div>';
-  if(ref&&ref.descendants&&ref.descendants.length)body+='<div class="sc-row"><span class="sc-label">Descend.</span><span class="sc-val">'+ref.descendants.slice(0,5).map(d=>esc(d.name)+(d.other_parent?' <span style="color:var(--text3)">(× '+esc(d.other_parent)+')</span>':'')).join(', ')+'</span></div>';
+  var tk=fiche&&fiche.type?fiche.type:typeKey(s.type);if(['indica','sativa','hybride'].indexOf(tk)<0)tk='unknown';
+  var kind=fiche&&fiche.type?capFirst(fiche.type)+(fiche.type==='hybride'&&fiche.dominante&&fiche.dominante!=='equilibree'?' à dominante '+fiche.dominante:''):(cleanVal(s.type)||'Type non renseigné');
+  if(fiche&&fiche.autofloraison===true)kind+=', autofloraison';
+  // lignée : base, puis GrowDiaries, puis estimation de l'IA (signalée)
+  var parents=[],linSrc='';
+  if(fiche&&fiche.parents&&fiche.parents.length)parents=fiche.parents;
+  else if(ref&&ref.parents&&ref.parents.length){parents=ref.parents;linSrc='GrowDiaries';}
+  else if(s.genetics&&cleanVal(s.genetics)){parents=String(s.genetics).split(/\s+[x×]\s+|\s*×\s*/i).map(x=>x.trim()).filter(Boolean);linSrc='estimation IA';}
+  var lineage=parents.length?'<div class="sc-lineage">'+parents.slice(0,3).map(p=>'<span class="p">'+esc(p)+'</span>').join('<span class="x">×</span>')+(linSrc?'<span class="src">'+linSrc+'</span>':'')+'</div>':'';
+  // stock du magasin
+  var st=findInStock(s.name),stamp='';
+  if(st){var ok=!st.dispo||/^(o|oui)$/i.test(st.dispo);stamp='<div class="sc-stamp'+(ok?'':' out')+'">'+(ok?'En stock':'En rupture')+(st.prix?'<small>'+esc(st.prix)+' €'+(st.graines?' · '+esc(st.graines)+' graines':'')+'</small>':'')+'</div>';}
+  // chiffres
+  var thc=fiche?rangeTxt(fiche.thc_min,fiche.thc_max,' %'):'';if(!thc)thc=cleanVal(s.thc);
+  var cbd=fiche?rangeTxt(fiche.cbd_min,fiche.cbd_max,' %'):'';if(!cbd)cbd=cleanVal(s.cbd);
+  var fl=floraisonOf(s,fiche);
+  var flo=fl?(fl.min===fl.max?String(fl.min):fl.min+'–'+fl.max).replace(/\./g,','):'';
+  var rend=fiche&&fiche.rendement?({faible:'Faible',moyen:'Moyen',eleve:'Élevé'})[fiche.rendement]:cleanVal(s.yield);
+  function spec(v,l){return '<div class="sc-spec">'+(v?'<b>'+esc(v)+'</b>':'<b class="na">—</b>')+'<small>'+l+'</small></div>';}
+  var specs='<div class="sc-specs">'+spec(thc,'THC')+spec(cbd,'CBD')+spec(flo,'semaines de floraison')+spec(rend,'rendement')+'</div>';
+  // texte
+  var rows='';
+  function row(l,v,cls){if(v)rows+='<div class="sc-row'+(cls?' '+cls:'')+'"><span class="sc-label">'+l+'</span><span class="sc-val">'+v+'</span></div>';}
+  row('Pourquoi elle',s.why?esc(s.why):'','why');
+  var eff=(s.effects&&s.effects.length?s.effects:(fiche&&fiche.effets)||[]);row('Effets',eff.map(esc).join(', '));
+  row('Arômes',s.flavor&&cleanVal(s.flavor)?esc(s.flavor):(fiche&&fiche.gouts&&fiche.gouts.length?esc(fiche.gouts.join(', ')):''));
+  row('Culture',s.culture_tips?esc(s.culture_tips):'');
+  var dispo=fiche&&window.VarDB?VarDB.banques(fiche):[];
+  if(dispo.length)row('Dispo chez',dispo.slice(0,8).map(esc).join(', ')+(dispo.length>8?' <span style="color:var(--ink3)">et '+(dispo.length-8)+' autres</span>':''));
+  else if(ref&&ref.breeders&&ref.breeders.length)row('Breeders',ref.breeders.slice(0,6).map(b=>esc(b.name)).filter(Boolean).join(', '));
+  var desc=fiche&&fiche.descendants&&fiche.descendants.length?fiche.descendants.map(d=>d.nom):(ref&&ref.descendants&&ref.descendants.length?ref.descendants.map(d=>d.name):[]);
+  if(desc.length)row('Descendants',desc.slice(0,5).map(esc).join(', '));
+  // actions
+  var n=escA(s.name);
+  var acts='<button class="sc-action'+(faved?' faved':'')+'" data-fav="'+n+'" data-n="'+n+'" data-t="'+escA(s.type||'')+'" onclick="toggleFav(this.dataset.n,this.dataset.t)" aria-pressed="'+faved+'">'+(faved?'★ Favori':'☆ Ajouter aux favoris')+'</button>';
+  acts+='<button class="sc-action" data-q="'+escA('Donne-moi plus de détails sur '+s.name+' : génétique, culture, où la trouver.')+'" onclick="quickSend(this.dataset.q)">Plus de détails</button>';
+  if(parents.length&&window.VarDB)acts+='<button class="sc-action" data-n="'+n+'" onclick="toggleLineage(this)" aria-expanded="false">Arbre généalogique</button>';
+  acts+='<button class="sc-action" data-n="'+n+'" onclick="startCompare(this.dataset.n)">Comparer</button>';
+  if(fiche&&fiche.sources&&fiche.sources.length)acts+='<a class="sc-action" href="'+escA(fiche.sources[0].url)+'" target="_blank" rel="noopener">Source : '+esc(VarDB.domain(fiche.sources[0].url))+' ↗</a>';
+  else if(ref&&ref.url)acts+='<a class="sc-action" href="'+escA(ref.url)+'" target="_blank" rel="noopener">GrowDiaries ↗</a>';
   var tags=(s.match_tags||[]).map(t=>'<span class="mtag">'+esc(t)+'</span>').join('');
-  var genetics=(ref&&ref.parents&&ref.parents.length)?buildGenetics(ref.parents.join(' × '),'GrowDiaries'):buildGenetics(s.genetics);
-  return '<div class="sc">'+buildPhoto(s.photo_url,s.name,s.seedbank)+'<div class="sc-actions">'+actions+'</div><div class="sc-stats">'+stats+'</div><div class="sc-body">'+body+'</div>'+genetics+buildTerps(s.terpenes)+buildStockSection(s.name)+buildRating(s.name)+'<div class="sc-tags">'+tags+'</div></div>';
+  // photo : celle de la fiche (importée depuis le CSV) ; si elle ne charge pas, la carte reste propre
+  var photo=fiche&&fiche.photos&&fiche.photos.length?fiche.photos[0]:'';
+  var photoHtml=photo?'<div class="sc-photo-win"><img src="'+escA(photo)+'" alt="Photo de '+escA(s.name)+'" width="132" height="132" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="var b=this.closest(\'.sc-band\');if(b)b.classList.remove(\'has-photo\');this.parentElement.remove()"></div>':'';
+  return '<article class="sc t-'+tk+'">'+
+    '<header class="sc-band'+(photo?' has-photo':'')+'"><div class="sc-band-txt"><div class="sc-kind">'+esc(kind)+'</div><h3 class="sc-name">'+esc(s.name)+'</h3>'+lineage+'</div>'+photoHtml+stamp+'</header>'+
+    specs+buildFrieze(fl)+(rows?'<div class="sc-body">'+rows+'</div>':'')+buildTerps(s.terpenes)+
+    (tags?'<div class="sc-tags">'+tags+'</div>':'')+
+    '<div class="sc-actions">'+acts+'</div>'+buildRating(s.name)+'</article>';
 }
+
+/* ══ ARBRE GÉNÉALOGIQUE : ouvert à la demande depuis une carte ══ */
+function treeNodeHtml(n,isRoot){
+  var tk=['indica','sativa','hybride'].indexOf(n.type)>-1?n.type:'unknown';
+  var media=n.photo?'<img class="lt-ph" src="'+escA(n.photo)+'" alt="" width="34" height="34" loading="lazy" referrerpolicy="no-referrer" onerror="this.outerHTML=\'<span class=lt-dot></span>\'">':'<span class="lt-dot"></span>';
+  var cls='lt-pill t-'+tk+(isRoot?' root':'')+(!n.known&&!isRoot?' unknown':'');
+  var pill=(isRoot||!n.known)?'<span class="'+cls+'"'+(!n.known&&!isRoot?' title="Variété absente de la base"':'')+'>'+media+esc(n.nom)+'</span>'
+    :'<button type="button" class="'+cls+'" data-q="'+escA('Parle-moi de '+n.nom+' : génétique, effets et culture.')+'" onclick="quickSend(this.dataset.q)" title="Voir '+escA(n.nom)+'">'+media+esc(n.nom)+'</button>';
+  var kids=n.parents&&n.parents.length?'<div class="lt-kids">'+n.parents.map(p=>treeNodeHtml(p,false)).join('')+'</div>':'';
+  return '<div class="lt-node">'+pill+kids+'</div>';
+}
+window.toggleLineage=async function(btn){
+  var card=btn.closest('.sc');if(!card)return;
+  var box=card.querySelector('.sc-tree');
+  if(box){box.remove();btn.setAttribute('aria-expanded','false');return;}
+  box=document.createElement('div');box.className='sc-tree';
+  box.innerHTML='<div class="lt-loading"><div class="typing-bub"><span></span><span></span><span></span></div>Je remonte la lignée dans la base…</div>';
+  var actions=card.querySelector('.sc-actions');card.insertBefore(box,actions);
+  btn.setAttribute('aria-expanded','true');
+  try{
+    var t=await VarDB.lineage(btn.dataset.n,4);
+    var known=0,total=0;(function cnt(n){total++;if(n.known)known++;(n.parents||[]).forEach(cnt);})(t);
+    if(!t.parents.length){box.innerHTML='<div class="lt-loading">La base ne connaît pas encore les parents de '+esc(t.nom)+'.</div>';return;}
+    box.innerHTML='<div class="sc-tree-head"><b>Arbre généalogique</b><span>'+(total-1)+' ancêtre'+(total>2?'s':'')+' · '+(known-1)+' dans la base</span></div>'+
+      '<div class="lt-scroll" role="tree" aria-label="Arbre généalogique de '+escA(t.nom)+'">'+treeNodeHtml(t,true)+'</div>'+
+      '<div class="lt-legend"><span><i style="background:var(--t-indica)"></i>Indica</span><span><i style="background:var(--t-hybride)"></i>Hybride</span><span><i style="background:var(--t-sativa)"></i>Sativa</span><span>Pointillés : absente de la base</span></div>';
+  }catch(e){box.innerHTML='<div class="lt-loading">Impossible de charger la lignée pour l\'instant.</div>';}
+};
+
+window.startCompare=function(name){setMode('compare');var inp=document.getElementById('inp');inp.value='Compare '+name+' avec ';inp.focus();inp.setSelectionRange(inp.value.length,inp.value.length);};
 
 function buildCompare(strains,cmp){
   if(strains.length<2)return '';
   var a=strains[0],b=strains[1];
   function w(f,n){return cmp&&cmp[f]===n?'cmp-win':'';}
-  function col(s){var html=buildCmpPhoto(s.photo_url,s.name);html+='<div class="compare-col-name">'+esc(s.name)+'</div><div class="compare-col-type">'+esc(s.type)+'</div>';html+='<div class="cmp-stat"><span class="cmp-stat-l">THC</span><span class="cmp-stat-v '+w('winner_thc',s.name)+'">'+esc(s.thc)+'</span></div>';html+='<div class="cmp-stat"><span class="cmp-stat-l">CBD</span><span class="cmp-stat-v">'+esc(s.cbd)+'</span></div>';html+='<div class="cmp-stat"><span class="cmp-stat-l">Floraison</span><span class="cmp-stat-v '+w('winner_flower',s.name)+'">'+esc(s.flowering)+'</span></div>';if(s.yield)html+='<div class="cmp-stat"><span class="cmp-stat-l">Rendement</span><span class="cmp-stat-v '+w('winner_yield',s.name)+'">'+esc(s.yield)+'</span></div>';html+='<div class="cmp-stat"><span class="cmp-stat-l">Arômes</span><span class="cmp-stat-v" style="font-size:11px">'+esc(s.flavor)+'</span></div>';if(s.genetics&&s.genetics!=='null')html+='<div class="cmp-stat"><span class="cmp-stat-l">Lignée</span><span class="cmp-stat-v" style="font-size:10.5px;font-style:italic">'+esc(s.genetics)+'</span></div>';return html;}
+  function col(s){
+    var fiche=window.VarDB?VarDB.cached(s.name):null;
+    var tk=fiche&&fiche.type?fiche.type:typeKey(s.type);if(['indica','sativa','hybride'].indexOf(tk)<0)tk='unknown';
+    var thc=(fiche&&rangeTxt(fiche.thc_min,fiche.thc_max,' %'))||cleanVal(s.thc)||'—';
+    var cbd=(fiche&&rangeTxt(fiche.cbd_min,fiche.cbd_max,' %'))||cleanVal(s.cbd)||'—';
+    var fl=floraisonOf(s,fiche),flo=fl?(fl.min===fl.max?fl.min:fl.min+'–'+fl.max)+' sem.':'—';
+    var html='<div class="cmp-band t-'+tk+'"><div class="compare-col-type">'+esc(fiche&&fiche.type?capFirst(fiche.type):(cleanVal(s.type)||'Type non renseigné'))+'</div><div class="compare-col-name">'+esc(s.name)+'</div></div>';
+    html+='<div class="cmp-stat"><span class="cmp-stat-l">THC</span><span class="cmp-stat-v '+w('winner_thc',s.name)+'">'+esc(thc)+'</span></div>';
+    html+='<div class="cmp-stat"><span class="cmp-stat-l">CBD</span><span class="cmp-stat-v '+w('winner_cbd',s.name)+'">'+esc(cbd)+'</span></div>';
+    html+='<div class="cmp-stat"><span class="cmp-stat-l">Floraison</span><span class="cmp-stat-v '+w('winner_flower',s.name)+'">'+esc(String(flo).replace('.',','))+'</span></div>';
+    var rd=fiche&&fiche.rendement?({faible:'Faible',moyen:'Moyen',eleve:'Élevé'})[fiche.rendement]:cleanVal(s.yield);
+    if(rd)html+='<div class="cmp-stat"><span class="cmp-stat-l">Rendement</span><span class="cmp-stat-v '+w('winner_yield',s.name)+'">'+esc(rd)+'</span></div>';
+    if(s.flavor)html+='<div class="cmp-stat"><span class="cmp-stat-l">Arômes</span><span class="cmp-stat-v" style="font-weight:400">'+esc(s.flavor)+'</span></div>';
+    var par=fiche&&fiche.parents&&fiche.parents.length?fiche.parents.join(' × '):(s.genetics&&cleanVal(s.genetics)?s.genetics:'');
+    if(par)html+='<div class="cmp-stat"><span class="cmp-stat-l">Lignée</span><span class="cmp-stat-v" style="font-weight:400">'+esc(par)+'</span></div>';
+    var st=findInStock(s.name);if(st){var ok=!st.dispo||/^(o|oui)$/i.test(st.dispo);html+='<div class="cmp-stat"><span class="cmp-stat-l">Magasin</span><span class="cmp-stat-v" style="color:'+(ok?'var(--green)':'#a50d26')+'">'+(ok?'En stock':'En rupture')+(st.prix?' · '+esc(st.prix)+' €':'')+'</span></div>';}
+    return html;
+  }
   var verdict=cmp&&cmp.verdict?'<div class="cmp-verdict"><strong>Verdict :</strong> '+esc(cmp.verdict)+'</div>':'';
   return '<div class="compare-panel"><div class="compare-header">Comparaison directe</div><div class="compare-cols"><div class="compare-col">'+col(a)+'</div><div class="compare-col">'+col(b)+'</div></div>'+verdict+'</div>';
 }
 
+function mdLite(t){
+  var lines=esc(String(t||'').trim()).split(/\n/),out=[],list=null,para=[];
+  function flushP(){if(para.length){out.push('<p>'+para.join('<br>')+'</p>');para=[];}}
+  function flushL(){if(list){out.push('<'+list.t+'>'+list.items.map(x=>'<li>'+x+'</li>').join('')+'</'+list.t+'>');list=null;}}
+  lines.forEach(function(raw){
+    var l=raw.trim(),m;
+    if(!l){flushP();flushL();return;}
+    if((m=l.match(/^#{1,4}\s+(.*)$/))){flushP();flushL();out.push('<h4>'+m[1]+'</h4>');return;}
+    if((m=l.match(/^[-•*]\s+(.*)$/))){flushP();if(!list||list.t!=='ul'){flushL();list={t:'ul',items:[]};}list.items.push(m[1]);return;}
+    if((m=l.match(/^\d+[.)]\s+(.*)$/))){flushP();if(!list||list.t!=='ol'){flushL();list={t:'ol',items:[]};}list.items.push(m[1]);return;}
+    flushL();para.push(l);
+  });
+  flushP();flushL();
+  return out.join('').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+}
 function renderReply(text){
   var mS=text.match(/\[STRAINS_JSON\]([\s\S]*?)\[\/STRAINS_JSON\]/);
   var mC=text.match(/\[COMPARE_JSON\]([\s\S]*?)\[\/COMPARE_JSON\]/);
@@ -1002,38 +1261,129 @@ function renderReply(text){
   var cmp=null;
   if(mC){try{cmp=JSON.parse(mC[1].trim());}catch(e){}rest=rest.replace(/\[COMPARE_JSON\][\s\S]*?\[\/COMPARE_JSON\]/,'');if(strains.length>=2){cmpBlock=buildCompare(strains,cmp);cards='';}}
   rest=rest.replace(/```json[\s\S]*?```/gi,'').replace(/```[\s\S]*?```/g,'');
-  rest=rest.trim().replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
-  return (mC?cmpBlock:cards)+rest;
+  return (mC?cmpBlock:cards)+mdLite(rest);
 }
 
-async function toggleFav(name,type){var idx=favorites.findIndex(f=>f.name===name);if(idx>=0){favorites.splice(idx,1);toast(name+' retiré');}else{favorites.push({name,type});toast('⭐ '+name+' ajouté');}await updateDoc(doc(db,'users',userId),{favorites});renderFavs();document.querySelectorAll('.sc-action[data-fav="'+name+'"]').forEach(btn=>{var f=favorites.some(x=>x.name===name);btn.classList.toggle('faved',f);btn.textContent='⭐ '+(f?'Favori':'Ajouter');});};
-function renderFavs(){var list=document.getElementById('favList');list.innerHTML='';if(!favorites.length){list.innerHTML='<div class="sb-empty">Aucun favori.<br>Ajoutez depuis les fiches ⭐</div>';return;}favorites.forEach(f=>{var item=document.createElement('div');item.className='fav-item';item.innerHTML='<div class="fav-dot"></div><div style="flex:1;min-width:0"><div class="fav-name">'+esc(f.name)+'</div><div class="fav-type">'+esc(f.type||'')+'</div></div><button class="fav-del" onclick="event.stopPropagation();removeFav(\''+esc(f.name)+'\')">✕</button>';item.addEventListener('click',()=>quickSend('Parle-moi de '+f.name+' en détail.'));list.appendChild(item);});}
+async function toggleFav(name,type){var idx=favorites.findIndex(f=>f.name===name);if(idx>=0){favorites.splice(idx,1);toast(name+' retiré');}else{favorites.push({name,type});toast('⭐ '+name+' ajouté');}await updateDoc(doc(db,'users',userId),{favorites});renderFavs();document.querySelectorAll('.sc-action[data-fav="'+name+'"]').forEach(btn=>{var f=favorites.some(x=>x.name===name);btn.classList.toggle('faved',f);btn.setAttribute('aria-pressed',f);btn.textContent=f?'★ Favori':'☆ Ajouter aux favoris';});};
+function renderFavs(){var list=document.getElementById('favList');list.innerHTML='';if(!favorites.length){list.innerHTML='<div class="sb-empty">Aucun favori.<br>Ajoutez depuis les fiches ⭐</div>';return;}favorites.forEach(f=>{var item=document.createElement('div');item.className='fav-item';item.innerHTML='<div class="fav-dot t-'+typeKey(f.type)+'" aria-hidden="true"></div><div style="flex:1;min-width:0"><div class="fav-name">'+esc(f.name)+'</div><div class="fav-type">'+esc(f.type||'')+'</div></div><button class="fav-del" aria-label="Retirer des favoris" onclick="event.stopPropagation();removeFav(\''+esc(f.name)+'\')">✕</button>';item.tabIndex=0;item.setAttribute('role','button');item.addEventListener('click',()=>quickSend('Parle-moi de '+f.name+' en détail.'));item.addEventListener('keydown',e=>{if(e.target===item&&(e.key==='Enter'||e.key===' ')){e.preventDefault();item.click();}});list.appendChild(item);});}
 async function removeFav(name){favorites=favorites.filter(f=>f.name!==name);await updateDoc(doc(db,'users',userId),{favorites});renderFavs();toast(name+' retiré');};
 
 async function saveConv(firstMsg){var title=firstMsg.length>50?firstMsg.slice(0,50)+'…':firstMsg;var ex=convHistory.findIndex(c=>c.id===currentId);var entry={id:currentId,title,date:new Date().toLocaleDateString('fr-FR'),messages:history.slice()};if(ex>=0)convHistory[ex]=entry;else convHistory.unshift(entry);if(convHistory.length>20)convHistory=convHistory.slice(0,20);await updateDoc(doc(db,'users',userId),{convHistory,totalConvs:increment(1)});renderHist();}
-function renderHist(){var list=document.getElementById('histList');list.innerHTML='';if(!convHistory.length){list.innerHTML='<div class="sb-empty">Aucune conversation.</div>';return;}convHistory.forEach(c=>{var item=document.createElement('div');item.className='hist-item';item.innerHTML='<div class="hist-title">'+esc(c.title)+'</div><div class="hist-date">'+c.date+'</div>';item.addEventListener('click',()=>loadConv(c));list.appendChild(item);});}
+function renderHist(){var list=document.getElementById('histList');list.innerHTML='';if(!convHistory.length){list.innerHTML='<div class="sb-empty">Aucune conversation.</div>';return;}convHistory.forEach(c=>{var item=document.createElement('div');item.className='hist-item';item.innerHTML='<div class="hist-title">'+esc(c.title)+'</div><div class="hist-date">'+c.date+'</div>';item.tabIndex=0;item.setAttribute('role','button');item.addEventListener('click',()=>loadConv(c));item.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();item.click();}});list.appendChild(item);});}
 function loadConv(conv){newChat(false);currentId=conv.id;history=conv.messages.slice();document.getElementById('topTitle').textContent=conv.title;history.forEach(m=>{if(m.role==='user')addMsg('user',esc(m.content));else addMsg('ai',renderReply(m.content));});}
 function newChat(resetId){if(resetId===undefined)resetId=true;history=[];if(resetId){currentId=Date.now();sessionMemory={liked:[],disliked:[],tried:[]};}if(mode==='stats'){setMode('chat');return;}renderWelcome();document.getElementById('topTitle').textContent='Nouvelle conversation';};
 
+/* ══ ACCUEIL : composeur de recherche ══ */
+var WB_GROUPS=[
+  {l:'Effet',c:[['relaxant','relaxante'],['pour dormir','pour dormir'],['énergisant','énergisante'],['créatif','qui rend créatif'],['euphorique','euphorique']]},
+  {l:'Goût',c:[['fruité','au goût fruité'],['agrumes','goût agrumes'],['sucré','au goût sucré'],['terreux','au goût terreux'],['diesel','goût diesel'],['épicé','au goût épicé']]},
+  {l:'Culture',c:[['autofloraison','en autofloraison'],['facile','facile pour débutant'],['floraison courte','à floraison courte'],['compacte','compacte'],['gros rendement','avec un gros rendement']]},
+  {l:'Puissance',c:[['douce','douce'],['puissante','puissante'],['riche en CBD','riche en CBD']]}
+];
+function wbQuery(){var parts=[];document.querySelectorAll('.wb-chip.on').forEach(b=>parts.push(b.dataset.p));return parts.length?'Je cherche une variété '+parts.join(', ')+'.':'';}
+window.wbToggle=function(btn){btn.classList.toggle('on');btn.setAttribute('aria-pressed',btn.classList.contains('on'));var q=wbQuery(),pv=document.getElementById('wbPreview');if(pv)pv.textContent=q||'Choisis un ou plusieurs critères, ou écris librement en bas.';};
+window.wbGo=function(){var q=wbQuery();if(!q){document.getElementById('inp').focus();toast('Choisis au moins un critère, ou écris ta demande en bas.','info');return;}quickSend(q);};
 function renderWelcome(){
   var p=panel();p.innerHTML='';
   var w=document.createElement('div');w.className='welcome';w.id='welcome';
-  var fh=favorites.length?'<div class="wcard" onclick="quickSend(\'Recommande une variété basée sur mes favoris : '+favorites.map(f=>f.name).join(', ')+'.\')" ><div class="wcard-tag">Basé sur mes favoris</div><div class="wcard-text">'+favorites.slice(0,3).map(f=>f.name).join(' · ')+'</div></div>':'';
-  var sh=stockData.length?'<div class="wcard" onclick="quickSend(\'Quelles variétés de votre stock sont idéales pour quelqu&apos;un qui cherche relaxation et bons arômes ?\')"><div class="wcard-tag">Depuis le stock</div><div class="wcard-text">'+stockData.length+' variétés disponibles</div></div>':'';
-  w.innerHTML='<div class="welcome-hero"><div class="welcome-icon">🌿</div><div><h2>Bonjour, '+esc(username)+' !</h2><p>Décrivez votre besoin librement — effets, saveurs, culture, variété similaire — recommandations expertes personnalisées.</p></div></div><div class="welcome-grid">'+fh+sh+'<div class="wcard" onclick="quickSend(\'Variété stimulante, saveurs OG Kush, Sour Diesel, GMO, RS11.\')"><div class="wcard-tag">Saveurs &amp; effets</div><div class="wcard-text">Stimulant · OG / Diesel / GMO</div></div><div class="wcard" onclick="quickSend(\'Goût tropical, relaxation musculaire, floraison courte.\')"><div class="wcard-tag">Grower · Relax</div><div class="wcard-text">Tropical · Relax · Floraison courte</div></div><div class="wcard" onclick="quickSend(\'Similaire à GMO Cookies, profil garlic/fuel terpin.\')"><div class="wcard-tag">Variété similaire</div><div class="wcard-text">Similaire GMO · Terpin fort</div></div><div class="wcard" onclick="quickSend(\'Débutant, sommeil difficile, peu de THC, arômes doux.\')"><div class="wcard-tag">Débutant · Bien-être</div><div class="wcard-text">Sommeil · CBD · Doux</div></div></div>';
+  var cards=[];
+  if(favorites.length)cards.push(['D\'après tes favoris',favorites.slice(0,3).map(f=>f.name).join(', '),'Recommande une variété basée sur mes favoris : '+favorites.map(f=>f.name).join(', ')+'.']);
+  if(stockData.length)cards.push(['Dans le magasin',stockData.length+' variétés disponibles','Quelles variétés de votre stock sont idéales pour quelqu\'un qui cherche relaxation et bons arômes ?']);
+  cards.push(['Variété proche','Comme GMO Cookies, profil ail et fuel','Une variété similaire à GMO Cookies, profil garlic et fuel.']);
+  cards.push(['Premier grow','Facile, compacte, en autofloraison','Je débute : une autofloraison facile et compacte pour un placard.']);
+  if(!favorites.length&&!stockData.length)cards.push(['Comparer','Gelato ou Wedding Cake ?','Compare Gelato et Wedding Cake pour un usage le soir.']);
+  var builder='<div class="welcome-builder" role="group" aria-label="Composer une recherche">'+
+    WB_GROUPS.map(g=>'<div class="wb-row"><span class="wb-label">'+g.l+'</span><div class="wb-chips">'+g.c.map(c=>'<button type="button" class="wb-chip" aria-pressed="false" data-p="'+escA(c[1])+'" onclick="wbToggle(this)">'+esc(c[0])+'</button>').join('')+'</div></div>').join('')+
+    '<div class="wb-foot"><span class="wb-preview" id="wbPreview" aria-live="polite">Choisis un ou plusieurs critères, ou écris librement en bas.</span><button type="button" class="wb-go" onclick="wbGo()">Lancer la recherche</button></div></div>';
+  w.innerHTML='<div class="welcome-hero"><h2>Salut '+esc(username)+', on te trouve quoi aujourd\'hui ?</h2><p>Compose ta recherche ci-dessous ou décris-la avec tes mots. Les fiches viennent de la base de la boutique, et le stock passe en premier.</p></div>'+
+    '<section class="shelf" id="shelf" aria-labelledby="shelfTitle"><div class="shelf-head"><h3 id="shelfTitle">Les plus demandées en boutique</h3></div><div class="shelf-row">'+'<span class="pk sk"></span>'.repeat(6)+'</div></section>'+builder+
+    '<div class="welcome-grid">'+cards.map(c=>'<button type="button" class="wcard" data-q="'+escA(c[2])+'" onclick="quickSend(this.dataset.q)"><div class="wcard-tag">'+esc(c[0])+'</div><div class="wcard-text">'+esc(c[1])+'</div></button>').join('')+'</div>';
   p.appendChild(w);
+  loadShelf();
 }
+/* étagère : les variétés les plus demandées, affichées comme des sachets */
+async function loadShelf(){
+  try{
+    if(!window.VarDB)return;
+    var snap=await db.collection('strains').orderBy('searchCount','desc').limit(14).get();
+    var names=[];snap.forEach(d=>{var n=d.data().name||d.id;if(n&&(d.data().searchCount||0)>0)names.push(n);});
+    if(!names.length){var b0=document.getElementById('shelf');if(b0)b0.remove();return;}
+    await VarDB.load();
+    var ids=[],seen={};names.forEach(n=>{var e=VarDB.resolve(n);if(e&&!seen[e.id]){seen[e.id]=1;ids.push(e.nom);}});
+    var docs=await Promise.all(ids.slice(0,8).map(n=>VarDB.get(n)));
+    var items=docs.filter(Boolean).slice(0,6).map(d=>({nom:d.nom,type:({indica:'i',sativa:'s',hybride:'h'})[d.type]||'',thcMax:d.thc_max!=null?d.thc_max:d.thc_min,floMin:d.floraison_sem_min,floMax:d.floraison_sem_max,photo:d.photos&&d.photos.length?d.photos[0]:''}));
+    var box=document.getElementById('shelf');if(!box)return;
+    if(!items.length){box.remove();return;}
+    var TY={i:['indica','Indica'],s:['sativa','Sativa'],h:['hybride','Hybride']};
+    box.innerHTML='<div class="shelf-head"><h3 id="shelfTitle">Les plus demandées en boutique</h3><span>D\'après les recherches des clients</span></div><div class="shelf-row">'+
+      items.map(f=>{var t=TY[f.type]||['unknown','Type non renseigné'];var flo=f.floMax!=null?(f.floMin!=null&&f.floMin!==f.floMax?f.floMin+'–'+f.floMax:f.floMax):(f.floMin!=null?f.floMin:null);
+        return '<button type="button" class="pk t-'+t[0]+'" data-q="'+escA('Parle-moi de '+f.nom+' : effets, culture et où la trouver.')+'" onclick="quickSend(this.dataset.q)">'+
+          '<span class="pk-top">'+(f.photo?'<img class="pk-img" src="'+escA(f.photo)+'" alt="" width="46" height="46" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.remove()">':'')+'<span class="pk-kind">'+t[1]+'</span><span class="pk-name">'+esc(f.nom)+'</span></span>'+
+          '<span class="pk-facts"><span>THC <b>'+(f.thcMax!=null?String(f.thcMax).replace('.',',')+' %':'—')+'</b></span><span><b>'+(flo!=null?String(flo).replace(/\./g,','):'—')+'</b> sem.</span></span></button>';}).join('')+'</div>';
+    box.hidden=false;
+  }catch(e){console.warn('[étagère]',e&&e.message);var b1=document.getElementById('shelf');if(b1)b1.remove();}
+}
+
+/* ══ RACCOURCIS sous la zone de saisie ══ */
+window.addQuick=function(t){var inp=document.getElementById('inp');var v=inp.value.trim();inp.value=v?v.replace(/[.\s]+$/,'')+', '+t:'Je cherche une variété '+t;inp.focus();inp.dispatchEvent(new Event('input'));};
+
+/* ══ AFFINER : retirer un critère compris et relancer la même recherche ══ */
+let critState={text:null,drop:[]},pendingRefine=null;
+window.refineDrop=function(k,label){if(busy||!critState.text)return;pendingRefine={text:critState.text,drop:critState.drop.concat([k])};quickSend('Même recherche, critère « '+label+' » retiré');};
 
 async function showStats(){var p=panel();p.innerHTML='';var sv=document.createElement('div');sv.id='statsView';sv.className='stats-panel';sv.innerHTML='<div class="stats-header">📊 Mes statistiques</div><div style="color:var(--text3);font-size:13px">Chargement…</div>';p.appendChild(sv);try{var uSnap=await getDoc(doc(db,'users',userId));var uData=uSnap.data()||{};var strainsSnap=await getDocs(collection(db,'strains'));var strains=[];strainsSnap.forEach(d=>strains.push(Object.assign({id:d.id},d.data())));strains.sort((a,b)=>(b.searchCount||0)-(a.searchCount||0));sv.innerHTML='<div class="stats-header">📊 Mes statistiques</div><div class="stats-grid"><div class="stat-card"><div class="stat-card-val">'+(uData.totalConvs||0)+'</div><div class="stat-card-label">Conversations</div></div><div class="stat-card"><div class="stat-card-val">'+((uData.favorites||[]).length)+'</div><div class="stat-card-label">Favoris</div></div><div class="stat-card"><div class="stat-card-val">'+((uData.convHistory||[]).length)+'</div><div class="stat-card-label">Sessions</div></div></div><div class="stats-section-title">Variétés les plus recherchées</div>'+strains.slice(0,8).map((s,i)=>'<div class="top-strain-item"><div class="top-strain-rank">'+(i+1)+'</div><div class="top-strain-name">'+esc(s.name||s.id)+'</div>'+(s.ratingCount?'<div class="top-strain-rating">★ '+(s.ratingTotal/s.ratingCount).toFixed(1)+'</div>':'')+'<div class="top-strain-count">'+(s.searchCount||0)+' recherches</div></div>').join('')||'<div class="sb-empty">Pas encore de données.</div>';}catch(e){sv.innerHTML+='<div style="color:#dc2626;font-size:12px;margin-top:10px">Erreur : '+e.message+'</div>';}}
 
-async function searchWeb(query){try{var res=await fetch(PROXY+'/search',{method:'POST',headers:{'Content-Type':'application/json','X-Shop-Token':SHOP_TOKEN},body:JSON.stringify({query})});var data=await res.json();return data.result||'';}catch(e){return '';}}
-async function fetchPage(url){try{var res=await fetch(PROXY+'/fetch-page',{method:'POST',headers:{'Content-Type':'application/json','X-Shop-Token':SHOP_TOKEN},body:JSON.stringify({url})});var data=await res.json();return data.result||'';}catch(e){return '';}}
+/* ══ APPELS WEB (Worker → Jina) ══
+   Le Worker renvoie HTTP 200 même quand Jina refuse (401 clé manquante, 429 quota) : l'erreur arrive
+   dans data.result. On la détecte ici pour ne jamais l'envoyer à l'IA comme si c'était une donnée. */
+let webStatus={};
+function jinaError(txt){
+  var t=String(txt||'').trim();if(t.charAt(0)!=='{')return null;
+  try{var j=JSON.parse(t);if(j&&(j.code>=400||/Error$/.test(j.name||'')))return {code:j.code||j.status,name:j.name,message:j.message||j.readableMessage};}catch(e){}
+  return null;
+}
+async function callProxy(route,payload){
+  var t0=performance.now();
+  try{
+    var res=await fetch(PROXY+route,{method:'POST',headers:{'Content-Type':'application/json','X-Shop-Token':SHOP_TOKEN},body:JSON.stringify(payload)});
+    var data=await res.json().catch(()=>({}));
+    if(!res.ok){
+      // 401 ici = jeton boutique refusé par le Worker (X-Shop-Token)
+      console.warn('[web] '+route+' HTTP '+res.status+(res.status===401?' : jeton boutique refusé par le Worker':''),data&&data.error);
+      webStatus[route]='HTTP '+res.status;return '';
+    }
+    var err=jinaError(data.result);
+    if(err){
+      // 401 ici = Jina exige une clé API (à configurer dans le Worker) ; 429 = quota Jina dépassé
+      console.warn('[web] '+route+' Jina '+err.code+' '+err.name+' : '+err.message);
+      webStatus[route]='Jina '+err.code;return '';
+    }
+    var out=data.result||'';
+    console.info('[web] '+route+' OK, '+out.length+' caractères en '+Math.round(performance.now()-t0)+' ms');
+    webStatus[route]='ok';return out;
+  }catch(e){console.warn('[web] '+route+' injoignable :',e&&e.message);webStatus[route]='injoignable';return '';}
+}
+async function searchWeb(query){return callProxy('/search',{query:query});}
+async function fetchPage(url){return callProxy('/fetch-page',{url:url});}
 
 // Mots en majuscule fréquents en début de phrase, à ne pas prendre pour des noms de variétés
 var CAP_STOPWORDS=['variété','variete','goût','gout','débutant','debutant','similaire','donne','parle','recommande','quelles','quelle','quel','quels','bonjour','salut','merci','stimulant','stimulante','grower','culture','indoor','outdoor','sativa','indica','hybride','tropical','relax','profil','saveurs','saveur','effets','effet','floraison','sommeil','arômes','aromes','seedbank','comment','pourquoi','avec','pour','dans','mais','elle','cette','cherche','veux','voudrais','aime','acheter','détails','details','basé','base','plus','peux','est-ce','tu','je','une','un','des','les','sur','mon','mes','ma'];
 
+// ce que la base a apporté au dernier message (affiché au-dessus de la réponse)
+let lastCtxInfo=null;
+function renderCtxStrip(info){
+  if(!info)return '';
+  var html='';
+  if(info.found&&info.found.length)html+='<div class="crit-line"><span class="crit-lead">Fiches de la base</span>'+info.found.map(n=>'<span class="crit-chip base">'+esc(n)+'</span>').join('')+'</div>';
+  if(info.similarTo||(info.criteria&&info.criteria.length)||(info.unsupported&&info.unsupported.length)){
+    var chips=(info.similarTo?'<span class="crit-chip type">profil proche de '+esc(info.similarTo)+'</span>':'')+(info.criteria||[]).map(c=>'<span class="crit-chip '+c.fam+'">'+(c.fam==='avoid'?'✕ ':'')+esc(c.l)+'<button type="button" class="crit-x" aria-label="Retirer le critère '+escA(c.l)+'" data-k="'+escA(c.k)+'" data-l="'+escA(c.l)+'" onclick="refineDrop(this.dataset.k,this.dataset.l)"><span aria-hidden="true">×</span></button></span>').join('')+(info.unsupported||[]).map(l=>'<span class="crit-chip na" title="Ce critère n\'est pas renseigné dans la base : l\'IA le vérifie avec ses connaissances">'+esc(l)+' (non renseigné)</span>').join('');
+    html+='<div class="crit-line"><span class="crit-lead">Recherche dans la base</span>'+chips+'<span class="crit-count">'+(info.total?info.total+' variété'+(info.total>1?'s':'')+(info.similarTo&&!(info.criteria||[]).length?' proche'+(info.total>1?'s':''):(info.total>1?' cochent tout':' coche tout')):'aucune ne coche tout, voici les plus proches')+'</span></div>';
+  }
+  return html?'<div class="crit-strip">'+html+'</div>':'';
+}
 async function buildCtx(txt){
-  // DÉTECTION NLP — regex sur les mots capitalisés + liste étendue
+  lastCtxInfo=null;
+  // Liste de secours, utilisée seulement si la base de variétés n'est pas disponible
   var knownStrains=['OG Kush','Sour Diesel','GMO','RS11','Blue Dream','Wedding Cake','Gelato','Runtz',
     'Zkittlez','White Widow','Northern Lights','AK-47','Jack Herer','Amnesia','Critical','Cheese',
     'Gorilla Glue','Girl Scout Cookies','Granddaddy Purple','Purple Haze','Pineapple Express',
@@ -1044,10 +1394,14 @@ async function buildCtx(txt){
     'Cereal Milk','Pancakes','Lemon Cherry Gelato','RS11','Gary Payton','Compound Genetics','Seed Junky',
     'Ethos','Cannarado','Dying Breed','Exotic Genetix','Humboldt','Barneys Farm','Royal Queen',
     'Dutch Passion','FastBuds','Dinafem','Sensi Seeds'];
-  // Noms de seedbanks : pas des variétés, on ne les cherche pas sur GrowDiaries
+  // Noms de seedbanks : pas des variétés, on ne les cherche pas comme fiches
   var breederNames=['Compound Genetics','Seed Junky','Ethos','Cannarado','Dying Breed','Exotic Genetix','Humboldt','Barneys Farm','Royal Queen','Dutch Passion','FastBuds','Dinafem','Sensi Seeds'];
-  // Détection via la liste + extraction des mots capitalisés du message
-  var mentioned=knownStrains.filter(s=>txt.toLowerCase().includes(s.toLowerCase()));
+
+  // DÉTECTION — d'abord les noms et alias de la base de variétés
+  var mentioned=[],hasBase=false;webStatus={};
+  try{if(window.VarDB){await VarDB.load();hasBase=VarDB.size()>0;if(hasBase)mentioned=VarDB.detect(txt,5).map(e=>e.nom);}}catch(e){console.warn('[VarDB]',e);}
+  if(!hasBase)console.warn('[buildCtx] base StrainSage indisponible pour ce message (index vide ou illisible) : recherche web en secours');
+  if(!hasBase)mentioned=knownStrains.filter(s=>txt.toLowerCase().includes(s.toLowerCase()));
   // Extraire aussi les groupes de mots capitalisés inconnus (ex: "Slurricane", "Gushers")
   var capitalWords=txt.match(/\b[A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)*\b/g)||[];
   capitalWords.forEach(w=>{
@@ -1065,23 +1419,43 @@ async function buildCtx(txt){
   ctx+=buildSessionMemoryCtx();
   if(favorites.length)ctx+='\n\n[FAVORIS DE '+username.toUpperCase()+'] '+favorites.map(f=>f.name).join(', ')+' — s\'en inspirer pour les recommandations.';
 
-  // RÉFÉRENCE GROWDIARIES — base Firestore d'abord, GrowDiaries seulement si la fiche manque ou a plus de 60 jours
+  // 1. BASE STRAINSAGE — consultée avant toute recherche
   var strainNames=mentioned.filter(n=>!breederNames.includes(n));
-  var gd={ctx:'',coveredStrains:0,requestedStrains:0,candidates:0};
-  try{if(window.GDRef)gd=await window.GDRef.buildContext(txt,strainNames,stockInfo);}catch(e){console.warn('[GDRef]',e);}
-  ctx+=gd.ctx;
-  if(mentioned.length)ctx+=buildKnowledgeCtx(mentioned);
+  var base={ctx:'',found:[],detected:[],missing:strainNames.slice(),size:0};
+  try{if(hasBase)base=await VarDB.buildContext(txt,strainNames,stockInfo);}catch(e){console.warn('[VarDB]',e);}
+  ctx+=base.ctx;
+  var inBase=n=>{var e=hasBase&&VarDB.resolve(n);return !!e&&base.found.indexOf(e.nom)>-1;};
+  var unresolved=strainNames.filter(n=>!inBase(n));
 
-  // RECHERCHE WEB — seulement si la référence GrowDiaries ne couvre pas la demande
+  // 1b. RECHERCHE PAR CRITÈRES dans la base (effets, goûts, floraison, THC…) ou profils proches d'une variété citée
+  var crit={ctx:'',info:{criteria:[],items:[],total:0,similarTo:null}};
+  // « Affiner » : on reprend la demande d'origine sans les critères retirés
+  var refine=pendingRefine;pendingRefine=null;
+  var critText=refine?refine.text:txt,critDrop=refine?refine.drop:[];
+  try{if(hasBase)crit=await VarDB.criteriaContext(critText,{exclude:sessionMemory.disliked,stockInfo:stockInfo,drop:critDrop});}catch(e){console.warn('[VarDB critères]',e);}
+  if(crit.info.criteria.length||crit.info.similarTo)critState={text:critText,drop:critDrop};
+  ctx+=crit.ctx;
+  var critCovers=crit.info.items.length>0;
+  lastCtxInfo={found:base.found,criteria:crit.info.criteria.map(c=>({k:c.k,l:c.l,fam:c.fam})),unsupported:(crit.info.unsupported||[]).map(c=>c.l),total:crit.info.total,similarTo:crit.info.similarTo};
+
+  // 2. RÉFÉRENCE GROWDIARIES — seulement pour ce que la base ne couvre pas
+  var gd={ctx:'',coveredStrains:0,requestedStrains:0,candidates:0};
+  if(unresolved.length||(!base.found.length&&!critCovers)){try{if(window.GDRef)gd=await window.GDRef.buildContext(txt,unresolved,stockInfo);}catch(e){console.warn('[GDRef]',e);}}
+  ctx+=gd.ctx;
+  var knowNames=mentioned.filter(n=>!inBase(n));
+  if(knowNames.length)ctx+=buildKnowledgeCtx(knowNames);
+
+  // 3. RECHERCHE WEB (seedfinder/leafly) — secours uniquement, si ni la base ni GrowDiaries ne couvrent la demande
+  var baseCovers=base.found.length>0&&!unresolved.length;
   var gdCovers=(gd.requestedStrains>0&&gd.coveredStrains>=gd.requestedStrains)||(gd.requestedStrains===0&&gd.candidates>0);
-  var shouldResearch=!gdCovers&&(mentioned.length>0||(txt.length>40&&txt.match(/\b(variété|variete|kush|haze|cookies|gelato|runtz|diesel|CBD|THC|floraison|seedbank|terpènes|terps|grower|culture|indoor|outdoor)\b/i)));
+  var shouldResearch=!baseCovers&&!gdCovers&&(unresolved.length>0||(!base.found.length&&!critCovers&&txt.length>40&&txt.match(/\b(variété|variete|kush|haze|cookies|gelato|runtz|diesel|CBD|THC|floraison|seedbank|terpènes|terps|grower|culture|indoor|outdoor)\b/i)));
   if(shouldResearch){
     try{
       var searchQueries=[];
-      if(mentioned.length){
-        // Requête ciblée sur la première variété mentionnée
-        searchQueries.push(searchWeb(mentioned[0]+' cannabis strain terpenes THC genetics flowering time'));
-        searchQueries.push(searchWeb(mentioned[0]+' cannabis grow report yield indoor'));
+      if(unresolved.length){
+        // Requête ciblée sur la première variété absente de la base
+        searchQueries.push(searchWeb(unresolved[0]+' cannabis strain terpenes THC genetics flowering time'));
+        searchQueries.push(searchWeb(unresolved[0]+' cannabis grow report yield indoor'));
       } else {
         // Requête basée sur la demande utilisateur, reformulée pour Jina
         var q=txt.replace(/[^\w\sàâäéèêëîïôùûü]/g,' ').trim().slice(0,120);
@@ -1090,21 +1464,29 @@ async function buildCtx(txt){
       var results=await Promise.all(searchQueries);
       var webData=results.filter(r=>r&&r.length>100).join('\n\n---\n\n');
       if(webData.length>100){
-        ctx+='\n\n[DONNÉES WEB — seedfinder/leafly/growdiaries]\n'+webData.slice(0,4000);
+        ctx+='\n\n[DONNÉES WEB — seedfinder/leafly/growdiaries, secours : moins fiables que la BASE STRAINSAGE]\n'+webData.slice(0,4000);
         ctx+='\n\nCroise ces données avec tes connaissances. Signale toute contradiction.';
       }
-    }catch(e){}
+    }catch(e){console.warn('[buildCtx] recherche web',e&&e.message);}
   }
+  // l'IA sait toujours si la base a été consultée, même quand aucune fiche ne correspond
+  if(hasBase&&!base.found.length&&!critCovers)ctx+='\n\n[BASE STRAINSAGE] La base de la boutique ('+VarDB.size()+' variétés) a été consultée : aucune fiche ne correspond explicitement à ce message. Ne dis pas au client que tu n\'as pas reçu la base.';
+  if(!hasBase)ctx+='\n\n(La base de la boutique n\'a pas pu être consultée pour ce message. Réponds avec tes connaissances et n\'évoque pas de problème technique au client.)';
+  console.info('[buildCtx] base : '+(hasBase?VarDB.size()+' noms':'indisponible')+' · fiches citées : '+base.found.length+(base.found.length?' ('+base.found.join(', ')+')':'')+' · critères : '+crit.info.criteria.length+' → '+crit.info.total+' variétés · web : '+(Object.keys(webStatus).length?JSON.stringify(webStatus):'non sollicité'));
 
   if(stockData.length){
+    // Le stock est relié aux fiches de la base par une correspondance de noms tolérante
+    var facts={};
+    try{if(hasBase)facts=await VarDB.stockFacts(stockData);}catch(e){}
     ctx+='\n\n[STOCK '+SHOP_NAME.toUpperCase()+'] Priorise ces variétés :\n'+
-    stockData.map(s=>{
+    stockData.map((s,i)=>{
       var l='- '+s.nom;
       if(s.seedbank)l+=' ('+s.seedbank+')';
       if(s.type)l+=' · '+s.type;
       if(s.prix)l+=' · '+s.prix+'€';
       if(s.graines)l+=' · '+s.graines+'gr';
       if(s.dispo)l+=' · '+(s.dispo.toUpperCase()==='O'||s.dispo.toUpperCase()==='OUI'?'✓ EN STOCK':'✗ RUPTURE');
+      if(facts[i])l+=' · '+facts[i];
       return l;
     }).join('\n');
   }
@@ -1125,6 +1507,9 @@ window.send=async function(){
   var trimmedHistory=history.length>8?history.slice(-8):history;
   var maxTok=(mode==='compare'||mode==='culture')?4000:3000;
   var ctx=await buildCtx(txt);
+  var strip=renderCtxStrip(lastCtxInfo);
+  var tt=document.getElementById('typTxt');
+  if(tt){var ci=lastCtxInfo||{};tt.textContent=ci.total?ci.total+' variétés de la base cochent tes critères. Je choisis les meilleures…':(ci.found&&ci.found.length?'Fiche de '+ci.found[0]+' trouvée. Je rédige…':'Je rédige ma réponse…');}
 
   try{
     var res=await fetch(PROXY,{
@@ -1173,11 +1558,8 @@ window.send=async function(){
             reply+=evt.delta.text;
             // Mise à jour en temps réel — afficher le texte brut pendant le stream
             // On ne rend les cartes qu'à la fin pour éviter les rendus partiels
-            bubble.innerHTML=reply.replace(/\[STRAINS_JSON\][\s\S]*$/,'')
-              .replace(/\[COMPARE_JSON\][\s\S]*$/,'')
-              .replace(/```json[\s\S]*?```/gi,'')
-              .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
-              .replace(/\n/g,'<br>')||'<span style="opacity:.4">…</span>';
+            var vis=reply.replace(/\[STRAINS_JSON\][\s\S]*?(\[\/STRAINS_JSON\]|$)/,'').replace(/\[COMPARE_JSON\][\s\S]*?(\[\/COMPARE_JSON\]|$)/,'').replace(/```json[\s\S]*?```/gi,'');
+            bubble.innerHTML=strip+(vis.trim()?mdLite(vis):'<div class="typing"><div class="typing-bub"><span></span><span></span><span></span></div><span>Je prépare les fiches…</span></div>');
             panel().scrollTop=panel().scrollHeight;
           }
           if(evt.type==='error'){throw new Error(evt.error&&evt.error.message||'Erreur stream');}
@@ -1186,8 +1568,9 @@ window.send=async function(){
     }
 
     // ── FIN DU STREAM — rendu final avec cartes ──
+    try{var mR=reply.match(/\[STRAINS_JSON\]([\s\S]*?)\[\/STRAINS_JSON\]/);if(mR&&window.VarDB)await VarDB.prefetch(JSON.parse(mR[1].trim()).map(x=>x.name),1500);}catch(e){}
     bubble.id='';
-    bubble.innerHTML=renderReply(reply);
+    bubble.innerHTML=strip+renderReply(reply);
     panel().scrollTop=panel().scrollHeight;
 
     history.push({role:'assistant',content:reply});
