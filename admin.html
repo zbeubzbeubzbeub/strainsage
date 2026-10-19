@@ -334,6 +334,9 @@ td{font-size:13.5px}
       <button class="nav-item" onclick="showPage('users')" id="nav-users">
         <span class="nav-item-icon">👥</span>Clients
       </button>
+      <button class="nav-item" onclick="showPage('gst')" id="nav-gst">
+        <span class="nav-item-icon">🛒</span>Catalogue Garden Seeds
+      </button>
       <button class="nav-item" onclick="showPage('varietes')" id="nav-varietes">
         <span class="nav-item-icon">🌿</span>Base de variétés
       </button>
@@ -505,6 +508,27 @@ td{font-size:13.5px}
         </div>
       </div>
 
+      <!-- CATALOGUE GARDEN SEEDS -->
+      <div class="page" id="page-gst">
+        <div class="page-title">Catalogue Garden Seeds</div>
+        <div class="page-sub">Le chat ne recommande que les graines disponibles chez Garden Seeds Trading. Synchronise le catalogue pour mettre à jour les variétés, les prix et la disponibilité.<br>Lecture seule : aucune commande ne peut partir de l'app.</div>
+        <div class="table-wrap">
+          <div class="vdb-body">
+            <div class="vdb-row"><button class="btn btn-primary" id="gstBtn" onclick="gstSync()">🔄 Synchroniser le catalogue Garden Seeds</button><span class="vdb-note" id="gstLast">—</span></div>
+            <div id="gstProgress" style="display:none"><div class="vdb-info" id="gstProgTxt"></div><div class="vdb-progress"><i id="gstProg"></i></div></div>
+            <div id="gstReport"></div>
+          </div>
+        </div>
+        <div class="section-title">Articles synchronisés</div>
+        <div class="table-wrap">
+          <div class="table-header">
+            <span class="table-header-title" id="gstCount">—</span>
+            <div class="vdb-row"><label class="vdb-check"><input type="checkbox" id="gstOnlyDispo" checked onchange="gstFilter()"/> Disponibles seulement</label><input class="vdb-search" id="gstSearch" placeholder="Rechercher une variété ou un breeder…" oninput="gstFilter()"/></div>
+          </div>
+          <div style="overflow-x:auto"><table><thead><tr><th></th><th>Variété</th><th>Breeder</th><th>Type</th><th>THC</th><th>Floraison</th><th>Prix public</th><th>Disponibilité</th><th>Base</th></tr></thead><tbody id="gstBody"></tbody></table></div>
+        </div>
+      </div>
+
       <!-- SETTINGS -->
       <div class="page" id="page-settings">
         <div class="page-title">Paramètres</div>
@@ -611,6 +635,7 @@ function showPage(name){
   if(name==='stats')loadStats();
   if(name==='users')loadUsers();
   if(name==='varietes'&&window.vdbOpen)window.vdbOpen();
+  if(name==='gst'&&window.gstOpen)window.gstOpen();
 }
 
 function toast(msg,type){
@@ -1598,6 +1623,204 @@ window.vdbClear=async function(){
 
 /* (tests) exposé pour la console : window.__vdb */
 window.__vdb={parseRange:parseRange,parseType:parseType,autoField:autoField,enumOf:enumOf,parseBool:parseBool,splitList:splitList,slug:slug,state:S};
+})();
+</script>
+<script>
+/* ══════════════════════════════════════════════════════════════
+   CATALOGUE GARDEN SEEDS TRADING — synchronisation (lecture seule)
+   - Lit le catalogue via le Worker (route /gst, jeton GST_TOKEN côté serveur).
+   - Ne garde que les familles des groupes « Semillas ».
+   - Analyse nombre / descripcionCorta (regex tolérantes, null si absent).
+   - Écrit catalogue_gst/{codigo} (seulement si l'article a changé) et un index
+     compact catalogue_gst_index/part_N lu par le chat.
+══════════════════════════════════════════════════════════════ */
+(function(){
+var PROXY_URL='https://strainsage-proxy.theobarege.workers.dev', TOKEN='strainsage-secret';
+var COL='catalogue_gst', IDX='catalogue_gst_index', VIDX='varietes_index';
+var PER_PAGE=100, PART=1200, BATCH=400, MAX_PAGES=400;
+var G={busy:false,entries:[],meta:null,loaded:false};
+function $(id){return document.getElementById(id);}
+function nrm(s){return String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[™®©]/g,'').replace(/[^a-z0-9]+/g,' ').trim();}
+function clean(s){return String(s==null?'':s).replace(/\|/g,'/').replace(/\s+/g,' ').trim();}
+// texte brut à partir du HTML du grossiste : DOMParser n'exécute aucun script et ne charge aucune image
+function stripHtml(h){if(!h)return '';h=String(h).replace(/<(br|p|div|li|tr|td|h\d)\b[^>]*>/gi,' $&');try{return (new DOMParser().parseFromString(h,'text/html').body.textContent||'').replace(/\s+/g,' ').trim();}catch(e){return String(h).replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();}}
+function pick(o,keys){for(var i=0;i<keys.length;i++){var v=o&&o[keys[i]];if(v!==undefined&&v!==null&&v!=='')return v;}return null;}
+function hash(s){var h=5381;for(var i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))|0;return (h>>>0).toString(36);}
+
+/* ── appels au Worker ── */
+async function gstGet(path,params){
+  var qs=params?'?'+new URLSearchParams(params).toString():'';
+  var res=await fetch(PROXY_URL+'/gst/'+path+qs,{headers:{'X-Shop-Token':TOKEN}});
+  var txt=await res.text();
+  if(!res.ok){var msg=txt;try{msg=(JSON.parse(txt).error)||txt;}catch(e){}throw new Error('HTTP '+res.status+' : '+String(msg).slice(0,180));}
+  try{return JSON.parse(txt);}catch(e){throw new Error('réponse illisible');}
+}
+function listOf(j){if(Array.isArray(j))return j;if(j&&Array.isArray(j.data))return j.data;if(j&&j.data&&Array.isArray(j.data.data))return j.data.data;return [];}
+function lastPage(j){return (j&&(j.last_page||(j.meta&&j.meta.last_page)||(j.data&&j.data.last_page)))||null;}
+
+/* ── analyse de « nombre » : variété, graines, type, breeder ── */
+function parseNombre(nombre,marca,grupo){
+  var s=String(nombre||'').replace(/\s+/g,' ').trim();
+  var m=s.match(/^(.*?)\s+(\d{1,3})\s*(?:u\.?|uds?\.?|unid\w*\.?|semillas?|seeds?|pcs?\.?)(?=[\s.,]|$)/i);
+  var variete=m?m[1]:s,nb=m?parseInt(m[2],10):null,rest=m?s.slice(m[0].length):'';
+  var g=nrm(grupo),n=nrm(s),type=null;
+  if(/autoflor/.test(g)||/\bauto/.test(n))type='auto';
+  else if(/feminiz/.test(g)||/\bfem/.test(n))type='fem';
+  else if(/regular/.test(g)||/\breg(ular|ulares)?\b/.test(n))type='regular';
+  var breeder=marca?clean(marca):null;
+  if(!breeder&&rest)breeder=clean(rest.replace(/^[\s.,-]*((auto(floreciente)?s?|fem(inizad[ao]s?)?|reg(ular(es)?)?|cbd)[\s.,-]*)+/ig,''))||null;
+  return {variete:clean(variete),nbGraines:nb,typeGraine:type,cbd:/\bcbd\b/.test(n)||/cbd/.test(g),breeder:breeder};
+}
+/* ── analyse de « descripcionCorta » : THC, floraison, production, hauteur, récolte ext. ── */
+var LABELS=/\b(thc|cbd|producci[oó]n|production|rendement|yield|floraci[oó]n|floraison|flowering|altura|hauteur|height|cosecha|r[ée]colte|harvest|gen[ée]tica|genetics|sabor|efecto)\b/i;
+function after(s,re,len){var m=re.exec(s);if(!m)return null;var seg=s.slice(m.index+m[0].length,m.index+m[0].length+(len||60));var cut=seg.search(LABELS);if(cut>0)seg=seg.slice(0,cut);return seg.replace(/^[\s:.\-–=·•]+/,'').replace(/[\s,;|/.\-–·•]+$/,'').trim()||null;}
+function nums(seg){return (String(seg||'').replace(/(\d),(\d)/g,'$1.$2').match(/\d+(?:\.\d+)?/g)||[]).map(Number);}
+function parseDesc(t){
+  var s=' '+t+' ',o={thcMin:null,thcMax:null,cbdMax:null,floMin:null,floMax:null,production:null,hauteur:null,recolteExt:null};
+  var th=after(s,/\bTHC\b/i,30);if(th&&/%/.test(th)){var a=nums(th.split('%').slice(0,2).join('%')).filter(x=>x<=40);if(a.length){o.thcMin=Math.min.apply(null,a.slice(0,2));o.thcMax=Math.max.apply(null,a.slice(0,2));}}
+  var cb=after(s,/\bCBD\b/i,25);if(cb&&/%/.test(cb)){var c=nums(cb.split('%')[0]).filter(x=>x<=30);if(c.length)o.cbdMax=Math.max.apply(null,c);}
+  var fl=after(s,/\b(floraci[oó]n|floraison|flowering)(\s+(interior|indoor|int\.?))?\b/i,40);
+  if(fl){var f=nums(fl).slice(0,2),days=/d[ií]as?|days?|jours?/i.test(fl);if(f.length&&(/sem|week|d[ií]a|day|jour/i.test(fl))){f=f.map(x=>days?Math.round(x/7*2)/2:x).filter(x=>x>=3&&x<=30);if(f.length){o.floMin=Math.min.apply(null,f);o.floMax=Math.max.apply(null,f);}}}
+  o.production=after(s,/\b(producci[oó]n|production|rendement|yield)(\s+(interior|indoor|int\.?))?\b/i,60);
+  o.hauteur=after(s,/\b(altura|hauteur|height)\b/i,45);
+  o.recolteExt=after(s,/\b(cosecha|r[ée]colte|harvest)\s*(exterior|ext\.?|outdoor)?\b/i,40);
+  ['production','hauteur','recolteExt'].forEach(k=>{if(o[k])o[k]=o[k].slice(0,60);});
+  return o;
+}
+
+/* ── rapprochement avec la base StrainSage (noms + alias, suffixes de graine retirés) ── */
+var SUFFIX=/\s+(auto|autoflower(ing)?|autofloreciente|fem|feminized|feminised|feminizada|feminizadas|feminisee|regular|reg|fast|fast version|f1|cbd|xl|xxl)$/;
+async function baseIndex(){
+  var meta=await db.collection(VIDX).doc('meta').get();var parts=meta.exists?(meta.data().parts||0):0;
+  var snaps=await Promise.all(Array.from({length:parts},(_,i)=>db.collection(VIDX).doc('part_'+i).get()));
+  var byKey={},byCompact={};
+  snaps.forEach(s=>{if(!s.exists)return;(s.data().entries||[]).forEach(e=>{var p=String(e).split('|');p.slice(1).forEach(n=>{var k=nrm(n);if(!k)return;if(!byKey[k])byKey[k]=p[0];var c=k.replace(/ /g,'');if(!byCompact[c])byCompact[c]=p[0];});});});
+  return {byKey:byKey,byCompact:byCompact,size:Object.keys(byKey).length};
+}
+function matchBase(ix,variete,breeder){
+  var k=nrm(variete);if(!k)return null;
+  var tries=[k],b=nrm(breeder);
+  if(b&&k.indexOf(b+' ')===0)tries.push(k.slice(b.length+1));
+  var cut=k,prev;do{prev=cut;cut=cut.replace(SUFFIX,'').trim();if(cut&&cut!==prev)tries.push(cut);}while(cut!==prev);
+  for(var i=0;i<tries.length;i++){if(ix.byKey[tries[i]])return ix.byKey[tries[i]];var c=tries[i].replace(/ /g,'');if(ix.byCompact[c])return ix.byCompact[c];}
+  return null;
+}
+
+/* ── index compact lu par le chat ──
+   codigo|variete|breeder|type(f/a/r)|graines|thcMin|thcMax|floMin|floMax|pvp|dispo(0 rupture,1 dispo,2 stock bas)|photo|varieteId|extrait|signature */
+function entryOf(a){return [a.codigo,a.variete,a.breeder||'',({fem:'f',auto:'a',regular:'r'})[a.typeGraine]||'',a.nbGraines==null?'':a.nbGraines,a.thcMin==null?'':a.thcMin,a.thcMax==null?'':a.thcMax,a.floMin==null?'':a.floMin,a.floMax==null?'':a.floMax,a.pvp==null?'':a.pvp,a.dispoFlag,a.photo||'',a.varieteId||'',clean(a.descCourte).slice(0,150),a.sig].map(clean).join('|');}
+function parseEntry(e){var p=String(e).split('|');return {codigo:p[0],variete:p[1],breeder:p[2],type:p[3],nb:p[4],thcMin:p[5],thcMax:p[6],floMin:p[7],floMax:p[8],pvp:p[9],dispo:p[10],photo:p[11],varieteId:p[12],extrait:p[13],sig:p[14]};}
+async function loadIndex(){
+  var meta=await db.collection(IDX).doc('meta').get();G.meta=meta.exists?meta.data():null;
+  var parts=G.meta?(G.meta.parts||0):0;
+  var snaps=await Promise.all(Array.from({length:parts},(_,i)=>db.collection(IDX).doc('part_'+i).get()));
+  var list=[];snaps.forEach(s=>{if(s.exists)(s.data().entries||[]).forEach(e=>list.push(parseEntry(e)));});
+  G.entries=list;G.loaded=true;return list;
+}
+
+/* ── synchronisation ── */
+function progress(txt,pct){$('gstProgress').style.display='';$('gstProgTxt').textContent=txt;if(pct!=null)$('gstProg').style.width=Math.max(2,Math.min(100,pct))+'%';}
+async function fetchAllPages(params,label,onPage,errors){
+  var page=1,last=null,all=[];
+  while(page<=MAX_PAGES){
+    var j=null;
+    for(var attempt=0;attempt<2&&!j;attempt++){try{j=await gstGet('articulos',Object.assign({},params,{per_page:PER_PAGE,page:page}));}catch(e){if(attempt===1){errors.push(label+' · page '+page+' : '+e.message);}else await new Promise(r=>setTimeout(r,800));}}
+    if(!j){if(last&&page<last){page++;continue;}break;}
+    var arr=listOf(j);last=lastPage(j)||last;all=all.concat(arr);onPage(page,last,all.length);
+    if(last?page>=last:arr.length<PER_PAGE)break;
+    page++;
+  }
+  return all;
+}
+window.gstSync=async function(){
+  if(G.busy)return;G.busy=true;var btn=$('gstBtn');btn.disabled=true;$('gstReport').innerHTML='';
+  var errors=[],t0=Date.now(),rep={};
+  try{
+    progress('Lecture des groupes et familles…',2);
+    var grupos=listOf(await gstGet('grupos')),familias=[];
+    try{familias=listOf(await gstGet('familias',{per_page:'false'}));}catch(e){errors.push('familias : '+e.message);}
+    var seedGroupIds={},seedGroupNames=[];
+    grupos.forEach(g=>{var name=String(pick(g,['nombre','descripcion','grupoFamilia','name'])||'');if(/semilla/i.test(name)){var id=pick(g,['id','idGrupoFamilia','codigo']);if(id!=null)seedGroupIds[id]=1;seedGroupNames.push(name);}});
+    var fams=familias.filter(f=>{var gid=pick(f,['idGrupoFamilia','idGrupo','grupo_id']);var gname=String(pick(f,['grupoFamilia','grupo'])||'');return (gid!=null&&seedGroupIds[gid])||/semilla/i.test(gname);})
+      .map(f=>({id:pick(f,['id','idFamilia','codigo']),nom:String(pick(f,['nombre','descripcion','familia'])||'')})).filter(f=>f.id!=null);
+    console.info('[GST] groupes de graines :',seedGroupNames,'· familles retenues :',fams.length);
+    var raw=[];
+    if(fams.length){
+      for(var i=0;i<fams.length;i++){
+        var f=fams[i];
+        var got=await fetchAllPages({idFamilia:f.id},f.nom||('famille '+f.id),(p,l,n)=>progress('Famille '+(i+1)+'/'+fams.length+' · '+(f.nom||f.id)+' · page '+p+(l?'/'+l:'')+' · '+(raw.length+n)+' articles',5+80*(i+(l?p/l:0.5))/fams.length),errors);
+        raw=raw.concat(got);
+      }
+    }else{
+      // familles non identifiables : on lit tout le catalogue et on filtre sur grupoFamilia
+      raw=await fetchAllPages({},'catalogue complet',(p,l,n)=>progress('Catalogue complet · page '+p+(l?'/'+l:'')+' · '+n+' articles',5+(l?80*p/l:Math.min(80,p))),errors);
+    }
+    var seen={},arts=[];
+    raw.forEach(a=>{var code=pick(a,['codigo','id']);if(code==null||seen[code])return;var grp=String(pick(a,['grupoFamilia'])||'');if(grp&&!/semilla/i.test(grp))return;seen[code]=1;arts.push(a);});
+    progress('Analyse de '+arts.length+' articles et rapprochement avec la base StrainSage…',87);
+    var ix=await baseIndex();
+    var now=Date.now(),items=arts.map(a=>{
+      var nom=pick(a,['nombre'])||'',marca=pick(a,['marca']),grupo=pick(a,['grupoFamilia'])||'';
+      var pn=parseNombre(nom,marca,grupo),dc=stripHtml(pick(a,['descripcionCorta'])),dl=stripHtml(pick(a,['descripcionLarga']));
+      var pd=parseDesc(dc+' '+dl.slice(0,800));
+      var fotos=a.fotos||{},photos=['thumbnail','foto1','foto2','foto3','foto4','foto5'].map(k=>fotos[k]).filter(u=>typeof u==='string'&&/^https?:\/\//.test(u));
+      var dispo=String(pick(a,['disponible'])||''),low=a.stockBajo===true||a.stockBajo===1||a.stockBajo==='1'||a.stockBajo==='true';
+      var it=Object.assign({codigo:String(pick(a,['codigo','id'])),nombre:nom},pn,pd,{
+        pvp:pick(a,['pvp'])!=null?Number(String(pick(a,['pvp'])).replace(',','.')):null,iva:pick(a,['iva']),
+        disponible:dispo||null,stockBajo:low,dispoFlag:/out\s*of\s*stock|agotado|sin stock/i.test(dispo)?0:(low?2:1),
+        photo:photos[0]||null,photos:photos,marca:marca||null,familia:pick(a,['familia']),idFamilia:pick(a,['idFamilia']),grupoFamilia:grupo||null,
+        descCourte:dc.slice(0,800),descLongue:dl.slice(0,3000)});
+      it.varieteId=matchBase(ix,it.variete,it.breeder);
+      var sig=hash(JSON.stringify([it.nombre,it.pvp,it.disponible,it.stockBajo,it.photo,it.descCourte,it.varieteId,it.familia]));
+      it.sig=sig;it.syncAt=now;return it;
+    });
+    // écritures : uniquement les articles nouveaux ou modifiés, suppression des articles disparus
+    var prev={};try{(await loadIndex()).forEach(e=>{prev[e.codigo]=e.sig;});}catch(e){}
+    var changed=items.filter(it=>prev[it.codigo]!==it.sig),gone=Object.keys(prev).filter(c=>!seen[c]);
+    var ops=changed.map(it=>({t:'set',id:it.codigo,data:Object.assign({},it,{sig:it.sig})})).concat(gone.map(c=>({t:'del',id:c})));
+    for(var o=0;o<ops.length;o+=BATCH){
+      var b=db.batch();ops.slice(o,o+BATCH).forEach(op=>{var r=db.collection(COL).doc(op.id.replace(/\//g,'_'));if(op.t==='set')b.set(r,op.data);else b.delete(r);});
+      await b.commit();progress('Écriture… '+Math.min(ops.length,o+BATCH)+' / '+ops.length,88+10*Math.min(1,(o+BATCH)/ops.length));
+    }
+    // index compact
+    var entries=items.map(entryOf),parts=Math.max(1,Math.ceil(entries.length/PART)),oldParts=(G.meta&&G.meta.parts)||0;
+    var bi=db.batch();
+    for(var p=0;p<parts;p++)bi.set(db.collection(IDX).doc('part_'+p),{entries:entries.slice(p*PART,(p+1)*PART)});
+    for(var q=parts;q<oldParts;q++)bi.delete(db.collection(IDX).doc('part_'+q));
+    rep={count:items.length,dispo:items.filter(i=>i.dispoFlag!==0).length,low:items.filter(i=>i.dispoFlag===2).length,matched:items.filter(i=>i.varieteId).length,
+      written:changed.length,removed:gone.length,groups:seedGroupNames,families:fams.length,errors:errors.slice(0,50),syncAt:now,ms:Date.now()-t0,baseSize:ix.size};
+    bi.set(db.collection(IDX).doc('meta'),Object.assign({parts:parts},rep));
+    await bi.commit();
+    progress('Synchronisation terminée',100);
+    console.info('[GST] synchro :',rep);
+  }catch(e){errors.push(e.message);rep.fatal=e.message;console.error('[GST] synchro interrompue',e);}
+  G.busy=false;btn.disabled=false;
+  renderReport(rep,errors);
+  await loadIndex().catch(()=>{});renderLast();renderList();
+};
+function renderReport(r,errors){
+  if(r.fatal){$('gstReport').innerHTML='<div class="vdb-info" style="color:var(--red)">Synchronisation interrompue : '+esc(r.fatal)+'</div>'+(errors.length>1?'<ul class="vdb-list">'+errors.map(e=>'<li>'+esc(e)+'</li>').join('')+'</ul>':'');return;}
+  $('gstReport').innerHTML='<div class="vdb-grid">'+
+    gcard(r.count,'Articles (graines)')+gcard(r.dispo,'Disponibles')+gcard(r.low,'Stock bas')+gcard(r.matched,'Rapprochés avec la base')+gcard(r.written,'Écrits (nouveaux ou modifiés)')+gcard(r.removed,'Retirés')+'</div>'+
+    '<div class="vdb-info">Groupes retenus : '+esc((r.groups||[]).join(', ')||'—')+' · '+r.families+' familles · '+Math.round(r.ms/1000)+' s</div>'+
+    (errors.length?'<div class="vdb-info"><div class="vdb-sub" style="color:var(--red)">Pages en erreur ('+errors.length+')</div><ul class="vdb-list">'+errors.map(e=>'<li>'+esc(e)+'</li>').join('')+'</ul></div>':'');
+}
+function gcard(v,l){return '<div class="stat-card"><div class="stat-val">'+v+'</div><div class="stat-label">'+l+'</div></div>';}
+function renderLast(){var m=G.meta;$('gstLast').textContent=m&&m.syncAt?'Dernière synchronisation : '+new Date(m.syncAt).toLocaleString('fr-FR')+' · '+m.count+' articles · '+m.dispo+' disponibles · '+m.matched+' rapprochés':'Jamais synchronisé';}
+var TYPE_TXT={f:'Féminisée',a:'Auto',r:'Régulière'};
+function renderList(){
+  var q=nrm(($('gstSearch')||{}).value||''),onlyDispo=($('gstOnlyDispo')||{}).checked;
+  var list=G.entries.filter(e=>(!onlyDispo||e.dispo!=='0')&&(!q||nrm(e.variete+' '+e.breeder).indexOf(q)>-1));
+  $('gstCount').textContent=G.entries.length?list.length+' article'+(list.length>1?'s':'')+(list.length>60?' · 60 premiers affichés':''):'Aucun article';
+  $('gstBody').innerHTML=list.slice(0,60).map(e=>'<tr><td>'+(e.photo?'<img src="'+esc(e.photo).replace(/"/g,'&quot;')+'" alt="" width="40" height="40" loading="lazy" referrerpolicy="no-referrer" style="object-fit:cover;border-radius:8px" onerror="this.remove()">':'')+'</td>'+
+    '<td><b style="font-weight:600">'+esc(e.variete)+'</b><div class="vdb-note">'+esc(e.codigo)+'</div></td><td>'+esc(e.breeder||'—')+'</td><td>'+(TYPE_TXT[e.type]||'—')+(e.nb?' · '+esc(e.nb)+' gr.':'')+'</td>'+
+    '<td>'+(e.thcMax?esc(e.thcMin&&e.thcMin!==e.thcMax?e.thcMin+'–'+e.thcMax:e.thcMax)+' %':'<span class="vdb-null">—</span>')+'</td><td>'+(e.floMax?esc(e.floMin&&e.floMin!==e.floMax?e.floMin+'–'+e.floMax:e.floMax)+' sem.':'<span class="vdb-null">—</span>')+'</td>'+
+    '<td>'+(e.pvp?esc(Number(e.pvp).toFixed(2).replace('.',','))+' €':'—')+'</td><td>'+(e.dispo==='0'?'<span class="td-badge red">Rupture</span>':e.dispo==='2'?'<span class="td-badge gold">Stock bas</span>':'<span class="td-badge green">Disponible</span>')+'</td>'+
+    '<td>'+(e.varieteId?'<span class="td-badge green">✓</span>':'<span class="vdb-null">—</span>')+'</td></tr>').join('')||'<tr><td colspan="9"><div class="empty-state">Lance une synchronisation pour charger le catalogue.</div></td></tr>';
+}
+var st=null;window.gstFilter=function(){clearTimeout(st);st=setTimeout(renderList,150);};
+window.gstOpen=async function(){try{await loadIndex();}catch(e){console.warn('[GST] index illisible',e&&e.message);}renderLast();renderList();};
+window.__gst={parseNombre:parseNombre,parseDesc:parseDesc,stripHtml:stripHtml,matchBase:matchBase};
 })();
 </script>
 </body>

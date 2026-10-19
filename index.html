@@ -677,7 +677,7 @@ html{-webkit-tap-highlight-color:rgba(0,112,60,.12)}
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="gd-reference.js"></script>
-<script src="varietes.js?v=20261019c"></script>
+<script src="varietes.js?v=20261019e"></script>
 <script>
 /* ══ THÈME ══ */
 function updateThemeLabel(t){
@@ -1141,8 +1141,10 @@ function buildCard(s){
   else if(s.genetics&&cleanVal(s.genetics)){parents=String(s.genetics).split(/\s+[x×]\s+|\s*×\s*/i).map(x=>x.trim()).filter(Boolean);linSrc='estimation IA';}
   var lineage=parents.length?'<div class="sc-lineage">'+parents.slice(0,3).map(p=>'<span class="p">'+esc(p)+'</span>').join('<span class="x">×</span>')+(linSrc?'<span class="src">'+linSrc+'</span>':'')+'</div>':'';
   // stock du magasin
+  var g=window.VarDB&&VarDB.gstFor?VarDB.gstFor(s.gst||s.name)||VarDB.gstFor(s.name):null;
   var st=findInStock(s.name),stamp='';
   if(st){var ok=!st.dispo||/^(o|oui)$/i.test(st.dispo);stamp='<div class="sc-stamp'+(ok?'':' out')+'">'+(ok?'En stock':'En rupture')+(st.prix?'<small>'+esc(st.prix)+' €'+(st.graines?' · '+esc(st.graines)+' graines':'')+'</small>':'')+'</div>';}
+  else if(g&&g.pvp!=null)stamp='<div class="sc-stamp">'+(g.dispo===2?'Stock limité':'À commander')+'<small>'+esc(VarDB.euro(g.pvp))+(g.nb?' · '+esc(g.nb)+' graines':'')+'</small></div>';
   // chiffres
   var thc=fiche?rangeTxt(fiche.thc_min,fiche.thc_max,' %'):'';if(!thc)thc=cleanVal(s.thc);
   var cbd=fiche?rangeTxt(fiche.cbd_min,fiche.cbd_max,' %'):'';if(!cbd)cbd=cleanVal(s.cbd);
@@ -1155,6 +1157,7 @@ function buildCard(s){
   var rows='';
   function row(l,v,cls){if(v)rows+='<div class="sc-row'+(cls?' '+cls:'')+'"><span class="sc-label">'+l+'</span><span class="sc-val">'+v+'</span></div>';}
   row('Pourquoi elle',s.why?esc(s.why):'','why');
+  if(g)row('À commander',esc([g.breeder,g.type?({fem:'féminisée',auto:'autofloraison',regular:'régulière'})[g.type]:'',g.nb?g.nb+' graines':''].filter(Boolean).join(' · '))+(g.pvp!=null?' · <b>'+esc(VarDB.euro(g.pvp))+'</b>':'')+(g.dispo===2?' · <span style="color:#a50d26">stock limité</span>':''));
   var eff=(s.effects&&s.effects.length?s.effects:(fiche&&fiche.effets)||[]);row('Effets',eff.map(esc).join(', '));
   row('Arômes',s.flavor&&cleanVal(s.flavor)?esc(s.flavor):(fiche&&fiche.gouts&&fiche.gouts.length?esc(fiche.gouts.join(', ')):''));
   row('Culture',s.culture_tips?esc(s.culture_tips):'');
@@ -1173,7 +1176,7 @@ function buildCard(s){
   else if(ref&&ref.url)acts+='<a class="sc-action" href="'+escA(ref.url)+'" target="_blank" rel="noopener">GrowDiaries ↗</a>';
   var tags=(s.match_tags||[]).map(t=>'<span class="mtag">'+esc(t)+'</span>').join('');
   // photo : celle de la fiche (importée depuis le CSV) ; si elle ne charge pas, la carte reste propre
-  var photo=fiche&&fiche.photos&&fiche.photos.length?fiche.photos[0]:'';
+  var photo=(g&&g.photo)||(fiche&&fiche.photos&&fiche.photos.length?fiche.photos[0]:'');
   var photoHtml=photo?'<div class="sc-photo-win"><img src="'+escA(photo)+'" alt="Photo de '+escA(s.name)+'" width="132" height="132" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="var b=this.closest(\'.sc-band\');if(b)b.classList.remove(\'has-photo\');this.parentElement.remove()"></div>':'';
   return '<article class="sc t-'+tk+'">'+
     '<header class="sc-band'+(photo?' has-photo':'')+'"><div class="sc-band-txt"><div class="sc-kind">'+esc(kind)+'</div><h3 class="sc-name">'+esc(s.name)+'</h3>'+lineage+'</div>'+photoHtml+stamp+'</header>'+
@@ -1374,6 +1377,7 @@ let lastCtxInfo=null;
 function renderCtxStrip(info){
   if(!info)return '';
   var html='';
+  if(info.gst&&info.gst.count)html+='<div class="crit-line"><span class="crit-lead">Disponibles en boutique</span><span class="crit-chip base">'+info.gst.count+' variété'+(info.gst.count>1?'s':'')+' proposée'+(info.gst.count>1?'s':'')+' à l\'IA</span><span class="crit-count">sur '+info.gst.available+' commandables</span></div>';
   if(info.found&&info.found.length)html+='<div class="crit-line"><span class="crit-lead">Fiches de la base</span>'+info.found.map(n=>'<span class="crit-chip base">'+esc(n)+'</span>').join('')+'</div>';
   if(info.similarTo||(info.criteria&&info.criteria.length)||(info.unsupported&&info.unsupported.length)){
     var chips=(info.similarTo?'<span class="crit-chip type">profil proche de '+esc(info.similarTo)+'</span>':'')+(info.criteria||[]).map(c=>'<span class="crit-chip '+c.fam+'">'+(c.fam==='avoid'?'✕ ':'')+esc(c.l)+'<button type="button" class="crit-x" aria-label="Retirer le critère '+escA(c.l)+'" data-k="'+escA(c.k)+'" data-l="'+escA(c.l)+'" onclick="refineDrop(this.dataset.k,this.dataset.l)"><span aria-hidden="true">×</span></button></span>').join('')+(info.unsupported||[]).map(l=>'<span class="crit-chip na" title="Ce critère n\'est pas renseigné dans la base : l\'IA le vérifie avec ses connaissances">'+esc(l)+' (non renseigné)</span>').join('');
@@ -1434,9 +1438,12 @@ async function buildCtx(txt){
   var critText=refine?refine.text:txt,critDrop=refine?refine.drop:[];
   try{if(hasBase)crit=await VarDB.criteriaContext(critText,{exclude:sessionMemory.disliked,stockInfo:stockInfo,drop:critDrop});}catch(e){console.warn('[VarDB critères]',e);}
   if(crit.info.criteria.length||crit.info.similarTo)critState={text:critText,drop:critDrop};
-  ctx+=crit.ctx;
-  var critCovers=crit.info.items.length>0;
-  lastCtxInfo={found:base.found,criteria:crit.info.criteria.map(c=>({k:c.k,l:c.l,fam:c.fam})),unsupported:(crit.info.unsupported||[]).map(c=>c.l),total:crit.info.total,similarTo:crit.info.similarTo};
+  // 1c. CATALOGUE GARDEN SEEDS : les seules variétés recommandables ; la base StrainSage sert à les décrire
+  var gstRes={ctx:'',info:{available:0,count:0}};
+  try{if(window.VarDB&&VarDB.catalogueContext)gstRes=await VarDB.catalogueContext(critText,{profile:userProfile,drop:critDrop});}catch(e){console.warn('[GST]',e&&e.message);}
+  ctx+=gstRes.ctx||crit.ctx;
+  var critCovers=crit.info.items.length>0||gstRes.info.count>0;
+  lastCtxInfo={gst:gstRes.info,found:base.found,criteria:crit.info.criteria.map(c=>({k:c.k,l:c.l,fam:c.fam})),unsupported:(crit.info.unsupported||[]).map(c=>c.l),total:crit.info.total,similarTo:crit.info.similarTo};
 
   // 2. RÉFÉRENCE GROWDIARIES — seulement pour ce que la base ne couvre pas
   var gd={ctx:'',coveredStrains:0,requestedStrains:0,candidates:0};
