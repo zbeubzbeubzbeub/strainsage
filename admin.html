@@ -522,7 +522,8 @@ td{font-size:13.5px}
         <div class="section-title">Rapprochement avec la base StrainSage</div>
         <div class="table-wrap">
           <div class="vdb-body">
-            <div class="vdb-row"><button class="btn btn-secondary" id="gstMatchBtn" onclick="gstRematch()">⟳ Recalculer le rapprochement</button><span class="vdb-note">Sans appel à Garden Seeds : utilise le catalogue déjà synchronisé, ta base et tes décisions.</span></div>
+            <div class="vdb-row"><button class="btn btn-secondary" id="gstMatchBtn" onclick="gstRematch()">⟳ Recalculer le rapprochement</button><span class="vdb-note">Sans appel à Garden Seeds : utilise le catalogue déjà synchronisé, ta base et tes décisions. N'écrit que les articles dont le résultat change.</span></div>
+            <div id="gstMatchMsg"></div>
             <div id="gstMatchStats"></div>
           </div>
         </div>
@@ -887,6 +888,41 @@ async function saveApiKey(){
     document.getElementById('settingApiKey').value='';
   }catch(e){toast('Erreur: '+e.message,'error');}
 }
+</script>
+<script>
+/* ══ GARDE-FOUS FIRESTORE (toutes les opérations de l'admin) ══
+   - compte les lectures et écritures réellement effectuées par l'opération en cours ;
+   - arrête une lecture ou une écriture sans réponse depuis 30 s (plus de barre bloquée sans message) ;
+   - traduit les erreurs (quota, droits, réseau) en message clair, sans boucle de réessais ;
+   - demande confirmation au-delà de 5 000 écritures (quota gratuit : 20 000 écritures / 50 000 lectures par jour). */
+window.FSG=(function(){
+  var STALL=30000,CONFIRM_WRITES=5000,cur={label:'',reads:0,writes:0,t0:Date.now()};
+  function begin(label){cur={label:label,reads:0,writes:0,t0:Date.now()};return cur;}
+  function timed(p,what){
+    var t;
+    return Promise.race([p,new Promise(function(_,rej){t=setTimeout(function(){var e=new Error('aucune réponse de Firestore depuis 30 s ('+(what||'opération')+')');e.code='stalled';rej(e);},STALL);})])
+      .then(function(v){clearTimeout(t);return v;},function(e){clearTimeout(t);throw e;});
+  }
+  // lecture d'un document (1) ou d'une requête (1 par document renvoyé, 1 au minimum)
+  async function get(refOrQuery,what){var s=await timed(refOrQuery.get(),what||'lecture');cur.reads+=(s&&typeof s.size==='number')?Math.max(1,s.size):1;return s;}
+  async function commit(batch,n,what){if(!n)return;await timed(batch.commit(),what||'écriture');cur.writes+=n;}
+  async function set(ref,data,opts,what){await timed(opts?ref.set(data,opts):ref.set(data),what||'écriture');cur.writes+=1;}
+  function why(e){
+    var c=e&&e.code||'',m=e&&e.message||String(e);
+    if(c==='resource-exhausted'||/quota|resource.exhausted/i.test(m))return 'Quota Firestore atteint (resource-exhausted). La progression est gardée : réessaie avec « Reprendre » après la remise à zéro du quota (minuit, heure du Pacifique) ou vérifie la facturation.';
+    if(c==='permission-denied'||/permission/i.test(m))return 'Accès refusé par les règles Firestore (permission-denied). Vérifie les règles de la collection, puis clique sur « Reprendre ».';
+    if(c==='stalled')return 'Firestore ne répond plus depuis 30 s (réseau coupé ou quota atteint). La progression est gardée : clique sur « Reprendre ». Une écriture déjà partie peut encore aboutir quand la connexion revient.';
+    if(c==='unavailable'||c==='deadline-exceeded'||/network|offline|failed to fetch/i.test(m))return 'Firestore injoignable (réseau). La progression est gardée : clique sur « Reprendre ».';
+    return 'Erreur Firestore : '+m+'. La progression est gardée : clique sur « Reprendre ».';
+  }
+  function summary(){return cur.reads+' lecture'+(cur.reads>1?'s':'')+' · '+cur.writes+' écriture'+(cur.writes>1?'s':'')+' Firestore · '+Math.round((Date.now()-cur.t0)/1000)+' s';}
+  function estimate(writes,reads){return 'Estimation : '+(writes==null?'?':'≈ '+writes)+' écriture'+(writes>1?'s':'')+' · '+(reads==null?'?':'≈ '+reads)+' lecture'+(reads>1?'s':'');}
+  function confirmCost(label,writes,reads){
+    if(!(writes>CONFIRM_WRITES))return true;
+    return window.confirm(label+'\n\n'+estimate(writes,reads)+' Firestore.\nC\'est plus de '+CONFIRM_WRITES+' écritures : au-delà du quota gratuit du jour (20 000 écritures, 50 000 lectures), le forfait Blaze facture l\'excédent.\n\nContinuer ?');
+  }
+  return {begin:begin,timed:timed,get:get,commit:commit,set:set,why:why,summary:summary,estimate:estimate,confirmCost:confirmCost,CONFIRM_WRITES:CONFIRM_WRITES,get cur(){return cur;}};
+})();
 </script>
 <script>
 /* ══════════════════════════════════════════════════════════════
@@ -1392,14 +1428,17 @@ window.vdbPreview=async function(){
   await loadIndex();
   var c=S.conv,recs=c.records;
   var existing=recs.filter(function(r){return findExisting(r);}).length;
+  var hashes=importHashes(),same=recs.filter(function(r){return hashes[targetId(r)]===recHash(r);}).length;
+  S.estWrites=recs.length-same;
   var noSrc=recs.filter(function(r){return !r.sources.length;}).length;
   var wk=Object.keys(c.warnings);
-  $('vdbPreviewInfo').innerHTML='<div class="vdb-grid">'+card(recs.length,'Fiches valides')+card(recs.length-existing,'Nouvelles')+card(existing,'Déjà en base (mise à jour)')+card(c.rejected.length,'Rejetées')+card(c.merged.length,'Doublons fusionnés')+card(noSrc,'Sans source')+'</div>'+
+  $('vdbPreviewInfo').innerHTML='<div class="vdb-grid">'+card(recs.length,'Fiches valides')+card(recs.length-existing,'Nouvelles')+card(existing-same,'Déjà en base (mise à jour)')+card(same,'Identiques (ignorées)')+card(S.estWrites,'Écritures prévues')+card(c.rejected.length,'Rejetées')+card(c.merged.length,'Doublons fusionnés')+card(noSrc,'Sans source')+'</div>'+
     (wk.length?'<div class="vdb-info"><div class="vdb-sub">Valeurs mises à null (non converties)</div><ul class="vdb-list">'+wk.map(function(k){var w=c.warnings[k];return '<li><b>'+esc((FBY[k]||{l:k}).l)+'</b> : '+w.count+' valeur(s) — '+esc(w.why)+' (ex. « '+w.ex.map(esc).join(' », « ')+' »)</li>';}).join('')+'</ul></div>':'<div class="vdb-info">Toutes les valeurs reliées ont été converties.</div>')+
     (c.conflicts.length?'<div class="vdb-info"><div class="vdb-sub">Doublons avec des valeurs différentes ('+c.conflicts.length+') — la première valeur est gardée</div><ul class="vdb-list">'+c.conflicts.slice(0,15).map(function(x){return '<li>'+esc(x.nom)+' · '+esc(x.champ)+' : gardé « '+esc(x.garde)+' », ignoré « '+esc(x.ignore)+' » (ligne '+x.line+')</li>';}).join('')+(c.conflicts.length>15?'<li>…</li>':'')+'</ul></div>':'');
   $('vdbPreviewBody').innerHTML=recs.slice(0,PREVIEW_N).map(function(r,i){return previewRow(r,i,'vdbp');}).join('')||'<tr><td colspan="10"><div class="empty-state">Aucune fiche valide</div></td></tr>';
   $('vdbBtnTest').disabled=!recs.length;$('vdbBtnAll').disabled=!recs.length;
   $('vdbBtnAll').innerHTML='💾 Tout importer ('+recs.length+')';
+  if(!S.indexLoaded)$('vdbPreviewInfo').innerHTML='<div class="vdb-info" style="color:var(--red)">Index de la base illisible : '+esc(FSG.why(S.indexError))+'</div>'+$('vdbPreviewInfo').innerHTML;
   show('vdbStepPreview',true);show('vdbStepReport',false);
   $('vdbStepPreview').scrollIntoView({behavior:'smooth',block:'start'});
 };
@@ -1407,23 +1446,20 @@ window.vdbPreview=async function(){
 /* ═══ 5. INDEX ET ÉCRITURE FIRESTORE ═══ */
 async function loadIndex(force){
   if(S.indexLoaded&&!force)return S.index;
-  var list=[];
+  var list=[];S.indexError=null;
   try{
-    var meta=await db.collection(IDX).doc('meta').get();
-    var parts=meta.exists?(meta.data().parts||0):0;
-    var snaps=await Promise.all(Array.from({length:parts},function(_,i){return db.collection(IDX).doc('part_'+i).get();}));
-    snaps.forEach(function(s){if(!s.exists)return;(s.data().entries||[]).forEach(function(e){var p=String(e).split('|');list.push({id:p[0],nom:p[1]||p[0],alias:p.slice(2).filter(Boolean),type:null});});});
+    var meta=await FSG.get(db.collection(IDX).doc('meta'),'index de la base');
     S.indexMeta=meta.exists?meta.data():null;
-    var fparts=(S.indexMeta&&S.indexMeta.fparts)||0,facets={};
-    var fsnaps=await Promise.all(Array.from({length:fparts},function(_,i){return db.collection(IDX).doc('f_'+i).get();}));
-    fsnaps.forEach(function(s){if(!s.exists)return;(s.data().entries||[]).forEach(function(e){facets[String(e).split('|')[0]]=e;});});
-    S.facets=facets;
-    var bparts=(S.indexMeta&&S.indexMeta.bparts)||0,brs={};
-    var bsnaps=await Promise.all(Array.from({length:bparts},function(_,i){return db.collection(IDX).doc('b_'+i).get();}));
-    bsnaps.forEach(function(s){if(!s.exists)return;(s.data().entries||[]).forEach(function(e){brs[String(e).split('|')[0]]=String(e);});});
-    S.breeders=brs;
-  }catch(e){console.warn('[varietes] index illisible',e&&e.message);}
-  S.index=list;S.indexLoaded=true;
+    // parties brutes gardées pour n'écrire ensuite que celles qui changent
+    async function readParts(prefix,n){var sn=await Promise.all(Array.from({length:n||0},function(_,i){return FSG.get(db.collection(IDX).doc(prefix+i),'index de la base');}));return sn.map(function(x){return x.exists?(x.data().entries||[]).map(String):null;});}
+    var m=S.indexMeta||{};
+    S.rawParts={part_:await readParts('part_',m.parts),f_:await readParts('f_',m.fparts),b_:await readParts('b_',m.bparts),h_:await readParts('h_',m.hparts)};
+    S.rawParts.part_.forEach(function(a){(a||[]).forEach(function(e){var p=e.split('|');list.push({id:p[0],nom:p[1]||p[0],alias:p.slice(2).filter(Boolean),type:null});});});
+    var facets={};S.rawParts.f_.forEach(function(a){(a||[]).forEach(function(e){facets[e.split('|')[0]]=e;});});S.facets=facets;
+    var brs={};S.rawParts.b_.forEach(function(a){(a||[]).forEach(function(e){brs[e.split('|')[0]]=e;});});S.breeders=brs;
+    var hs={};S.rawParts.h_.forEach(function(a){(a||[]).forEach(function(e){var p=e.split('|');hs[p[0]]=p[1];});});S.hashes=hs;
+  }catch(e){console.warn('[varietes] index illisible',e&&e.message);S.indexError=e;}
+  S.index=list;S.indexLoaded=!S.indexError;
   S.byKey={};list.forEach(function(e){[e.id].concat([e.nom].concat(e.alias).map(slug)).forEach(function(k){if(k&&!S.byKey[k])S.byKey[k]=e;});});
   return list;
 }
@@ -1434,35 +1470,52 @@ function findExisting(r){
   for(var i=0;i<ks.length;i++)if(ks[i]&&S.byKey[ks[i]])return S.byKey[ks[i]];
   return null;
 }
+function h36(str){var h=5381;for(var i=0;i<str.length;i++)h=((h<<5)+h+str.charCodeAt(i))|0;return (h>>>0).toString(36);}
+function recHash(r){return h36(JSON.stringify(cleanForWrite(r)));}
+function targetId(r){var ex=findExisting(r);return ex?ex.id:r.id;}
 function cleanForWrite(r){var o={};Object.keys(r).forEach(function(k){if(k.charAt(0)!=='_')o[k]=r[k]===undefined?null:r[k];});return o;}
 function nonEmpty(o){var out={};Object.keys(o).forEach(function(k){var v=o[k];if(v===null||v===undefined)return;if(Array.isArray(v)&&!v.length)return;out[k]=v;});return out;}
 
-window.vdbImport=async function(test){
+// progression de l'import gardée dans ce navigateur : empreintes des fiches déjà écrites pour ce fichier
+var IKEY='ss_vdb_import';
+function importKey(){return S.file?S.file.name+'|'+S.file.size:'';}
+function importState(){try{var x=JSON.parse(localStorage.getItem(IKEY)||'null');return x&&x.file===importKey()?x:null;}catch(e){return null;}}
+function importHashes(){var st=importState();return Object.assign({},S.hashes||{},st?st.done:{});}
+window.vdbImport=async function(test,resume){
   if(S.busy||!S.conv)return;
   var recs=test?S.conv.records.slice(0,TEST_N):S.conv.records;
   if(!recs.length)return;
+  FSG.begin('Import CSV');
+  await loadIndex(true);
+  if(!S.indexLoaded){toast(FSG.why(S.indexError),'error');return;}
+  var hashes=importHashes(),est=recs.filter(function(r){return hashes[targetId(r)]!==recHash(r);}).length;
   // confirmation dans la page : les fenêtres confirm() peuvent être bloquées par le navigateur
-  if(!test&&!S.armed){
-    S.armed=true;var btn=$('vdbBtnAll');btn.innerHTML='⚠️ Cliquer encore pour importer '+recs.length+' fiches';
+  if(!test&&!resume&&!S.armed){
+    S.armed=true;var btn=$('vdbBtnAll');btn.innerHTML='⚠️ Cliquer encore : '+est+' écriture'+(est>1?'s':'')+' prévue'+(est>1?'s':'')+' ('+(recs.length-est)+' fiches identiques ignorées)';
     clearTimeout(S.armTimer);S.armTimer=setTimeout(function(){S.armed=false;btn.innerHTML='💾 Tout importer ('+recs.length+')';},8000);
     return;
   }
   S.armed=false;clearTimeout(S.armTimer);
+  if(!FSG.confirmCost('Import de '+recs.length+' fiches',est+20,FSG.cur.reads))return;
   S.busy=true;$('vdbBtnTest').disabled=true;$('vdbBtnAll').disabled=true;
   show('vdbStepReport',true);
   $('vdbReport').innerHTML='<div class="vdb-info" id="vdbProgTxt">Préparation…</div><div class="vdb-progress"><i id="vdbProg"></i></div>';
   $('vdbStepReport').scrollIntoView({behavior:'smooth',block:'start'});
-  await loadIndex(true);
-  var now=Date.now(),FV=firebase.firestore.FieldValue,ops=[],rep={test:!!test,file:S.file.name,date:new Date().toLocaleString('fr-FR'),created:[],updated:[],rejected:S.conv.rejected,merged:S.conv.merged,conflicts:S.conv.conflicts,warnings:S.conv.warnings,noSource:[],written:0,error:null};
+  var now=Date.now(),FV=firebase.firestore.FieldValue,ops=[],rep={test:!!test,file:S.file.name,date:new Date().toLocaleString('fr-FR'),created:[],updated:[],unchanged:0,rejected:S.conv.rejected,merged:S.conv.merged,conflicts:S.conv.conflicts,warnings:S.conv.warnings,noSource:[],written:0,error:null};
   var idxMap={};(S.index||[]).forEach(function(e){idxMap[e.id]={nom:e.nom,alias:e.alias.slice()};});
-  var facetMap=Object.assign({},S.facets||{}),brMap=Object.assign({},S.breeders||{});
+  var facetMap=Object.assign({},S.facets||{}),brMap=Object.assign({},S.breeders||{}),hashMap=Object.assign({},S.hashes||{});
+  var ist=importState()||{file:importKey(),done:{}};
   recs.forEach(function(r){
-    var ex=findExisting(r),data=cleanForWrite(r);
-    data.updatedAt=now;data.importFile=S.file.name;
+    var ex=findExisting(r),tid=ex?ex.id:r.id,hv=recHash(r);
     if(!r.sources.length)rep.noSource.push(r.nom);
+    hashMap[tid]=hv;
+    // fiche identique à celle déjà écrite (dernier import ou import interrompu) : aucune écriture
+    if(hashes[tid]===hv){rep.unchanged++;return;}
+    var data=cleanForWrite(r);
+    data.updatedAt=now;data.importFile=S.file.name;
     if(!ex){
       data.importedAt=now;
-      ops.push({id:r.id,data:data,merge:false});
+      ops.push({id:r.id,data:data,merge:false,h:hv});
       rep.created.push(r.nom);
       idxMap[r.id]={nom:r.nom,alias:r.alias.slice()};
       facetMap[r.id]=facetOf(r);
@@ -1475,7 +1528,7 @@ window.vdbImport=async function(test){
       if(extraAlias.length)upd.alias=FV.arrayUnion.apply(FV,extraAlias);
       // les sources s'ajoutent à celles déjà enregistrées (traçabilité entre fichiers)
       if(upd.sources)upd.sources=FV.arrayUnion.apply(FV,upd.sources);
-      ops.push({id:ex.id,data:upd,merge:true});
+      ops.push({id:ex.id,data:upd,merge:true,h:hv});
       rep.updated.push(r.nom+(ex.id!==r.id?' → '+ex.nom:''));
       facetMap[ex.id]=mergeFacet(facetMap[ex.id],facetOf(Object.assign({},r,{id:ex.id})));
       brMap[ex.id]=breederLine(ex.id,brMap[ex.id],r.produits);
@@ -1485,22 +1538,26 @@ window.vdbImport=async function(test){
   });
   try{
     for(var i=0;i<ops.length;i+=BATCH){
-      var b=db.batch();
-      ops.slice(i,i+BATCH).forEach(function(o){var ref=db.collection(COL).doc(o.id);if(o.merge)b.set(ref,o.data,{merge:true});else b.set(ref,o.data);});
-      await b.commit();
+      var b=db.batch(),sl=ops.slice(i,i+BATCH);
+      sl.forEach(function(o){var ref=db.collection(COL).doc(o.id);if(o.merge)b.set(ref,o.data,{merge:true});else b.set(ref,o.data);});
+      await FSG.commit(b,sl.length,'fiches');
+      sl.forEach(function(o){ist.done[o.id]=o.h;});
+      try{localStorage.setItem(IKEY,JSON.stringify(ist));}catch(x){}
       rep.written=Math.min(ops.length,i+BATCH);
-      $('vdbProg').style.width=Math.round(rep.written/ops.length*95)+'%';
-      $('vdbProgTxt').textContent='Écriture… '+rep.written+' / '+ops.length+' fiches';
+      $('vdbProg').style.width=Math.round(rep.written/Math.max(1,ops.length)*95)+'%';
+      $('vdbProgTxt').textContent='Écriture… '+rep.written+' / '+ops.length+' fiches ('+rep.unchanged+' identiques ignorées) · '+FSG.summary();
     }
-    $('vdbProgTxt').textContent='Mise à jour de l\'index des noms…';
-    await writeIndex(idxMap,now,facetMap,brMap);
+    $('vdbProgTxt').textContent='Mise à jour de l\'index (parties modifiées seulement)…';
+    await writeIndex(idxMap,now,facetMap,brMap,hashMap);
+    try{localStorage.removeItem(IKEY);}catch(x){}
     $('vdbProg').style.width='100%';
-  }catch(e){rep.error=e&&e.message||String(e);}
+  }catch(e){rep.error=FSG.why(e);}
+  rep.cost=FSG.summary();
   S.lastReport=rep;S.busy=false;
   $('vdbBtnTest').disabled=false;$('vdbBtnAll').disabled=false;$('vdbBtnAll').innerHTML='💾 Tout importer ('+S.conv.records.length+')';
   renderReport(rep);
   S.docCache={};await loadIndex(true);vdbSearch();
-  toast(rep.error?'Import interrompu : '+rep.error:(test?'🧪 Test : ':'✅ ')+rep.written+' fiches enregistrées',rep.error?'error':'info');
+  toast(rep.error?'Import interrompu : '+rep.error:(test?'🧪 Test : ':'✅ ')+rep.written+' fiches écrites, '+rep.unchanged+' identiques ignorées · '+rep.cost,rep.error?'error':'info');
 };
 /* ── facettes : faits compacts par fiche, lus par le chat pour la recherche par critères ──
    id|type|dominante|thcMin|thcMax|cbdMax|floMin|floMax|auto|difficulté|hauteur|rendement|env|moisissure|nbBanques|effets|indésirables|goûts|terpènes */
@@ -1525,26 +1582,27 @@ function breederLine(id,old,produits){
 // mise à jour : comme pour la fiche, une valeur vide n'efface pas l'ancienne
 function mergeFacet(oldF,newF){if(!oldF)return newF;var o=oldF.split('|'),n=newF.split('|');return n.map(function(v,i){return i===0?v:(v!==''?v:(o[i]||''));}).join('|');}
 
-async function writeIndex(idxMap,now,facetMap,brMap){
+function sameArr(a,b){if(!a||!b||a.length!==b.length)return false;for(var i=0;i<a.length;i++)if(a[i]!==b[i])return false;return true;}
+// écrit seulement les parties qui diffèrent de l'existant, supprime les parties en trop
+function diffParts(b,prefix,arr,size,min){
+  var old=(S.rawParts&&S.rawParts[prefix])||[],parts=Math.max(min||0,arr.length?Math.ceil(arr.length/size):0),n=0;
+  for(var p=0;p<parts;p++){var sl=arr.slice(p*size,(p+1)*size);if(!sameArr(old[p],sl)){b.set(db.collection(IDX).doc(prefix+p),{entries:sl});n++;}}
+  for(var q=parts;q<old.length;q++){b.delete(db.collection(IDX).doc(prefix+q));n++;}
+  return {parts:parts,n:n};
+}
+async function writeIndex(idxMap,now,facetMap,brMap,hashMap){
   var ids=Object.keys(idxMap).sort(),entries=ids.map(function(id){var e=idxMap[id];return [id,String(e.nom||id).replace(/\|/g,'/')].concat((e.alias||[]).map(function(a){return String(a).replace(/\|/g,'/');})).join('|');});
-  var parts=Math.max(1,Math.ceil(entries.length/IDX_PART)),old=(S.indexMeta&&S.indexMeta.parts)||0;
-  var b=db.batch(),n=0;
-  for(var p=0;p<parts;p++){b.set(db.collection(IDX).doc('part_'+p),{entries:entries.slice(p*IDX_PART,(p+1)*IDX_PART)});n++;}
-  for(var q=parts;q<old;q++){b.delete(db.collection(IDX).doc('part_'+q));n++;}
+  var m=S.indexMeta||{},b=db.batch(),n=0;
+  var P=diffParts(b,'part_',entries,IDX_PART,1);n+=P.n;
   var facets=Object.keys(facetMap||{}).filter(function(id){return idxMap[id];}).sort().map(function(id){return facetMap[id];});
-  var fparts=facets.length?Math.ceil(facets.length/FACET_PART):0,oldF=(S.indexMeta&&S.indexMeta.fparts)||0;
-  for(var fp=0;fp<fparts;fp++){b.set(db.collection(IDX).doc('f_'+fp),{entries:facets.slice(fp*FACET_PART,(fp+1)*FACET_PART)});}
-  for(var fq=fparts;fq<oldF;fq++){b.delete(db.collection(IDX).doc('f_'+fq));}
-  // breeders : réécrits seulement quand ils sont fournis (sinon les parties existantes sont gardées)
-  var bparts=(S.indexMeta&&S.indexMeta.bparts)||0;
-  if(brMap){
-    var brs=Object.keys(brMap).filter(function(id){return idxMap[id]&&brMap[id];}).sort().map(function(id){return brMap[id];}),oldB=bparts;
-    bparts=brs.length?Math.ceil(brs.length/IDX_PART):0;
-    for(var bp=0;bp<bparts;bp++){b.set(db.collection(IDX).doc('b_'+bp),{entries:brs.slice(bp*IDX_PART,(bp+1)*IDX_PART)});}
-    for(var bq=bparts;bq<oldB;bq++){b.delete(db.collection(IDX).doc('b_'+bq));}
-  }
-  b.set(db.collection(IDX).doc('meta'),{parts:parts,count:entries.length,fparts:fparts,facets:facets.length,bparts:bparts,updatedAt:now,file:S.file?S.file.name:null});
-  await b.commit();
+  var F=diffParts(b,'f_',facets,FACET_PART);n+=F.n;
+  // breeders et empreintes : réécrits seulement quand ils sont fournis (sinon les parties existantes sont gardées)
+  var bparts=m.bparts||0,hparts=m.hparts||0;
+  if(brMap){var brs=Object.keys(brMap).filter(function(id){return idxMap[id]&&brMap[id];}).sort().map(function(id){return brMap[id];});var Bp=diffParts(b,'b_',brs,IDX_PART);bparts=Bp.parts;n+=Bp.n;}
+  if(hashMap){var hs=Object.keys(hashMap).filter(function(id){return idxMap[id]&&hashMap[id];}).sort().map(function(id){return id+'|'+hashMap[id];});var Hp=diffParts(b,'h_',hs,IDX_PART);hparts=Hp.parts;n+=Hp.n;}
+  b.set(db.collection(IDX).doc('meta'),{parts:P.parts,count:entries.length,fparts:F.parts,facets:facets.length,bparts:bparts,hparts:hparts,updatedAt:now,file:S.file?S.file.name:(m.file||null)});n++;
+  await FSG.commit(b,n,'index de la base');
+  return n;
 }
 
 /* ── rapport ── */
@@ -1552,9 +1610,11 @@ function renderReport(r){
   var rejList=r.rejected.slice(0,200).map(function(x){return '<li>Ligne '+x.line+(x.nom?' · '+esc(x.nom):'')+' — '+esc(x.why)+'</li>';}).join('');
   var wk=Object.keys(r.warnings);
   $('vdbReport').innerHTML=
-    (r.error?'<div class="vdb-info" style="color:var(--red)">❌ Import interrompu après '+r.written+' fiche(s) : '+esc(r.error)+'<br>Vérifie les règles Firestore de la collection <code>'+COL+'</code>.</div>':'')+
+    (r.error?'<div class="vdb-info" style="color:var(--red)">❌ Import interrompu après '+r.written+' fiche(s) : '+esc(r.error)+'</div>':'')+
     '<div class="vdb-info">'+(r.test?'🧪 <b>Import de test</b> (20 premières fiches) · ':'')+esc(r.file)+' · '+esc(r.date)+'</div>'+
-    '<div class="vdb-grid">'+card(r.created.length,'Importées')+card(r.updated.length,'Mises à jour')+card(r.rejected.length,'Rejetées')+card(r.merged.length,'Doublons fusionnés')+card(r.noSource.length,'Sans source')+'</div>'+
+    (r.error?'<div class="vdb-row"><button class="btn btn-primary" onclick="vdbImport(false,true)">⏯ Reprendre l\'import</button><span class="vdb-note">Les fiches déjà écrites ne seront pas réécrites.</span></div>':'')+
+    '<div class="vdb-info"><b>Coût réel : '+esc(r.cost||'—')+'</b></div>'+
+    '<div class="vdb-grid">'+card(r.created.length,'Importées')+card(r.updated.length,'Mises à jour')+card(r.unchanged||0,'Identiques (ignorées)')+card(r.rejected.length,'Rejetées')+card(r.merged.length,'Doublons fusionnés')+card(r.noSource.length,'Sans source')+'</div>'+
     (r.rejected.length?'<div class="vdb-info"><div class="vdb-sub">Fiches rejetées</div><ul class="vdb-list">'+rejList+(r.rejected.length>200?'<li>…</li>':'')+'</ul></div>':'')+
     (r.noSource.length?'<div class="vdb-info"><div class="vdb-sub">Fiches sans source ('+r.noSource.length+')</div><ul class="vdb-list">'+r.noSource.slice(0,200).map(function(n){return '<li>'+esc(n)+'</li>';}).join('')+(r.noSource.length>200?'<li>…</li>':'')+'</ul></div>':'')+
     (r.merged.length?'<div class="vdb-info"><div class="vdb-sub">Doublons et alias fusionnés</div><ul class="vdb-list">'+r.merged.slice(0,100).map(function(m){return '<li>Ligne '+m.line+' · '+esc(m.nom)+' → '+esc(m.into)+'</li>';}).join('')+'</ul></div>':'')+
@@ -1579,6 +1639,7 @@ window.vdbDownloadReport=function(){
 /* ═══ LISTE CONSULTABLE ═══ */
 window.vdbOpen=async function(force){
   $('vdbListCount').textContent='Chargement…';
+  if($('vdbBtnRebuild')&&!S.busy)$('vdbBtnRebuild').innerHTML=rebuildLabel();
   await loadIndex(!!force);
   if(force)S.docCache={};
   vdbSearch();
@@ -1609,25 +1670,45 @@ async function renderList(){
 }
 
 /* ── reconstruire l'index des noms et des critères à partir des fiches enregistrées ── */
+var RBKEY='ss_vdb_rebuild';
+function rebuildState(){try{return JSON.parse(localStorage.getItem(RBKEY)||'null');}catch(e){return null;}}
+function rebuildLabel(){var st=rebuildState();return st?'⏯ Reprendre la reconstruction ('+st.n+' fiches lues)':'⟳ Reconstruire l\'index';}
 window.vdbRebuild=async function(){
   var btn=$('vdbBtnRebuild');if(S.busy)return;
+  var st=rebuildState();
+  // confirmation dans la page avec l'estimation (la lecture des fiches est la partie coûteuse)
+  if(!S.rbArmed){
+    S.rbArmed=true;var total=(S.indexMeta&&S.indexMeta.count)||0,left=Math.max(0,total-(st?st.n:0));
+    btn.innerHTML='⚠️ Cliquer encore : '+(total?'≈ '+left+' lectures':'lecture de toutes les fiches')+', ≈ 20 écritures au plus'+(st?' (reprise après '+st.n+' fiches)':'');
+    clearTimeout(S.rbTimer);S.rbTimer=setTimeout(function(){S.rbArmed=false;btn.innerHTML=rebuildLabel();},8000);
+    return;
+  }
+  S.rbArmed=false;clearTimeout(S.rbTimer);
+  FSG.begin('Reconstruction de l\'index');
   S.busy=true;btn.disabled=true;
-  var idxMap={},facetMap={},brMap={},n=0,last=null;
+  st=st||{n:0,last:null,idxMap:{},facetMap:{},brMap:{}};
+  var ok=false;
   try{
     await loadIndex(true);
+    if(!S.indexLoaded)throw S.indexError;
     while(true){
       var q=db.collection(COL).orderBy(firebase.firestore.FieldPath.documentId()).limit(500);
-      if(last)q=q.startAfter(last);
-      var snap=await q.get();
+      if(st.last)q=q.startAfter(st.last);
+      var snap=await FSG.get(q,'fiches');
       if(snap.empty)break;
-      snap.forEach(function(d){var r=Object.assign({},d.data(),{id:d.id});idxMap[d.id]={nom:r.nom||d.id,alias:r.alias||[]};facetMap[d.id]=facetOf(r);brMap[d.id]=breederLine(d.id,null,r.produits);});
-      n+=snap.size;last=snap.docs[snap.docs.length-1];btn.innerHTML='Lecture… '+n;
+      snap.forEach(function(d){var r=Object.assign({},d.data(),{id:d.id});st.idxMap[d.id]={nom:r.nom||d.id,alias:r.alias||[]};st.facetMap[d.id]=facetOf(r);var bl=breederLine(d.id,null,r.produits);if(bl)st.brMap[d.id]=bl;});
+      st.n+=snap.size;st.last=snap.docs[snap.docs.length-1].id;
+      try{localStorage.setItem(RBKEY,JSON.stringify(st));}catch(x){}
+      btn.innerHTML='Lecture… '+st.n+' fiches · '+FSG.summary();
+      if(snap.size<500)break;
     }
-    btn.innerHTML='Écriture de l\'index…';
-    await writeIndex(idxMap,Date.now(),facetMap,brMap);
-    toast('✅ Index reconstruit : '+n+' fiches','info');
-  }catch(e){toast('Erreur : '+(e&&e.message),'error');}
-  S.busy=false;btn.disabled=false;btn.innerHTML='⟳ Reconstruire l\'index';
+    btn.innerHTML='Écriture de l\'index (parties modifiées seulement)…';
+    await writeIndex(st.idxMap,Date.now(),st.facetMap,st.brMap,null);
+    try{localStorage.removeItem(RBKEY);}catch(x){}
+    ok=true;
+    toast('✅ Index reconstruit : '+st.n+' fiches · '+FSG.summary(),'info');
+  }catch(e){toast(FSG.why(e)+' · '+FSG.summary(),'error');}
+  S.busy=false;btn.disabled=false;btn.innerHTML=rebuildLabel();
   S.docCache={};await loadIndex(true);renderList();
 };
 
@@ -1799,10 +1880,10 @@ function trig(s){var t=' '+s+' ',o={};for(var i=0;i<t.length-2;i++)o[t.substr(i,
 
 /* base StrainSage : noms + alias nettoyés, breeders (parties b_N de l'index), trigrammes des noms souples */
 async function loadMatcher(){
-  var meta=await db.collection(VIDX).doc('meta').get(),md=meta.exists?meta.data():{};
+  var meta=await FSG.get(db.collection(VIDX).doc('meta'),'index de la base'),md=meta.exists?meta.data():{};
   var parts=md.parts||0,bparts=md.bparts||0;
-  var snaps=await Promise.all(Array.from({length:parts},(_,i)=>db.collection(VIDX).doc('part_'+i).get()));
-  var bsnaps=await Promise.all(Array.from({length:bparts},(_,i)=>db.collection(VIDX).doc('b_'+i).get()));
+  var snaps=await Promise.all(Array.from({length:parts},(_,i)=>FSG.get(db.collection(VIDX).doc('part_'+i),'index de la base')));
+  var bsnaps=await Promise.all(Array.from({length:bparts},(_,i)=>FSG.get(db.collection(VIDX).doc('b_'+i),'index de la base')));
   var br={};
   bsnaps.forEach(s=>{if(s.exists)(s.data().entries||[]).forEach(e=>{var p=String(e).split('|');br[p[0]]=(p[1]||'').split(',').filter(Boolean);});});
   var M={strict:{},soft:{},nums:{},nom:{},br:{},auto:{},keys:[],tri:{},ktri:[],size:0,hasBreeders:bparts>0};
@@ -1831,7 +1912,8 @@ function similar(M,soft,n,skip){
 }
 async function loadDecisions(){
   var D={};
-  try{(await db.collection(DEC).get()).forEach(d=>{var x=d.data();if(x&&x.key)D[x.key]=x;});}catch(e){console.warn('[GST] décisions illisibles',e&&e.message);}
+  // décisions illisibles = arrêt : sans elles, une décision manuelle pourrait être contredite
+  (await FSG.get(db.collection(DEC),'décisions manuelles')).forEach(d=>{var x=d.data();if(x&&x.key)D[x.key]=x;});
   return D;
 }
 function decisionKey(strict,breeder){return strict+'|'+base0(breeder);}
@@ -1867,7 +1949,7 @@ function matchVariety(M,D,variete,breeder,familia,type){
 var TL={fem:'f',auto:'a',regular:'r'};
 function groupOf(strict,breeder,type){return [strict,base0(breeder),type||''].join('~');}
 function matchFields(m,breeder,type){return {varieteId:m.statut==='r'?m.candidat:null,matchCode:m.statut,matchStatut:STATUT[m.statut],matchNiveau:m.niveau===''?null:m.niveau,matchCandidat:m.candidat||null,matchScore:m.score||null,nomStrict:m.strict,groupe:groupOf(m.strict,breeder,type)};}
-function mtuple(e){return String(e||'').split('|').slice(17,22).join('|');}
+function mtuple(e){var p=String(e||'').split('|');return [p[12]||''].concat(p.slice(17,22)).join('|');}
 /* applique le rapprochement à des lignes d'index ; renvoie les nouvelles lignes et les documents à mettre à jour */
 function applyMatch(M,D,raw){
   var cache={},changes=[],out=raw.map(e=>{
@@ -1880,10 +1962,21 @@ function applyMatch(M,D,raw){
   });
   return {entries:out,changes:changes};
 }
+// reprise du recalcul : documents déjà mis à jour mémorisés dans ce navigateur (jamais réécrits deux fois)
+var RKEY='ss_gst_rematch';
+function loadDone(){try{return JSON.parse(localStorage.getItem(RKEY)||'{}')||{};}catch(e){return {};}}
+function saveDone(d){try{localStorage.setItem(RKEY,JSON.stringify(d));}catch(e){}}
+function clearDone(){try{localStorage.removeItem(RKEY);}catch(e){}}
+function changeSig(c){return hash(JSON.stringify(c.data));}
+function pendingChanges(changes){var done=loadDone();return changes.filter(c=>done[c.codigo]!==changeSig(c));}
 async function writeMatchChanges(changes,onStep){
+  var done=loadDone();
   for(var o=0;o<changes.length;o+=BATCH){
-    var b=db.batch();changes.slice(o,o+BATCH).forEach(c=>b.set(db.collection(COL).doc(String(c.codigo).replace(/\//g,'_')),c.data,{merge:true}));
-    await b.commit();if(onStep)onStep(Math.min(changes.length,o+BATCH),changes.length);
+    var b=db.batch(),sl=changes.slice(o,o+BATCH);
+    sl.forEach(c=>b.set(db.collection(COL).doc(String(c.codigo).replace(/\//g,'_')),c.data,{merge:true}));
+    await FSG.commit(b,sl.length,'articles du catalogue');
+    sl.forEach(c=>{done[c.codigo]=changeSig(c);});saveDone(done);
+    if(onStep)onStep(Math.min(changes.length,o+BATCH),changes.length);
   }
 }
 /* statistiques : articles et variétés uniques (articles qui ne diffèrent que par le conditionnement regroupés) */
@@ -1899,30 +1992,49 @@ function matchStats(raw){
   s.at=Date.now();return s;
 }
 
-/* ── index compact lu par le chat ──
-   codigo|variete|breeder|type(f/a/r)|graines|thcMin|thcMax|floMin|floMax|pvp|dispo(0 rupture,1 dispo,2 stock bas)|photo|varieteId|extrait|signature
-   |nom brut|famille|statut(r/v/n/x)|niveau(1/2/3/m)|candidat StrainSage|score|groupe (nom strict~breeder~type) */
-function entryOf(a){return [a.codigo,a.variete,a.breeder||'',({fem:'f',auto:'a',regular:'r'})[a.typeGraine]||'',a.nbGraines==null?'':a.nbGraines,a.thcMin==null?'':a.thcMin,a.thcMax==null?'':a.thcMax,a.floMin==null?'':a.floMin,a.floMax==null?'':a.floMax,a.pvp==null?'':a.pvp,a.dispoFlag,a.photo||'',a.varieteId||'',clean(a.descCourte).slice(0,150),a.sig,a.nombre||'',a.familia==null?'':a.familia,a.matchCode||'',a.matchNiveau==null?'':a.matchNiveau,a.matchCandidat||'',a.matchScore||'',a.groupe||''].map(clean).join('|');}
-function parseEntry(e){var p=String(e).split('|');return {codigo:p[0],variete:p[1],breeder:p[2],type:p[3],nb:p[4],thcMin:p[5],thcMax:p[6],floMin:p[7],floMax:p[8],pvp:p[9],dispo:p[10],photo:p[11],varieteId:p[12],extrait:p[13],sig:p[14],nombre:p[15]||'',familia:p[16]||'',statut:p[17]||'',niveau:p[18]||'',candidat:p[19]||'',score:p[20]||'',groupe:p[21]||''};}
+/* ── index compact lu par le chat ; sert aussi de MANIFESTE de la synchro (code → empreinte + date de modification) ──
+   codigo|variete|breeder|type(f/a/r)|graines|thcMin|thcMax|floMin|floMax|pvp|dispo(0 rupture ou retiré,1 dispo,2 stock bas)|photo|varieteId|extrait|empreinte
+   |nom brut|famille|statut(r/v/n/x)|niveau(1/2/3/m)|candidat StrainSage|score|groupe (nom strict~breeder~type)|modifié le (ms, base 36)|R si retiré du catalogue */
+function entryOf(a){return [a.codigo,a.variete,a.breeder||'',({fem:'f',auto:'a',regular:'r'})[a.typeGraine]||'',a.nbGraines==null?'':a.nbGraines,a.thcMin==null?'':a.thcMin,a.thcMax==null?'':a.thcMax,a.floMin==null?'':a.floMin,a.floMax==null?'':a.floMax,a.pvp==null?'':a.pvp,a.dispoFlag,a.photo||'',a.varieteId||'',clean(a.descCourte).slice(0,150),a.sig,a.nombre||'',a.familia==null?'':a.familia,a.matchCode||'',a.matchNiveau==null?'':a.matchNiveau,a.matchCandidat||'',a.matchScore||'',a.groupe||'',a.majAt?Number(a.majAt).toString(36):'',a.retire?'R':''].map(clean).join('|');}
+function parseEntry(e){var p=String(e).split('|');return {codigo:p[0],variete:p[1],breeder:p[2],type:p[3],nb:p[4],thcMin:p[5],thcMax:p[6],floMin:p[7],floMax:p[8],pvp:p[9],dispo:p[10],photo:p[11],varieteId:p[12],extrait:p[13],sig:p[14],nombre:p[15]||'',familia:p[16]||'',statut:p[17]||'',niveau:p[18]||'',candidat:p[19]||'',score:p[20]||'',groupe:p[21]||'',maj:p[22]?parseInt(p[22],36):null,retire:p[23]==='R'};}
 async function loadIndex(){
-  var meta=await db.collection(IDX).doc('meta').get();G.meta=meta.exists?meta.data():null;
+  var meta=await FSG.get(db.collection(IDX).doc('meta'),'index du catalogue');G.meta=meta.exists?meta.data():null;
   var parts=G.meta?(G.meta.parts||0):0;
-  var snaps=await Promise.all(Array.from({length:parts},(_,i)=>db.collection(IDX).doc('part_'+i).get()));
-  var list=[];snaps.forEach(s=>{if(s.exists)(s.data().entries||[]).forEach(e=>list.push(Object.assign(parseEntry(e),{raw:String(e)})));});
+  var snaps=await Promise.all(Array.from({length:parts},(_,i)=>FSG.get(db.collection(IDX).doc('part_'+i),'index du catalogue')));
+  G.partsRaw=snaps.map(s=>s.exists?(s.data().entries||[]).map(String):null);
+  var list=[];G.partsRaw.forEach(a=>{if(a)a.forEach(e=>list.push(Object.assign(parseEntry(e),{raw:e})));});
   G.entries=list;G.loaded=true;return list;
 }
+// index : seules les parties qui ont réellement changé sont réécrites, plus la meta
+async function writeIndexParts(entries,meta,merge){
+  var parts=Math.max(1,Math.ceil(entries.length/PART)),old=G.partsRaw||[],b=db.batch(),n=0,np=[];
+  for(var p=0;p<parts;p++){var sl=entries.slice(p*PART,(p+1)*PART);np.push(sl);if(!old[p]||old[p].length!==sl.length||old[p].some((e,i)=>e!==sl[i])){b.set(db.collection(IDX).doc('part_'+p),{entries:sl});n++;}}
+  for(var q=parts;q<old.length;q++){b.delete(db.collection(IDX).doc('part_'+q));n++;}
+  var parsed=entries.map(parseEntry);
+  var m=Object.assign({parts:parts,count:entries.length,dispo:parsed.filter(e=>e.dispo!=='0').length,low:parsed.filter(e=>e.dispo==='2').length,matched:parsed.filter(e=>e.varieteId).length,retired:parsed.filter(e=>e.retire).length},meta||{});
+  if(merge)b.set(db.collection(IDX).doc('meta'),m,{merge:true});else b.set(db.collection(IDX).doc('meta'),m);
+  await FSG.commit(b,n+1,'index du catalogue');
+  G.partsRaw=np;G.meta=Object.assign({},merge?G.meta||{}:{},m);
+  return n+1;
+}
 
-/* ── synchronisation reprenable ──
-   La progression (familles, dernière page lue, échecs, index en cours) est gardée dans ce navigateur.
-   Chaque page est écrite dans Firestore dès sa lecture : une reprise ne relit que les pages manquantes.
-   Rien n'est supprimé tant qu'une famille reste en échec. */
-var SKEY='ss_gst_sync';
+/* ── synchronisation différentielle et reprenable ──
+   - l'index (≈ 7 lectures) sert de manifeste : un article n'est réécrit que s'il est nouveau, si son empreinte
+     (nombre, prix, disponibilité, stock bas, descriptions, photos, famille) a changé, ou si son rapprochement a changé ;
+   - les articles disparus de l'API ne sont jamais supprimés : marqués « Retiré » une seule fois ;
+   - progression gardée dans ce navigateur après chaque page, index mis à jour toutes les 25 pages. */
+var SKEY='ss_gst_sync',FLUSH_EVERY=25;
 function loadState(){try{var s=JSON.parse(localStorage.getItem(SKEY)||'null');return s&&s.v===1&&Array.isArray(s.fams)?s:null;}catch(e){return null;}}
 function saveState(s){try{localStorage.setItem(SKEY,JSON.stringify(s));return true;}catch(e){if(!saveState.warned){saveState.warned=true;console.warn('[GST] progression non enregistrée dans le navigateur : la reprise ne sera pas possible',e&&e.message);}return false;}}
 function clearState(){try{localStorage.removeItem(SKEY);}catch(e){}}
 function progress(txt,pct){$('gstProgress').style.display='';$('gstProgTxt').textContent=txt;if(pct!=null)$('gstProg').style.width=Math.max(2,Math.min(100,pct))+'%';}
 function famKey(f){return f.id==null?'_all':String(f.id);}
 function sigOf(entry){return String(entry||'').split('|')[14]||'';}
+// empreinte v2 : les champs du grossiste seulement (le rapprochement est comparé à part)
+function sig2(it){return '2.'+hash(JSON.stringify([it.nombre,it.pvp,it.disponible,it.stockBajo,it.descCourte,it.descLongue,it.photos,it.familia==null?'':String(it.familia)]));}
+// migration depuis l'empreinte v1 : article considéré inchangé si tout ce que l'index en connaît est identique
+var VISIBLE=[1,2,3,4,5,6,7,8,9,10,11,13,15,16];
+function sameVisible(prev,next){var a=String(prev).split('|'),b=String(next).split('|');return VISIBLE.every(i=>(i===15||i===16)&&!a[i]?true:(a[i]||'')===(b[i]||''));}
 function buildItem(a,R,now){
   var nom=pick(a,['nombre'])||'',marca=pick(a,['marca']),grupo=pick(a,['grupoFamilia'])||'';
   var pn=parseNombre(nom,marca,grupo),dc=stripHtml(pick(a,['descripcionCorta'])),dl=stripHtml(pick(a,['descripcionLarga']));
@@ -1937,33 +2049,54 @@ function buildItem(a,R,now){
   var tl=TL[it.typeGraine]||'',ck=[it.variete,it.breeder||'',it.familia==null?'':it.familia,tl].join('|');
   var m=R.mcache[ck]||(R.mcache[ck]=matchVariety(R.M,R.D,it.variete,it.breeder,it.familia,tl));
   Object.assign(it,matchFields(m,it.breeder,tl));
-  it.sig=hash(JSON.stringify([it.nombre,it.pvp,it.disponible,it.stockBajo,it.photo,it.descCourte,it.varieteId,it.familia]));
-  it.syncAt=now;return it;
+  it.sig=sig2(it);it.syncAt=now;return it;
 }
-// une page d'articles : analyse, écriture groupée des nouveaux ou modifiés, puis ajout à l'index en cours
+// une page d'articles : comparaison avec le manifeste, puis écriture groupée des seuls nouveaux / modifiés
 async function writePage(arts,R,st){
-  var pending={},ops=[];
+  var pending={},full=[],matchOnly=[],now=Date.now(),cnt={nouveaux:0,modifies:0,inchanges:0};
   arts.forEach(a=>{
     var code=pick(a,['codigo','id']);if(code==null)return;
     var grp=String(pick(a,['grupoFamilia'])||'');if(grp&&!/semilla/i.test(grp))return;
     var it=buildItem(a,R,R.now),c=it.codigo;
     if(pending[c]||(st.entries[c]&&sigOf(st.entries[c])===it.sig))return;
-    pending[c]=entryOf(it);
-    if(R.prevSig[c]!==it.sig||R.prevMatch[c]!==mtuple(pending[c]))ops.push(it);
+    var prev=R.prevRaw[c],pp=prev?String(prev).split('|'):null,ps=pp?pp[14]:'',kind;
+    if(!prev)kind='nouveaux';
+    else if(pp[23]==='R')kind='modifies';
+    else if(ps===it.sig||(ps.indexOf('2.')!==0&&sameVisible(prev,entryOf(it))))kind='inchanges';
+    else kind='modifies';
+    it.majAt=kind==='inchanges'?(pp[22]?parseInt(pp[22],36):null):now;
+    var e=entryOf(it);pending[c]=e;cnt[kind]++;
+    if(kind!=='inchanges')full.push(it);
+    else if(mtuple(prev)!==mtuple(e))matchOnly.push({codigo:c,data:{varieteId:it.varieteId,matchCode:it.matchCode,matchStatut:it.matchStatut,matchNiveau:it.matchNiveau,matchCandidat:it.matchCandidat,matchScore:it.matchScore,nomStrict:it.nomStrict,groupe:it.groupe}});
   });
-  for(var o=0;o<ops.length;o+=BATCH){var b=db.batch();ops.slice(o,o+BATCH).forEach(it=>b.set(db.collection(COL).doc(it.codigo.replace(/\//g,'_')),it));await b.commit();}
-  Object.assign(st.entries,pending);st.written+=ops.length;
+  var nw=full.length+matchOnly.length;
+  if(nw&&!st.costOk&&st.written+nw>FSG.CONFIRM_WRITES){
+    if(!FSG.confirmCost('La synchro a déjà écrit '+st.written+' articles et va dépasser '+FSG.CONFIRM_WRITES+' écritures.',st.written+nw,FSG.cur.reads)){var pe=new Error('Synchro mise en pause à ta demande avant de dépasser '+FSG.CONFIRM_WRITES+' écritures. Clique sur « Reprendre » pour continuer.');pe.code='paused';throw pe;}
+    st.costOk=true;
+  }
+  var ops=full.map(it=>({ref:db.collection(COL).doc(it.codigo.replace(/\//g,'_')),data:it,merge:false})).concat(matchOnly.map(x=>({ref:db.collection(COL).doc(String(x.codigo).replace(/\//g,'_')),data:x.data,merge:true})));
+  for(var o=0;o<ops.length;o+=BATCH){var b=db.batch(),sl=ops.slice(o,o+BATCH);sl.forEach(x=>{if(x.merge)b.set(x.ref,x.data,{merge:true});else b.set(x.ref,x.data);});await FSG.commit(b,sl.length,'articles du catalogue');}
+  Object.assign(st.entries,pending);st.written+=nw;
+  Object.keys(cnt).forEach(k=>{st.counts[k]=(st.counts[k]||0)+cnt[k];});
 }
+// index = ancien index + articles relus (+ retirés), trié par code pour que les parties inchangées ne soient pas réécrites
+function mergedEntries(R,st,extra){var m=Object.assign({},R.prevRaw,extra||{},st.entries);return Object.keys(m).sort().map(c=>m[c]);}
 async function runSync(resume){
   if(G.busy)return;
   var st=resume?loadState():null;
   if(resume&&!st){renderResume();return;}
   G.busy=true;$('gstBtn').disabled=true;$('gstResumeBtn').style.display='none';$('gstReport').innerHTML='';
+  FSG.begin('Synchro Garden Seeds');
   var t0=Date.now(),rep={},R={};
   try{
-    progress('Préparation : base StrainSage et index actuel…',1);
-    R.M=await loadMatcher();R.D=await loadDecisions();G.M=R.M;G.D=R.D;R.mcache={};R.now=Date.now();R.prevSig={};R.prevRaw={};R.prevMatch={};
-    try{(await loadIndex()).forEach(e=>{R.prevSig[e.codigo]=e.sig;R.prevRaw[e.codigo]=e.raw;R.prevMatch[e.codigo]=mtuple(e.raw);});}catch(e){}
+    progress('Préparation : index du catalogue (manifeste), base StrainSage et décisions…',1);
+    R.prevSig={};R.prevRaw={};
+    // manifeste illisible = arrêt (sinon tout serait considéré comme nouveau et réécrit)
+    (await loadIndex()).forEach(e=>{R.prevSig[e.codigo]=e.sig;R.prevRaw[e.codigo]=e.raw;});
+    var last=G.meta&&G.meta.lastWrites!=null?G.meta.lastWrites:null;
+    if(!st&&last!=null&&!FSG.confirmCost('Synchro Garden Seeds (la dernière synchro a écrit '+last+' articles)',last,FSG.cur.reads)){progress('Synchro annulée avant toute écriture · '+FSG.summary(),0);G.busy=false;$('gstBtn').disabled=false;renderResume();return;}
+    R.M=await loadMatcher();R.D=await loadDecisions();G.M=R.M;G.D=R.D;R.mcache={};R.now=Date.now();
+    progress('Préparation · '+FSG.estimate(last,FSG.cur.reads)+' (d\'après la dernière synchro)',2);
     if(!st){
       progress('Lecture des groupes et familles…',2);
       var grupos=await fetchList('grupos','groupes'),familias=[],famErr=null;
@@ -1972,51 +2105,57 @@ async function runSync(resume){
       grupos.forEach(g=>{var name=String(pick(g,['nombre','descripcion','grupoFamilia','grupo','name'])||'');if(/semilla/i.test(name)){var id=pick(g,['id','idGrupoFamilia','idGrupo','codigo']);if(id!=null)seedGroupIds[id]=1;seedGroupNames.push(name);}});
       var list=familias.filter(f=>{var gid=pick(f,['idGrupoFamilia','idGrupo','grupo_id']);var gname=String(pick(f,['grupoFamilia','grupo'])||'');return (gid!=null&&seedGroupIds[gid])||/semilla/i.test(gname);})
         .map(f=>({id:pick(f,['id','idFamilia','codigo']),nom:String(pick(f,['nombre','descripcion','familia'])||'')})).filter(f=>f.id!=null);
-      // familles non identifiables : tout le catalogue, filtré ensuite sur grupoFamilia
       if(!list.length)list=[{id:null,nom:'catalogue complet'}];
       console.info('[GST] groupes de graines :',seedGroupNames,'· familles retenues :',list.length);
-      st={v:1,startedAt:Date.now(),groups:seedGroupNames,fams:list,done:{},failed:{},entries:{},written:0,famErr:famErr};
+      st={v:1,startedAt:Date.now(),groups:seedGroupNames,fams:list,done:{},failed:{},entries:{},written:0,famErr:famErr,costOk:last!=null&&last>FSG.CONFIRM_WRITES,counts:{nouveaux:0,modifies:0,inchanges:0,retires:0},pages:0};
       saveState(st);
     }
+    st.counts=st.counts||{nouveaux:0,modifies:0,inchanges:0,retires:0};
     var fams=st.fams;
     for(var i=0;i<fams.length;i++){
       var f=fams[i],k=famKey(f),d=st.done[k]||{page:0,last:null,complete:false},name=f.nom||('famille '+f.id);
       if(d.complete)continue;
       delete st.failed[k];
       for(var page=d.page+1;page<=MAX_PAGES;page++){
-        progress('Famille '+(i+1)+'/'+fams.length+' · '+name+' · page '+page+(d.last?'/'+d.last:'')+' · '+Object.keys(st.entries).length+' articles',3+85*(i+(d.last?(page-1)/d.last:0.5))/fams.length);
+        progress('Famille '+(i+1)+'/'+fams.length+' · '+name+' · page '+page+(d.last?'/'+d.last:'')+' · '+st.counts.inchanges+' inchangés, '+(st.counts.modifies+st.counts.nouveaux)+' écrits · '+FSG.summary(),3+85*(i+(d.last?(page-1)/d.last:0.5))/fams.length);
         var j;
         try{j=await gstGetRetry('articulos',Object.assign(f.id==null?{}:{idFamilia:f.id},{per_page:PER_PAGE,page:page}),name+' p.'+page);}
         catch(e){st.failed[k]={nom:name,page:page,raison:e.message};break;}
         var arr=listOf(j);d.last=lastPage(j)||d.last;
         await writePage(arr,R,st);
         d.page=page;if(d.last?page>=d.last:arr.length<PER_PAGE)d.complete=true;
-        st.done[k]=d;saveState(st);
+        st.done[k]=d;st.pages=(st.pages||0)+1;saveState(st);
+        // manifeste mis à jour périodiquement (seules les parties modifiées sont écrites)
+        if(st.pages%FLUSH_EVERY===0)await writeIndexParts(mergedEntries(R,st),{syncPartielle:true,syncAt:Date.now()},true);
         if(d.complete)break;
       }
       if(!d.complete&&!st.failed[k])st.failed[k]={nom:name,page:d.page+1,raison:'plus de '+MAX_PAGES+' pages'};
       saveState(st);
     }
-    // index lu par le chat : ancien index + articles relus ; les familles en échec gardent leurs anciens articles
     var failedKeys=Object.keys(st.failed),complete=!failedKeys.length;
-    progress('Mise à jour de l\'index lu par le chat…',92);
-    var gone=complete?Object.keys(R.prevRaw).filter(c=>!st.entries[c]):[];
-    for(var o=0;o<gone.length;o+=BATCH){var b=db.batch();gone.slice(o,o+BATCH).forEach(c=>b.delete(db.collection(COL).doc(c.replace(/\//g,'_'))));await b.commit();}
-    var merged=Object.assign({},complete?{}:R.prevRaw,st.entries),entries=Object.keys(merged).map(c=>merged[c]),parsed=entries.map(parseEntry);
-    var parts=Math.max(1,Math.ceil(entries.length/PART)),oldParts=(G.meta&&G.meta.parts)||0;
-    var bi=db.batch();
-    for(var p=0;p<parts;p++)bi.set(db.collection(IDX).doc('part_'+p),{entries:entries.slice(p*PART,(p+1)*PART)});
-    for(var q=parts;q<oldParts;q++)bi.delete(db.collection(IDX).doc('part_'+q));
+    // articles disparus de l'API : marqués « Retiré » (une seule fois), jamais supprimés
+    var retired={},gone=complete?Object.keys(R.prevRaw).filter(c=>!st.entries[c]&&String(R.prevRaw[c]).split('|')[23]!=='R'):[],now=Date.now();
+    if(gone.length&&!st.costOk&&st.written+gone.length>FSG.CONFIRM_WRITES&&!FSG.confirmCost('Marquer '+gone.length+' articles disparus comme « Retiré »',st.written+gone.length,FSG.cur.reads)){var pe=new Error('Marquage des articles retirés mis en pause à ta demande. Clique sur « Reprendre » pour continuer.');pe.code='paused';throw pe;}
+    for(var o=0;o<gone.length;o+=BATCH){
+      var b=db.batch(),sl=gone.slice(o,o+BATCH);
+      sl.forEach(c=>b.set(db.collection(COL).doc(c.replace(/\//g,'_')),{disponible:'Retiré',dispoFlag:0,stockBajo:false,retire:true,retireAt:now,majAt:now},{merge:true}));
+      await FSG.commit(b,sl.length,'articles retirés');
+      sl.forEach(c=>{var p=String(R.prevRaw[c]).split('|');while(p.length<24)p.push('');p[10]='0';p[22]=now.toString(36);p[23]='R';retired[c]=p.map(clean).join('|');});
+      progress('Articles retirés du catalogue : '+Math.min(gone.length,o+BATCH)+' / '+gone.length,90);
+    }
+    st.counts.retires=(st.counts.retires||0)+gone.length;st.written+=gone.length;
+    progress('Mise à jour de l\'index (parties modifiées seulement)…',93);
+    var entries=mergedEntries(R,st,retired),parsed=entries.map(parseEntry);
     rep={count:entries.length,dispo:parsed.filter(e=>e.dispo!=='0').length,low:parsed.filter(e=>e.dispo==='2').length,matched:parsed.filter(e=>e.varieteId).length,
-      read:Object.keys(st.entries).length,written:st.written,removed:gone.length,groups:st.groups,families:fams.length,
+      read:Object.keys(st.entries).length,written:st.written,counts:st.counts,groups:st.groups,families:fams.length,
       famOk:fams.filter(f=>(st.done[famKey(f)]||{}).complete).length,famFailed:failedKeys.map(k=>st.failed[k]),complete:complete,
-      famErr:st.famErr||null,syncAt:Date.now(),ms:Date.now()-t0,baseSize:R.M.size};
-    bi.set(db.collection(IDX).doc('meta'),Object.assign({parts:parts},rep,{matchAvant:matchStats(Object.keys(R.prevRaw).map(c=>R.prevRaw[c])),matchApres:matchStats(entries),matchAt:Date.now()}));
-    await bi.commit();
+      famErr:st.famErr||null,syncAt:Date.now(),ms:Date.now()-t0,baseSize:R.M.size,lastWrites:st.written};
+    await writeIndexParts(entries,Object.assign({},rep,{syncPartielle:false,matchAvant:matchStats(Object.keys(R.prevRaw).map(c=>R.prevRaw[c])),matchApres:matchStats(entries),matchAt:Date.now()}),false);
     if(complete)clearState();
-    progress(complete?'Synchronisation terminée':'Synchronisation partielle : '+failedKeys.length+' famille(s) à reprendre',100);
+    rep.cost=FSG.summary();
+    progress((complete?'Synchronisation terminée':'Synchronisation partielle : '+failedKeys.length+' famille(s) à reprendre')+' · '+rep.cost,100);
     console.info('[GST] synchro :',rep);
-  }catch(e){rep.fatal=e.message;if(st)saveState(st);console.error('[GST] synchro interrompue',e);}
+  }catch(e){rep.fatal=e&&e.code==='paused'?e.message:FSG.why(e);rep.cost=FSG.summary();if(st)saveState(st);console.error('[GST] synchro interrompue',e);progress('Synchro interrompue · '+rep.cost);}
   G.busy=false;$('gstBtn').disabled=false;$('gstWait').style.display='none';
   renderReport(rep);
   await loadIndex().catch(()=>{});renderLast();renderList();renderResume();renderMatch();
@@ -2035,12 +2174,12 @@ window.gstSync=async function(){
 window.gstResume=async function(){return runSync(true);};
 window.addEventListener('beforeunload',function(e){if(G.busy){e.preventDefault();e.returnValue='';}});
 function renderReport(r){
-  if(r.fatal){$('gstReport').innerHTML='<div class="vdb-info" style="color:var(--red)">Synchronisation interrompue : '+esc(r.fatal)+'<br>La progression est gardée : « Reprendre la synchro » repartira de la dernière page enregistrée.</div>';return;}
-  var ff=r.famFailed||[];
+  if(r.fatal){$('gstReport').innerHTML='<div class="vdb-info" style="color:var(--red)">Synchronisation interrompue : '+esc(r.fatal)+'</div>'+(r.cost?'<div class="vdb-info">Coût réel : '+esc(r.cost)+'</div>':'');return;}
+  var ff=r.famFailed||[],c=r.counts||{};
   $('gstReport').innerHTML='<div class="vdb-grid">'+
-    gcard(r.famOk+' / '+r.families,'Familles réussies')+gcard(ff.length,'Familles en échec')+gcard(r.read,'Articles lus')+gcard(r.count,'Articles au catalogue')+
-    gcard(r.dispo,'Disponibles')+gcard(r.low,'Stock bas')+gcard(r.matched,'Rapprochés avec la base')+gcard(r.written,'Écrits (nouveaux ou modifiés)')+gcard(r.removed,'Retirés')+'</div>'+
-    '<div class="vdb-info">Groupes retenus : '+esc((r.groups||[]).join(', ')||'—')+' · '+Math.round(r.ms/1000)+' s'+(r.complete?'':' · aucun article supprimé tant que des familles restent à reprendre')+'</div>'+
+    gcard(r.famOk+' / '+r.families,'Familles réussies')+gcard(ff.length,'Familles en échec')+gcard(c.inchanges||0,'Inchangés (non réécrits)')+gcard(c.modifies||0,'Modifiés')+gcard(c.nouveaux||0,'Nouveaux')+gcard(c.retires||0,'Retirés (marqués)')+
+    gcard(r.written,'Articles écrits')+gcard(r.count,'Articles au catalogue')+gcard(r.dispo,'Disponibles')+gcard(r.matched,'Rapprochés avec la base')+'</div>'+
+    '<div class="vdb-info"><b>Coût réel : '+esc(r.cost||'')+'</b> · groupes retenus : '+esc((r.groups||[]).join(', ')||'—')+(r.complete?'':' · aucun article marqué « Retiré » tant que des familles restent à reprendre')+'</div>'+
     (r.famErr?'<div class="vdb-info" style="color:var(--red)">Liste des familles illisible ('+esc(r.famErr)+') : catalogue complet lu à la place.</div>':'')+
     (ff.length?'<div class="vdb-info"><div class="vdb-sub" style="color:var(--red)">Familles en échec ('+ff.length+') : clique sur « Reprendre la synchro »</div><ul class="vdb-list">'+ff.map(x=>'<li><b>'+esc(x.nom)+'</b> · page '+x.page+' : '+esc(x.raison)+'</li>').join('')+'</ul></div>':'');
 }
@@ -2054,35 +2193,31 @@ function renderList(){
   $('gstBody').innerHTML=list.slice(0,60).map(e=>'<tr><td>'+(e.photo?'<img src="'+esc(e.photo).replace(/"/g,'&quot;')+'" alt="" width="40" height="40" loading="lazy" referrerpolicy="no-referrer" style="object-fit:cover;border-radius:8px" onerror="this.remove()">':'')+'</td>'+
     '<td><b style="font-weight:600">'+esc(e.variete)+'</b><div class="vdb-note">'+esc(e.codigo)+'</div></td><td>'+esc(e.breeder||'—')+'</td><td>'+(TYPE_TXT[e.type]||'—')+(e.nb?' · '+esc(e.nb)+' gr.':'')+'</td>'+
     '<td>'+(e.thcMax?esc(e.thcMin&&e.thcMin!==e.thcMax?e.thcMin+'–'+e.thcMax:e.thcMax)+' %':'<span class="vdb-null">—</span>')+'</td><td>'+(e.floMax?esc(e.floMin&&e.floMin!==e.floMax?e.floMin+'–'+e.floMax:e.floMax)+' sem.':'<span class="vdb-null">—</span>')+'</td>'+
-    '<td>'+(e.pvp?esc(Number(e.pvp).toFixed(2).replace('.',','))+' €':'—')+'</td><td>'+(e.dispo==='0'?'<span class="td-badge red">Rupture</span>':e.dispo==='2'?'<span class="td-badge gold">Stock bas</span>':'<span class="td-badge green">Disponible</span>')+'</td>'+
+    '<td>'+(e.pvp?esc(Number(e.pvp).toFixed(2).replace('.',','))+' €':'—')+'</td><td>'+(e.retire?'<span class="td-badge red">Retiré</span>':e.dispo==='0'?'<span class="td-badge red">Rupture</span>':e.dispo==='2'?'<span class="td-badge gold">Stock bas</span>':'<span class="td-badge green">Disponible</span>')+'</td>'+
     '<td>'+(e.varieteId?'<span class="td-badge green">✓</span>':e.statut==='v'?'<span class="td-badge gold" title="à vérifier">?</span>':'<span class="vdb-null">—</span>')+'</td></tr>').join('')||'<tr><td colspan="9"><div class="empty-state">Lance une synchronisation pour charger le catalogue.</div></td></tr>';
 }
 /* ── recalcul du rapprochement sans l'API Garden Seeds ──
-   1er recalcul : lit les documents catalogue_gst (les champs utiles n'existent pas encore dans l'index) ;
-   ensuite : l'index compact suffit (nom brut et famille y sont ajoutés). */
+   - calcul en mémoire d'abord : le nombre exact d'écritures est connu avant d'écrire ;
+   - un document n'est écrit que si son résultat change (statut, candidat, niveau, score) ;
+   - reprise : les documents déjà mis à jour sont mémorisés et ne sont pas réécrits ;
+   - 1er recalcul seulement : lecture des documents (les champs utiles n'existaient pas dans l'index). */
 async function ensureMatcher(force){if(!G.M||force){G.M=await loadMatcher();}if(!G.D||force){G.D=await loadDecisions();}return G.M;}
 async function readCatalogueDocs(onPage){
   var out=[],last=null;
   while(true){
     var q=db.collection(COL).orderBy(firebase.firestore.FieldPath.documentId()).limit(500);if(last)q=q.startAfter(last);
-    var snap=await q.get();if(snap.empty)break;
+    var snap=await FSG.get(q,'articles du catalogue');if(snap.empty)break;
     snap.forEach(d=>{var a=d.data();if(a&&a.codigo)out.push(entryOf(Object.assign({sig:''},a)));});
     last=snap.docs[snap.docs.length-1];if(onPage)onPage(out.length);
     if(snap.size<500)break;
   }
   return out;
 }
-async function writeIndexLines(entries,extra){
-  var parsed=entries.map(parseEntry),parts=Math.max(1,Math.ceil(entries.length/PART)),oldParts=(G.meta&&G.meta.parts)||0;
-  var bi=db.batch();
-  for(var p=0;p<parts;p++)bi.set(db.collection(IDX).doc('part_'+p),{entries:entries.slice(p*PART,(p+1)*PART)});
-  for(var q=parts;q<oldParts;q++)bi.delete(db.collection(IDX).doc('part_'+q));
-  bi.set(db.collection(IDX).doc('meta'),Object.assign({parts:parts,count:entries.length,dispo:parsed.filter(e=>e.dispo!=='0').length,low:parsed.filter(e=>e.dispo==='2').length,matched:parsed.filter(e=>e.varieteId).length},extra||{}),{merge:true});
-  await bi.commit();
-}
 function matchBusy(on){G.busy=on;['gstBtn','gstMatchBtn'].forEach(id=>{var b=$(id);if(b)b.disabled=on;});}
+function matchMsg(html){var el=$('gstMatchMsg');if(el)el.innerHTML=html||'';}
 window.gstRematch=async function(){
-  if(G.busy)return;matchBusy(true);$('gstMatchStats').innerHTML='';
+  if(G.busy)return;matchBusy(true);matchMsg('');
+  FSG.begin('Recalcul du rapprochement');
   try{
     progress('Lecture de la base StrainSage et des décisions manuelles…',5);
     await ensureMatcher(true);
@@ -2090,36 +2225,48 @@ window.gstRematch=async function(){
     await loadIndex();
     var raw=G.entries.map(e=>e.raw),avant=matchStats(raw);
     if(!raw.length||!raw.every(e=>String(e).split('|').length>=17)){
-      raw=await readCatalogueDocs(n=>progress('Premier recalcul : lecture des articles enregistrés… '+n,15+Math.min(45,n/200)));
+      progress('Premier recalcul : ≈ '+((G.meta&&G.meta.count)||'?')+' lectures des articles enregistrés (une seule fois)…',16);
+      raw=await readCatalogueDocs(n=>progress('Premier recalcul : lecture des articles enregistrés… '+n+' · '+FSG.summary(),16+Math.min(44,n/200)));
     }
     progress('Rapprochement de '+raw.length+' articles…',62);
     await new Promise(r=>setTimeout(r,30));
-    var res=applyMatch(G.M,G.D,raw),apres=matchStats(res.entries);
-    await writeMatchChanges(res.changes,(n,t)=>progress('Mise à jour des articles… '+n+' / '+t,65+25*n/t));
-    progress('Mise à jour de l\'index lu par le chat…',93);
-    await writeIndexLines(res.entries,{matchAvant:avant,matchApres:apres,matchAt:Date.now()});
-    progress('Rapprochement recalculé : '+res.changes.length+' article(s) modifié(s)',100);
-    console.info('[GST] rapprochement :',{avant:avant,apres:apres,modifies:res.changes.length});
-  }catch(e){console.error('[GST] recalcul interrompu',e);$('gstMatchStats').innerHTML='<div class="vdb-info" style="color:var(--red)">Recalcul interrompu : '+esc(e.message)+'</div>';}
+    var res=applyMatch(G.M,G.D,raw),apres=matchStats(res.entries),todo=pendingChanges(res.changes);
+    var est=todo.length+1+Math.ceil(res.entries.length/PART);
+    if(!FSG.confirmCost('Recalcul du rapprochement : '+todo.length+' article(s) à mettre à jour',est,FSG.cur.reads)){progress('Recalcul annulé avant toute écriture · '+FSG.summary(),0);matchBusy(false);return;}
+    progress(FSG.estimate(est,0).replace('Estimation','Écritures prévues')+' — '+todo.length+' article(s) modifié(s)',64);
+    await writeMatchChanges(todo,(n,t)=>progress('Mise à jour des articles… '+n+' / '+t+' · '+FSG.summary(),65+25*n/t));
+    progress('Mise à jour de l\'index (parties modifiées seulement)…',93);
+    await writeIndexParts(res.entries,{matchAvant:avant,matchApres:apres,matchAt:Date.now()},true);
+    clearDone();
+    var msg='Rapprochement recalculé : '+todo.length+' article(s) modifié(s), '+(res.entries.length-res.changes.length)+' inchangé(s) · '+FSG.summary();
+    progress(msg,100);matchMsg('<div class="vdb-info">'+esc(msg)+'</div>');
+    console.info('[GST] rapprochement :',{avant:avant,apres:apres,modifies:todo.length,cout:FSG.summary()});
+  }catch(e){
+    console.error('[GST] recalcul interrompu',e);
+    progress('Recalcul interrompu · '+FSG.summary());
+    matchMsg('<div class="vdb-info" style="color:var(--red)">'+esc(FSG.why(e))+'<br>'+esc(FSG.summary())+'</div><div class="vdb-row"><button class="btn btn-primary" onclick="gstRematch()">⏯ Reprendre le recalcul</button></div>');
+  }
   matchBusy(false);
   await loadIndex().catch(()=>{});renderLast();renderList();renderMatch();
 };
 /* décision manuelle : enregistrée, appliquée tout de suite, jamais écrasée par une synchro ou un recalcul */
 window.gstDecide=async function(i,action){
   var it=G.review&&G.review[i];if(!it||G.busy)return;matchBusy(true);
+  FSG.begin('Décision manuelle');
   try{
     await ensureMatcher();
     var d=Object.assign({key:it.key,rejetes:[]},G.D[it.key]||{});
     if(action==='valide'){d.valide=it.candidat;d.rejetes=(d.rejetes||[]).filter(x=>x!==it.candidat);}
     else{d.valide=null;d.rejetes=(d.rejetes||[]).filter(x=>x!==it.candidat).concat([it.candidat]);}
     d.at=Date.now();d.gstNom=it.nom;d.breeder=it.breeder||'';d.candidatNom=G.M.nom[it.candidat]||it.candidat;
-    await db.collection(DEC).doc(decisionId(it.key)).set(d);
+    await FSG.set(db.collection(DEC).doc(decisionId(it.key)),d,null,'décision');
     G.D[it.key]=d;
     var res=applyMatch(G.M,G.D,G.entries.map(e=>e.raw));
-    await writeMatchChanges(res.changes);
-    await writeIndexLines(res.entries,{matchApres:matchStats(res.entries),matchAt:Date.now()});
-    toast(action==='valide'?'✅ Rapprochement validé : '+it.nom+' → '+d.candidatNom:'Rapprochement rejeté : '+it.nom,'info');
-  }catch(e){toast('Erreur : '+e.message,'error');}
+    await writeMatchChanges(pendingChanges(res.changes));
+    await writeIndexParts(res.entries,{matchApres:matchStats(res.entries),matchAt:Date.now()},true);
+    clearDone();
+    toast((action==='valide'?'✅ Rapprochement validé : '+it.nom+' → '+d.candidatNom:'Rapprochement rejeté : '+it.nom)+' · '+FSG.summary(),'info');
+  }catch(e){toast(FSG.why(e),'error');}
   matchBusy(false);
   await loadIndex().catch(()=>{});renderLast();renderList();renderMatch();
 };
