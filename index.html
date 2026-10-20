@@ -677,7 +677,7 @@ html{-webkit-tap-highlight-color:rgba(0,112,60,.12)}
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="gd-reference.js"></script>
-<script src="varietes.js?v=20261021b"></script>
+<script src="varietes.js?v=20261021c"></script>
 <script>
 /* ══ THÈME ══ */
 function updateThemeLabel(t){
@@ -1158,6 +1158,7 @@ function buildCard(s){
   var g=window.VarDB&&VarDB.gstFor?VarDB.gstFor(s.gst||s.name)||VarDB.gstFor(s.name):null;
   var st=findInStock(s.name),stamp='';
   if(st){var ok=!st.dispo||/^(o|oui)$/i.test(st.dispo);stamp='<div class="sc-stamp'+(ok?'':' out')+'">'+(ok?'En stock':'En rupture')+(st.prix?'<small>'+esc(st.prix)+' €'+(st.graines?' · '+esc(st.graines)+' graines':'')+'</small>':'')+'</div>';}
+  else if(g&&VarDB.packsOf&&!VarDB.packsOf(g).length)stamp='<div class="sc-stamp out">En rupture<small>chez le fournisseur</small></div>';
   else if(g&&g.pvp!=null){var gp=VarDB.packsOf?VarDB.packsOf(g):[g],minP=Math.min.apply(null,gp.map(function(p){return p.pvp==null?Infinity:p.pvp;}));
     stamp='<div class="sc-stamp">'+(g.dispo===2?'Stock limité':'À commander')+'<small>'+(gp.length>1&&isFinite(minP)?'dès '+esc(VarDB.euro(minP))+' · '+gp.length+' packs':esc(VarDB.euro(g.pvp))+(g.nb?' · '+esc(VarDB.seedsLabel?VarDB.seedsLabel(g):g.nb+' graines'):''))+'</small></div>';}
   // chiffres
@@ -1177,7 +1178,7 @@ function buildCard(s){
     // tous les packs commandables de la variété : nombre de graines, prix public, stock limité
     var packs=VarDB.packsOf?VarDB.packsOf(g):[g];
     var packHtml=packs.map(function(p){return esc(VarDB.seedsLabel?VarDB.seedsLabel(p):(p.nb?p.nb+' graines':'paquet'))+(p.pvp!=null?' <b>'+esc(VarDB.euro(p.pvp))+'</b>':'')+(p.dispo===2?' <span style="color:#a50d26">(stock limité)</span>':'');}).join(' · ');
-    row('À commander',esc([g.breeder,g.type?({fem:'féminisée',auto:'autofloraison',regular:'régulière'})[g.type]:''].filter(Boolean).join(' · '))+(packHtml?(g.breeder||g.type?' — ':'')+packHtml:' — actuellement en rupture'));
+    row('À commander',esc([g.breeder,g.type?({fem:'féminisée',auto:'autofloraison',regular:'régulière'})[g.type]:''].filter(Boolean).join(' · '))+(packHtml?(g.breeder||g.type?' — ':'')+packHtml:' — en rupture chez le fournisseur'));
   }
   var eff=(s.effects&&s.effects.length?s.effects:(fiche&&fiche.effets)||[]);row('Effets',eff.map(esc).join(', '));
   row('Arômes',s.flavor&&cleanVal(s.flavor)?esc(s.flavor):(fiche&&fiche.gouts&&fiche.gouts.length?esc(fiche.gouts.join(', ')):''));

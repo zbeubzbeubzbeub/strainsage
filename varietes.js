@@ -470,7 +470,7 @@
   function statusOf(it){
     var pk=packsOf(it);if(pk.length)return pk.some(function(p){return p.dispo===1;})?'disponible':'stock limité';
     var all=(it.packs||[it]).filter(function(p){return !p.granel||gstMeta.showGranel;});
-    return all.length&&all.every(function(p){return p.retire;})?'retirée du catalogue du grossiste':'en rupture chez le grossiste';
+    return all.length&&all.every(function(p){return p.retire;})?'retirée du catalogue du grossiste':'en rupture chez le fournisseur';
   }
   var BUDGET={'moins de 30€':30,'30-60€':60,'60-100€':100};
   var TYPE_FR={fem:'féminisée',auto:'autofloraison',regular:'régulière'};
@@ -480,11 +480,18 @@
     if(it.type)p.push(TYPE_FR[it.type]);
     var thc=it.thcMax!=null?(it.thcMin!=null&&it.thcMin!==it.thcMax?it.thcMin+'–'+it.thcMax:it.thcMax)+'% THC':(f&&f.thcMax!=null?f.thcMax+'% THC (base)':null);if(thc)p.push(thc);
     var flo=it.floMax!=null?(it.floMin!=null&&it.floMin!==it.floMax?it.floMin+'–'+it.floMax:it.floMax)+' sem.':(f&&f.floMax!=null?f.floMax+' sem. (base)':null);if(flo)p.push('flo '+flo);
-    var pk=packsText(it);p.push(pk?'packs disponibles : '+pk:statusOf(it)+' (aucun pack commandable)');
+    var pk=packsText(it);p.push(pk?'packs disponibles : '+pk:statusOf(it)+' (aucun pack commandable : ne propose ni vrac ni autre format)');
     var l='- '+it.variete+' [code '+it.codigo+'] · '+p.join(' · ');
     if(f){var x=[];if(f.eff.length)x.push('effets : '+f.eff.slice(0,4).join(', '));if(f.gouts.length)x.push('goûts : '+f.gouts.slice(0,4).join(', '));if(x.length)l+=' · [base StrainSage : '+x.join(' ; ')+']';}
     else if(it.extrait)l+=' · '+it.extrait.slice(0,110);
     return l;
+  }
+  // toutes les déclinaisons d'une variété (même nom de base, même breeder), hors déclinaisons vendues seulement en vrac
+  function declinaisonsOf(it){
+    var b=key0(it.breeder);
+    return oneByVariety((gstByBase[it.base]||[]).filter(function(x){return key0(x.breeder)===b;}))
+      .filter(function(x){return gstMeta.showGranel||(x.packs||[x]).some(function(p){return !p.granel;});}).map(repOf)
+      .sort(function(a,b){return (packsOf(b).length?1:0)-(packsOf(a).length?1:0);});
   }
   function oneByVariety(arr){var seen={};return arr.filter(function(i){if(seen[i.gk])return false;seen[i.gk]=1;return true;});}
   // représentant d'une déclinaison : pack commandable le moins cher, sinon le premier
@@ -585,10 +592,20 @@
     // absentes : nom visé par la question sans aucun article, ou fiche StrainSage sans article
     var asked=named.length?'':askedName(raw),absent=(asked?[asked]:[]).concat(fn.ficheAbsent.filter(function(n){return !asked||nrm(n)!==nrm(asked);}));
     if(absent.length)blocks.push('[ABSENTES DU CATALOGUE DU GROSSISTE] '+absent.map(function(a){return '« '+a+' »';}).join(', ')+' : aucun article correspondant chez le grossiste (ni en stock, ni en rupture). Dis-le clairement et sans hésiter, puis propose la variété disponible la plus proche parmi celles ci-dessous.');
-    // 3. autres variétés disponibles
-    var top=(matching.length?matching:picked).filter(function(i){return !seenG[i.gk];}).slice(0,20);
+    // 3. autres variétés disponibles : jusqu'à 15 variétés, chacune avec toutes ses déclinaisons (type, packs, prix, stock)
+    var top=[],varieties=[],seenV={};
+    (matching.length?matching:picked).forEach(function(it){
+      if(varieties.length>=15||seenG[it.gk])return;
+      var vk=it.base+'|'+key0(it.breeder);if(seenV[vk])return;seenV[vk]=1;
+      var decl=declinaisonsOf(it);if(!decl.length)decl=[it];
+      decl.forEach(function(d){seenG[d.gk]=1;top.push(d);});varieties.push(decl);
+    });
     var head=matching.length?'les mieux adaptées à la demande':((hasCrit||detected.length)?'les plus proches de la demande':'sélection variée');
-    if(top.length)blocks.push('[AUTRES VARIÉTÉS DISPONIBLES CHEZ LE GROSSISTE — '+head+' ; '+availV+' variétés commandables au total'+(maxBudget?', budget ≤ '+maxBudget+' € par pack':'')+(wantType&&wantType!=='notauto'?', type '+TYPE_FR[wantType]:'')+']\n'+top.map(function(it){return gstLine(it,fct(it));}).join('\n'));
+    if(varieties.length)blocks.push('[AUTRES VARIÉTÉS DISPONIBLES CHEZ LE GROSSISTE — '+head+' ; '+availV+' variétés commandables au total'+(maxBudget?', budget ≤ '+maxBudget+' € par pack':'')+(wantType&&wantType!=='notauto'?', type '+TYPE_FR[wantType]:'')+'] Une variété peut exister en plusieurs déclinaisons (auto, fast, XL, CBD…) : ce sont des options distinctes.\n'+
+      varieties.map(function(decl){
+        if(decl.length===1)return gstLine(decl[0],fct(decl[0]))+' · statut : '+statusOf(decl[0]);
+        return '• '+decl[0].variete+(decl[0].breeder?' ('+decl[0].breeder+')':'')+' — '+decl.length+' déclinaisons :\n'+decl.map(function(d){return '  '+gstLine(d,fct(d))+' · statut : '+statusOf(d);}).join('\n');
+      }).join('\n'));
     if(!blocks.length)return {ctx:'',info:{available:availV,articles:avail.length,count:0}};
     var example=(remembered[0]||top[0]||(named.length&&gstByBase[named[0].base][0])||{}).codigo||'12345';
     var ctx='\n\n[CATALOGUE DU GROSSISTE GARDEN SEEDS TRADING — variétés commandables par la boutique]\n'+blocks.join('\n\n')+
@@ -596,10 +613,10 @@
       '\n- Recommande UNIQUEMENT des variétés présentes ci-dessus, avec leur nom exact. Dans le JSON des cartes, ajoute pour chacune "gst" avec son code (ex. "gst":"'+example+'").'+
       '\n- Une variété déjà présentée dans la conversation reste valable : ne la désavoue jamais et ne te corrige pas sur sa disponibilité, sauf si son statut ci-dessus le contredit explicitement.'+
       '\n- Quand le client cite une variété trouvée (même par un acronyme ou son nom complet), présente toutes ses déclinaisons commandables avec leurs packs et prix.'+
-      '\n- Prix et conditionnements : cite uniquement ceux indiqués ci-dessus, à l\'identique ; n\'en invente aucun. Les cartes font foi.'+
+      '\n- Prix, conditionnements et déclinaisons : cite uniquement ceux indiqués ci-dessus, à l\'identique. N\'invente jamais de format « habituel » ni de taille de pack ; si une déclinaison n\'a aucun pack commandable, dis qu\'elle est en rupture chez le fournisseur, sans proposer de vrac à la place. Les cartes font foi.'+
       '\n- Ne parle jamais de « liste », « candidates », « classement », « contexte », « données », « base » ni du fonctionnement de l\'application : parle comme un vendeur qui connaît son catalogue.'+
       '\n- Si rien ne correspond vraiment, dis-le franchement et propose la variété disponible la plus proche.';
-    console.info('[GST] '+remembered.length+' déjà présentées, '+named.length+' citée(s) ('+namedCount+' déclinaisons), '+absent.length+' absente(s), '+top.length+' autres ; '+availV+' variétés disponibles');
+    console.info('[GST] '+remembered.length+' déjà présentées, '+named.length+' citée(s) ('+namedCount+' déclinaisons), '+absent.length+' absente(s), '+varieties.length+' autres variétés ('+top.length+' déclinaisons) ; '+availV+' variétés disponibles');
     return {ctx:ctx,info:{available:availV,articles:avail.length,count:top.length+namedCount+remembered.length,matching:matching.length,named:named.map(function(n){return n.query;}),absent:absent,remembered:remembered.length}};
   }
 

@@ -523,7 +523,7 @@ td{font-size:13.5px}
         <div class="table-wrap">
           <div class="vdb-body">
             <div class="vdb-info">Analyse en lecture seule de l'index du catalogue : compare ce que voit le chat (stocké) à ce que donnerait le parseur actuel sur les mêmes noms bruts. Aucune écriture, aucun appel à Garden Seeds.</div>
-            <div class="vdb-row"><button class="btn btn-primary" onclick="gstAudit()">🔍 Lancer l'audit</button><button class="btn btn-secondary" onclick="gstAudit(true)">Analyser depuis les documents</button><button class="btn btn-secondary" onclick="gstAuditCopy()">📋 Copier le résultat</button></div>
+            <div class="vdb-row"><button class="btn btn-primary" onclick="gstAudit()">🔍 Lancer l'audit</button><button class="btn btn-secondary" onclick="gstAudit(true)">Analyser depuis les documents</button><button class="btn btn-secondary" onclick="gstAuditCopy()">📋 Copier le résultat</button><button class="btn btn-gold" onclick="gstReparse()">⟳ Réappliquer le découpage des noms</button></div>
             <div id="gstAuditOut"></div>
             <div class="vdb-row" style="margin-top:10px"><input class="vdb-search" id="gstInspectQ" placeholder="Inspecter une variété (ex. sad)" onkeydown="if(event.key==='Enter')gstInspect()"/><button class="btn btn-secondary" onclick="gstInspect()">Inspecter</button></div>
             <div id="gstInspectOut"></div>
@@ -536,6 +536,15 @@ td{font-size:13.5px}
             <label class="vdb-check"><input type="checkbox" id="gstShowGranel"/> Proposer aussi les formats vrac pro (« Granel Profesionales », 25 / 100 graines) aux clients</label>
             <div class="vdb-info">Alias de variétés : une correspondance par ligne, sous la forme <code>alias = nom</code> (ex. <code>SAD = Sweet Afghani Delicious</code>). Ils servent au rapprochement et à la recherche du chat.</div>
             <textarea class="field-input" id="gstAlias" rows="4" style="font-family:inherit;resize:vertical" placeholder="SAD = Sweet Afghani Delicious"></textarea>
+            <div class="vdb-sub" style="margin-top:8px">Règles de découpage des noms</div>
+            <div class="vdb-info">Listes séparées par des virgules. Après une modification : « Réappliquer le découpage des noms » (section Qualité), puis « Recalculer le rapprochement ».</div>
+            <label class="field-label">Unités de pack (« 5 u. », « 3+1 u. »…)</label><input class="field-input" id="gstRuleUnites"/>
+            <label class="field-label">Mentions de type retirées du nom (fem, regular…) — un nombre suivi d'une de ces mentions est aussi lu comme un pack (« 10 reg. »)</label><input class="field-input" id="gstRuleTypes"/>
+            <label class="field-label">Mentions de vrac professionnel (cherchées dans le nom, la famille et le breeder)</label><input class="field-input" id="gstRuleVrac"/>
+            <label class="field-label">Seuil vrac : un pack d'au moins N graines est considéré comme vrac pro (0 = désactivé)</label><input class="field-input" id="gstRuleSeuil" type="number" min="0" style="max-width:120px"/>
+            <label class="field-label">Assortiments (collections, mix : pas de nombre de graines attendu)</label><input class="field-input" id="gstRuleAssort"/>
+            <label class="field-label">Déclinaisons : une par ligne, « mot = libellé », suivi de (début) ou (fin) pour limiter sa position ; sinon début et fin</label><textarea class="field-input" id="gstRuleDecl" rows="7" style="font-family:monospace;font-size:12px;resize:vertical"></textarea>
+            <div class="vdb-row"><button class="btn btn-secondary" onclick="gstRulesDefault()">Rétablir les règles par défaut</button></div>
             <div class="vdb-row"><button class="btn btn-secondary" onclick="gstSaveSettings()">💾 Enregistrer les réglages</button><span class="vdb-note" id="gstSettingsNote"></span></div>
           </div>
         </div>
@@ -1831,21 +1840,78 @@ function listOf(j){if(Array.isArray(j))return j;if(j&&Array.isArray(j.data))retu
 function lastPage(j){return (j&&(j.last_page||(j.meta&&j.meta.last_page)||(j.data&&j.data.last_page)))||null;}
 
 /* ── analyse de « nombre » : variété, graines, type, breeder ── */
-function parseNombre(nombre,marca,grupo){
-  var s0=String(nombre||'').replace(/\s+/g,' ').trim();
-  // vrac pro : gardé au catalogue, mention retirée du nom de variété
-  var granel=/\bgranel\b/i.test(s0),s=s0.replace(/\s*\bgranel(?:\s+profesionales?)?\b/ig,' ').replace(/\s+/g,' ').trim();
-  // « 5 u. », « 3+1 u. » (3 payées + 1 offerte = 4 graines)
-  var m=s.match(/^(.*?)\s+(\d{1,3})(?:\s*\+\s*(\d{1,3}))?\s*(?:u\.?|uds?\.?|unid\w*\.?|semillas?|seeds?|pcs?\.?)(?=[\s.,]|$)/i);
-  var offertes=m&&m[3]?parseInt(m[3],10):0;
-  var variete=m?m[1]:s,nb=m?parseInt(m[2],10)+offertes:null,rest=m?s.slice(m[0].length):'';
-  var g=nrm(grupo),n=nrm(s),type=null;
+/* ── RÈGLES DE DÉCOUPAGE DES NOMS (modifiables dans « Réglages du catalogue ») ──
+   Aucune règle propre à une variété ou à un breeder : uniquement des listes de mots et un seuil. */
+var DEF_RULES={
+  unites:'u, ud, uds, un, unid, unids, unidad, unidades, unit, units, seed, seeds, semilla, semillas, graine, graines, pc, pcs, sem',
+  types:'fem, feminizada, feminizadas, feminizado, feminizados, feminized, feminised, feminisee, feminisees, feminizzata, reg, regular, regulares',
+  vrac:'granel profesionales, granel, profesionales, bulk, vrac',
+  seuilVrac:25,
+  assortiments:'collection, coleccion, coleccionista, mix, assortiment, surtido',
+  declinaisons:'auto = auto\nautos = auto\nautoflowering = auto\nautoflower = auto\nautofloreciente = auto\nautoflorecientes = auto\nautofloraison = auto\nautomatic = auto\nautomatica = auto\nfast version = fast (fin)\nfast = fast (fin)\nxxl = xxl (fin)\nxl = xl (fin)\ncbd = cbd (fin)\nf1 = f1 (fin)'
+};
+var RULES=null;
+function escRe(s){return String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
+function words(txt){return String(txt||'').split(/[,\n]/).map(x=>base0(x)).filter(Boolean).sort((a,b)=>b.length-a.length);}
+function compileRules(r){
+  r=Object.assign({},DEF_RULES,r||{});
+  var units=words(r.unites),types=words(r.types),vrac=words(r.vrac),assort=words(r.assortiments);
+  var decl=String(r.declinaisons||'').split('\n').map(l=>{var m=l.match(/^\s*(.+?)\s*=\s*([^()]+?)\s*(?:\((debut|début|fin|partout)\))?\s*$/i);if(!m)return null;var p=base0(m[1]);return p?{p:p,label:base0(m[2]),where:(m[3]||'partout').toLowerCase().replace('é','e')}:null;}).filter(Boolean);
+  var alt=a=>a.map(x=>escRe(x).replace(/ /g,'\\s+')).join('|')||'(?!)';
+  // un nombre de pack n'est jamais un numéro de variété (#4) ni collé à un mot (RS11, 2.0)
+  var N='(?<![\\w#.])(\\d{1,3})';
+  RULES={raw:r,units:units,types:types,vrac:vrac,assort:assort,decl:decl,seuil:Number(r.seuilVrac)||0,
+    unitRe:new RegExp(N+'(?:\\s*\\+\\s*(\\d{1,3}))?\\s*(?:'+alt(units)+')\\.?(?![\\w])','gi'),
+    promoRe:new RegExp(N+'\\s*\\+\\s*(\\d{1,3})(?![\\w.])','g'),
+    typeNumRe:new RegExp(N+'()\\s*(?:'+alt(types)+')\\.?(?![\\w])','gi'),
+    vracRe:new RegExp('\\b(?:'+alt(vrac)+')\\b','i'),
+    vracAllRe:new RegExp('\\s*\\b(?:'+alt(vrac)+')\\b','gi'),
+    assortRe:new RegExp('\\b(?:'+alt(assort)+')\\b','i'),
+    typeTailRe:new RegExp('[\\s.,\\-]+(?:'+alt(types)+')\\.?$','i'),
+    unitTailRe:new RegExp('(\\d)\\s*(?:'+alt(units)+')\\.?$','i'),
+    unitAfterNumRe:new RegExp('\\b(\\d+) (?:'+alt(units)+')\\b','g'),
+    // mots retirés en début ou fin du nom de base : déclinaisons (avec leur libellé), types, vrac
+    edge:decl.concat(types.map(t=>({p:t,label:'',where:'partout'}))).concat(vrac.map(t=>({p:t,label:'',where:'partout'}))).sort((a,b)=>b.p.length-a.p.length)};
+  return RULES;
+}
+function rules(){return RULES||compileRules(G.settings&&G.settings.regles);}
+// pack d'un nom brut : « 5 u. », « 3+1 u. », « 3+1 » seul, « 10 reg. » ; le dernier valable l'emporte, par ordre de fiabilité
+function findPack(s){
+  var R=rules();
+  for(var k=0,res=[R.unitRe,R.promoRe,R.typeNumRe];k<res.length;k++){
+    var re=res[k],m,last=null;re.lastIndex=0;
+    // jamais un pack : précédé de « # », ou nombre nul / commençant par 0 (« 00 Seeds » est un breeder)
+    while((m=re.exec(s))){var before=s.slice(0,m.index).replace(/\s+$/,'');if(before&&!/#$/.test(before)&&!/^0/.test(m[1]))last={i:m.index,len:m[0].length,a:parseInt(m[1],10),b:m[2]?parseInt(m[2],10):0};}
+    if(last)return last;
+  }
+  return null;
+}
+// nom affiché : sans ponctuation finale ni mention de type (« Gorilla Glue fem. » → « Gorilla Glue »)
+function displayName(v,marca){
+  var R=rules(),prev,bw=marca?breederWords([marca]):[];v=String(v||'').replace(/\s+/g,' ').trim();
+  do{prev=v;
+    v=v.replace(/[\s\-–+,/(]+$/,'').replace(R.typeTailRe,'').replace(R.unitTailRe,'$1').trim();
+    // breeder recopié en fin de nom (article sans pack lisible)
+    var w=v.split(' ');for(var i=0;i<bw.length;i++){var n=bw[i].split(' ').length;if(w.length>n&&base0(w.slice(-n).join(' '))===bw[i]){v=w.slice(0,-n).join(' ');break;}}
+  }while(v!==prev);
+  return clean(v);
+}
+function parseNombre(nombre,marca,grupo,familia){
+  var R=rules(),s0=String(nombre||'').replace(/\s+/g,' ').trim();
+  // vrac pro (Granel…) : dans le nom, la famille, le breeder ou le groupe ; gardé au catalogue, retiré du nom
+  var granel=R.vracRe.test(s0)||R.vracRe.test(String(familia||''))||R.vracRe.test(String(marca||''))||R.vracRe.test(String(grupo||''));
+  var s=s0.replace(R.vracAllRe,' ').replace(/\s+/g,' ').trim();
+  var pk=findPack(s),offertes=pk?pk.b:0,nb=pk?pk.a+pk.b:null;
+  var variete=pk?s.slice(0,pk.i):s,rest=pk?s.slice(pk.i+pk.len):'';
+  // au-delà du seuil (25 graines par défaut), un pack est un format vrac professionnel
+  if(nb!=null&&R.seuil>0&&nb>=R.seuil)granel=true;
+  var g=nrm(grupo),n=nrm(s0),type=null;
   if(/autoflor/.test(g)||/\bauto/.test(n))type='auto';
   else if(/feminiz/.test(g)||/\bfem/.test(n))type='fem';
   else if(/regular/.test(g)||/\breg(ular|ulares)?\b/.test(n))type='regular';
   var breeder=marca?clean(marca):null;
   if(!breeder&&rest)breeder=clean(rest.replace(/^[\s.,-]*((auto(floreciente)?s?|fem(inizad[ao]s?)?|reg(ular(es)?)?|cbd)[\s.,-]*)+/ig,''))||null;
-  return {variete:clean(variete),nbGraines:nb,offertes:offertes,granel:granel,typeGraine:type,cbd:/\bcbd\b/.test(n)||/cbd/.test(g),breeder:breeder};
+  return {variete:displayName(variete,marca)||clean(s),nbGraines:nb,offertes:offertes,granel:granel,assortiment:R.assortRe.test(s0),typeGraine:type,cbd:/\bcbd\b/.test(n)||/cbd/.test(g),breeder:breeder};
 }
 /* ── analyse de « descripcionCorta » : THC, floraison, production, hauteur, récolte ext. ── */
 var LABELS=/\b(thc|cbd|producci[oó]n|production|rendement|yield|floraci[oó]n|floraison|flowering|altura|hauteur|height|cosecha|r[ée]colte|harvest|gen[ée]tica|genetics|sabor|efecto)\b/i;
@@ -1871,11 +1937,8 @@ function parseDesc(t){
 var DEC='catalogue_gst_decisions', SIM_REVIEW=0.85, SIM_SHOW=0.5, SIM_CLEAN=0.7;
 var STATUT={r:'rapproché',v:'à vérifier',n:'non trouvé',x:'rejeté'};
 function base0(s){return String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[’'`´]/g,'').replace(/[™®©]/g,'').replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim();}
-// tailles de pack : « 5 u. », « 10 seeds », « x3 », « pack 3 »…
-var PACK_RE=[/\b\d{1,3} ?(?:u|ud|uds|un|unid|unids|unidad|unidades|units?|semillas?|seeds?|graines?|pcs?|sem|packs?)\b/g,/\bx ?\d{1,3}\b/g,/\b(?:pack|caja|box|lot|blister)(?: de| of)? ?\d{1,3}\b/g];
-// mentions de type : retirées en fin de nom (et en début pour fem / auto / regular), jamais si le nom devient vide
-var TYPE_SUFFIX=/ (?:feminizadas?|feminizados?|feminized|feminised|feminisees?|feminizzat[ae]|fem|autoflowering|autoflower|autoflorecientes?|autofloraison|automatica|automatic|autos?|regulares|regular|reg|fast version|fast|f1|xxl|xl|cbd)$/;
-var TYPE_PREFIX=/^(?:feminizadas?|feminized|feminised|fem|autoflowering|autoflower|autoflorecientes?|autos?|regular) /;
+// autres tailles de pack à retirer d'un nom : « x3 », « pack 3 »
+var PACK_RE=[/\bx ?\d{1,3}\b/g,/\b(?:pack|caja|box|lot|blister)(?: de| of)? ?\d{1,3}\b/g];
 function breederWords(list){
   var out=[];
   (list||[]).forEach(function(b){b=base0(b);if(!b||b.length<2)return;out.push(b);var c=b.replace(/ (?:seeds?|seed ?bank|seedbank|genetics?|semillas|bank|company|co)$/,'').trim();
@@ -1884,30 +1947,34 @@ function breederWords(list){
     if(c&&c!==b&&(c.indexOf(' ')>0||c.length>=7))out.push(c);});
   return out.sort(function(a,b){return b.length-a.length;});
 }
-function stripEdges(s,words){
-  for(var guard=0;guard<12;guard++){
-    var m=s.match(TYPE_SUFFIX);if(m){s=s.slice(0,m.index).trim();continue;}
-    m=s.match(TYPE_PREFIX);if(m&&s.length>m[0].length){s=s.slice(m[0].length).trim();continue;}
+// retire en début / fin de nom : déclinaisons (libellé gardé dans labels), types, vrac, puis breeder ; jamais tout le nom
+function stripEdges(s,bwords,labels){
+  var E=rules().edge;
+  for(var guard=0;guard<15;guard++){
     var cut=false;
-    for(var i=0;i<words.length;i++){var w=words[i];if(w===s)continue;
-      if(s.indexOf(w+' ')===0){s=s.slice(w.length+1).trim();cut=true;break;}
-      if(s.length>w.length+1&&s.slice(-(w.length+1))===' '+w){s=s.slice(0,-(w.length+1)).trim();cut=true;break;}}
+    for(var i=0;i<E.length&&!cut;i++){var e=E[i],p=e.p;if(p===s)continue;
+      if(e.where!=='fin'&&s.indexOf(p+' ')===0){s=s.slice(p.length+1).trim();cut=true;}
+      else if(e.where!=='debut'&&s.length>p.length+1&&s.slice(-(p.length+1))===' '+p){s=s.slice(0,-(p.length+1)).trim();cut=true;}
+      if(cut&&e.label&&labels&&labels.indexOf(e.label)<0)labels.push(e.label);}
+    for(var j=0;j<bwords.length&&!cut;j++){var w=bwords[j];if(w===s)continue;
+      if(s.indexOf(w+' ')===0){s=s.slice(w.length+1).trim();cut=true;}
+      else if(s.length>w.length+1&&s.slice(-(w.length+1))===' '+w){s=s.slice(0,-(w.length+1)).trim();cut=true;}}
     if(!cut)break;
   }
   return s;
 }
-var VARIANT={auto:'auto',autos:'auto',autoflowering:'auto',autoflower:'auto',autofloreciente:'auto',autoflorecientes:'auto',autofloraison:'auto',automatic:'auto',automatica:'auto',fast:'fast',xl:'xl',xxl:'xxl',cbd:'cbd',f1:'f1'};
 function joinLetters(s){return s.replace(/\b(?:[a-z] )+[a-z]\b/g,function(m){return m.replace(/ /g,'');});}
+// nom de base (sans pack, déclinaison, breeder, vrac) et clé de déclinaison (nom de base + libellés triés)
 function cleanName(name,breeders){
-  // packs promo « 3+1 u. » retirés avant la normalisation (le « + » disparaît ensuite)
-  var s=joinLetters(base0(String(name==null?'':name).replace(/\b\d{1,3}\s*\+\s*\d{1,3}\s*(?:u\.?|uds?\.?|unid\w*\.?|semillas?|seeds?)(?=[\s.,]|$)/gi,' ')));PACK_RE.forEach(function(re){s=s.replace(re,' ');});
-  s=s.replace(/\bgranel(?: profesionales?)?\b/g,' ').replace(/\s+/g,' ').trim();
-  var strict=stripEdges(s,breederWords(breeders))||s;
+  var R=rules(),raw=String(name==null?'':name);
+  var pk;while((pk=findPack(raw)))raw=raw.slice(0,pk.i)+' '+raw.slice(pk.i+pk.len);
+  var s=joinLetters(base0(raw.replace(R.vracAllRe,' ')));PACK_RE.forEach(function(re){s=s.replace(re,' ');});
+  // unité restée après un numéro de variété (« Bruce Banner #3 u. ») : le numéro est gardé, l'unité retirée
+  s=s.replace(R.unitAfterNumRe,'$1').replace(/\s+/g,' ').trim();
+  var labels=[],strict=stripEdges(s,breederWords(breeders),labels)||s;
   var toks=strict.split(' '),nums=toks.filter(function(t){return /^\d+$/.test(t);});
   var soft=toks.filter(function(t){return !/^\d+$/.test(t);}).join(' ')||strict;
-  // déclinaison : mentions auto / fast / xl / cbd présentes dans le nom, ajoutées triées au nom de base
-  var vt=[];s.split(' ').forEach(function(t){var v=VARIANT[t];if(v&&vt.indexOf(v)<0)vt.push(v);});
-  return {strict:strict,soft:soft,nums:nums.join(' '),variant:strict+(vt.length?' '+vt.sort().join(' '):'')};
+  return {strict:strict,soft:soft,nums:nums.join(' '),variant:strict+(labels.length?' '+labels.sort().join(' '):'')};
 }
 function alphaToks(k){return String(k||'').split(' ').filter(function(t){return /^[a-z]+$/.test(t);});}
 function trig(s){var t=' '+s+' ',o={};for(var i=0;i<t.length-2;i++)o[t.substr(i,3)]=1;return Object.keys(o);}
@@ -1922,6 +1989,7 @@ async function loadMatcher(){
   bsnaps.forEach(s=>{if(s.exists)(s.data().entries||[]).forEach(e=>{var p=String(e).split('|');br[p[0]]=(p[1]||'').split(',').filter(Boolean);});});
   var M={strict:{},soft:{},nums:{},nom:{},br:{},auto:{},ini:{},short:{},alias:{},keys:[],tri:{},ktri:[],size:0,hasBreeders:bparts>0};
   var set=await FSG.get(db.collection('adminData').doc('gstSettings'),'réglages du catalogue');M.settings=set.exists?set.data():{};
+  G.settings=Object.assign({alias:[],showGranel:false},M.settings);compileRules(M.settings.regles);
   (M.settings.alias||[]).forEach(x=>{var a=cleanName(x.alias,[]).strict,n=cleanName(x.nom,[]).strict;if(a&&n&&a!==n){M.alias[a]=n;if(!M.alias[n])M.alias[n]=a;}});
   function add(map,k,id){var a=map[k]||(map[k]=[]);if(a.indexOf(id)<0)a.push(id);}
   snaps.forEach(s=>{if(!s.exists)return;(s.data().entries||[]).forEach(e=>{
@@ -2011,7 +2079,7 @@ function applyMatch(M,D,raw){
   var cache={},changes=[],out=raw.map(e=>{
     var p=String(e).split('|');while(p.length<27)p.push('');
     var np=p.slice();
-    if(p[15]){var pn=parseNombre(p[15],p[2],'');if(pn.variete)np[1]=clean(pn.variete);np[4]=pn.nbGraines==null?'':String(pn.nbGraines);np[24]=pn.offertes?String(pn.offertes):'';np[25]=pn.granel?'G':'';}
+    if(p[15]){var pn=parseNombre(p[15],p[2],'',p[16]);if(pn.variete)np[1]=clean(pn.variete);np[4]=pn.nbGraines==null?'':String(pn.nbGraines);np[24]=pn.offertes?String(pn.offertes):'';np[25]=pn.granel?'G':'';}
     var ck=[np[1],np[2],np[16],np[3]].join('|'),m=cache[ck]||(cache[ck]=matchVariety(M,D,np[1]||np[15],np[2],np[16],np[3]));
     var f=matchFields(m,np[2],np[3]);
     np[12]=f.varieteId||'';np[17]=m.statut;np[18]=String(f.matchNiveau==null?'':f.matchNiveau);np[19]=f.matchCandidat||'';np[20]=f.matchScore?String(f.matchScore):'';np[21]=clean(f.groupe);np[26]=clean(m.strict);
@@ -2026,18 +2094,18 @@ function applyMatch(M,D,raw){
 }
 // reprise du recalcul : documents déjà mis à jour mémorisés dans ce navigateur (jamais réécrits deux fois)
 var RKEY='ss_gst_rematch';
-function loadDone(){try{return JSON.parse(localStorage.getItem(RKEY)||'{}')||{};}catch(e){return {};}}
-function saveDone(d){try{localStorage.setItem(RKEY,JSON.stringify(d));}catch(e){}}
-function clearDone(){try{localStorage.removeItem(RKEY);}catch(e){}}
+function loadDone(k){try{return JSON.parse(localStorage.getItem(k||RKEY)||'{}')||{};}catch(e){return {};}}
+function saveDone(d,k){try{localStorage.setItem(k||RKEY,JSON.stringify(d));}catch(e){}}
+function clearDone(k){try{localStorage.removeItem(k||RKEY);}catch(e){}}
 function changeSig(c){return hash(JSON.stringify(c.data));}
-function pendingChanges(changes){var done=loadDone();return changes.filter(c=>done[c.codigo]!==changeSig(c));}
-async function writeMatchChanges(changes,onStep){
-  var done=loadDone();
+function pendingChanges(changes,k){var done=loadDone(k);return changes.filter(c=>done[c.codigo]!==changeSig(c));}
+async function writeMatchChanges(changes,onStep,k){
+  var done=loadDone(k);
   for(var o=0;o<changes.length;o+=BATCH){
     var b=db.batch(),sl=changes.slice(o,o+BATCH);
     sl.forEach(c=>b.set(db.collection(COL).doc(String(c.codigo).replace(/\//g,'_')),c.data,{merge:true}));
     await FSG.commit(b,sl.length,'articles du catalogue');
-    sl.forEach(c=>{done[c.codigo]=changeSig(c);});saveDone(done);
+    sl.forEach(c=>{done[c.codigo]=changeSig(c);});saveDone(done,k);
     if(onStep)onStep(Math.min(changes.length,o+BATCH),changes.length);
   }
 }
@@ -2100,7 +2168,7 @@ var VISIBLE=[1,2,3,4,5,6,7,8,9,10,11,13,15,16];
 function sameVisible(prev,next){var a=String(prev).split('|'),b=String(next).split('|');return VISIBLE.every(i=>(i===15||i===16)&&!a[i]?true:(a[i]||'')===(b[i]||''));}
 function buildItem(a,R,now){
   var nom=pick(a,['nombre'])||'',marca=pick(a,['marca']),grupo=pick(a,['grupoFamilia'])||'';
-  var pn=parseNombre(nom,marca,grupo),dc=stripHtml(pick(a,['descripcionCorta'])),dl=stripHtml(pick(a,['descripcionLarga']));
+  var pn=parseNombre(nom,marca,grupo,pick(a,['familia'])),dc=stripHtml(pick(a,['descripcionCorta'])),dl=stripHtml(pick(a,['descripcionLarga']));
   var pd=parseDesc(dc+' '+dl.slice(0,800));
   var fotos=a.fotos||{},photos=['thumbnail','foto1','foto2','foto3','foto4','foto5'].map(k=>fotos[k]).filter(u=>typeof u==='string'&&/^https?:\/\//.test(u));
   var dispo=String(pick(a,['disponible'])||''),low=a.stockBajo===true||a.stockBajo===1||a.stockBajo==='1'||a.stockBajo==='true';
@@ -2381,7 +2449,8 @@ async function renderMatch(){
 /* ── QUALITÉ DU CATALOGUE (lecture seule) ──
    Compare, pour chaque article, ce que voit le chat (index stocké) et ce que donnerait le parseur actuel
    sur le même nom brut. Aucune écriture, aucun appel à l'API Garden Seeds. */
-var SUSPECT_RE=/^(?:fast|version|auto|autos|autoflowering|autoflower|autoflorecientes?|autofloraison|automatic|automatica|xl|xxl|cbd|f1|s1|s2|bx\d*|ibl|regular|regulares|reg|fem|feminizadas?|feminizados?|feminized|feminised|granel|profesionales?)$/;
+// mot de déclinaison, de type ou de vrac resté dans un nom de base (listes des règles + quelques marqueurs génétiques)
+function isSuspect(t){if(/^(?:version|s\d|bx\d*|ibl)$/.test(t))return true;return rules().edge.some(e=>e.p===t);}
 function viewsOf(e){
   var p=String(e).split('|');while(p.length<27)p.push('');
   var raw=p[15]||'',hasRaw=!!p[15];
@@ -2389,7 +2458,7 @@ function viewsOf(e){
   var sBase=p[26]||joinLetters(base0(p[1]));
   var stored={variete:p[1],nb:p[4]===''?null:Number(p[4]),off:Number(p[24]||0),granel:p[25]==='G',base:sBase,decl:(p[21]||'').split('~')[0]||sBase,groupe:p[21]||(nrm(p[1])+'~'+nrm(p[2])+'~'+(p[3]||''))};
   var current=null;
-  if(hasRaw){var pn=parseNombre(raw,p[2],''),c=cleanName(pn.variete||p[1],[p[2],p[16]]);
+  if(hasRaw){var pn=parseNombre(raw,p[2],'',p[16]),c=cleanName(pn.variete||p[1],[p[2],p[16]]);
     current={variete:pn.variete,nb:pn.nbGraines,off:pn.offertes||0,granel:!!pn.granel,base:c.strict,decl:c.variant,groupe:groupOf(c.variant,p[2],p[3])};}
   return {p:p,raw:raw,hasRaw:hasRaw,code:p[0],breeder:p[2]||'—',famille:p[16]||'—',type:p[3],dispo:p[10],retire:p[23]==='R',statut:p[17],stored:stored,current:current};
 }
@@ -2411,8 +2480,10 @@ function auditOf(list,view,showGranel){
     var v=a[view];if(!v){A.sansRaw++;return;}
     A.articles++;
     var bad=false;
-    if(v.nb==null||isNaN(v.nb)){A.packInconnu++;bad=true;var f=packShape(a.raw||v.variete);var F=A.formes[f]||(A.formes[f]={n:0,ex:[]});F.n++;if(F.ex.length<3)F.ex.push(a.raw||v.variete);}
-    var toks=String(v.base||'').split(' ').filter(Boolean),sus=toks.filter(t=>SUSPECT_RE.test(t));
+    // assortiments (collections, mix) : pas de nombre de graines par nature, comptés à part
+    if((v.nb==null||isNaN(v.nb))&&rules().assortRe.test(a.raw||v.variete)){A.assort=(A.assort||0)+1;}
+    else if(v.nb==null||isNaN(v.nb)){A.packInconnu++;bad=true;var f=packShape(a.raw||v.variete);var F=A.formes[f]||(A.formes[f]={n:0,ex:[]});F.n++;if(F.ex.length<3)F.ex.push(a.raw||v.variete);}
+    var toks=String(v.base||'').split(' ').filter(Boolean),sus=toks.filter(isSuspect);
     if(sus.length){A.declNonId++;bad=true;}
     toks.forEach(t=>{if(/^\d+$/.test(t))return;A.residus[t]=(A.residus[t]||0)+1;});
     if(bad){var k=a.breeder;A.mauvaisParBreeder[k]=(A.mauvaisParBreeder[k]||0)+1;}
@@ -2428,10 +2499,12 @@ function auditOf(list,view,showGranel){
   // même breeder, noms de base quasi identiques mais groupes séparés
   Object.keys(byBreederBases).forEach(br=>{
     var bases=Object.keys(byBreederBases[br]),compact={},seen={};
-    bases.forEach(b=>{var c=b.replace(/[\s\d]+/g,'');(compact[c]=compact[c]||[]).push(b);});
+    bases.forEach(b=>{var c=b.replace(/\s+/g,'');(compact[c]=compact[c]||[]).push(b);});
     Object.keys(compact).forEach(c=>{if(compact[c].length>1){compact[c].forEach(b=>seen[b]=1);if(A.coupeesEx.length<10)A.coupeesEx.push(compact[c].join(' / ')+' ('+br+')');}});
     if(bases.length<=400)for(var i=0;i<bases.length;i++)for(var j=i+1;j<bases.length;j++){
       if(seen[bases[i]]&&seen[bases[j]])continue;
+      // produits numérotés (Collection #1 / #2, Skunk #1 / #11) : distincts, pas une coupure
+      var al1=bases[i].split(' ').filter(t=>!/^\d+$/.test(t)).join(' '),al2=bases[j].split(' ').filter(t=>!/^\d+$/.test(t)).join(' ');if(al1===al2)continue;
       var t1=trig(bases[i]),t2=trig(bases[j]),inter=t1.filter(x=>t2.indexOf(x)>-1).length,d=2*inter/(t1.length+t2.length);
       if(d>=0.9){seen[bases[i]]=1;seen[bases[j]]=1;if(A.coupeesEx.length<10)A.coupeesEx.push(bases[i]+' / '+bases[j]+' ('+br+')');}
     }
@@ -2452,13 +2525,15 @@ async function auditEntries(forceDocs){
   return raw.map(viewsOf);
 }
 function topN(obj,n){return Object.keys(obj).map(k=>[k,obj[k]]).sort((a,b)=>(b[1].n||b[1])-(a[1].n||a[1])).slice(0,n);}
-function auditHtml(S,C,list){
+function auditHtml(S,C,labels){
+  labels=labels||['Stocké (ce que voit le chat)','Parseur actuel (même nom brut)'];
   var row=(l,a,b)=>'<tr><td>'+l+'</td><td>'+a+'</td><td><b style="font-weight:600">'+(C?b:'—')+'</b></td></tr>';
   var n=(x,t)=>x+(t?' <span class="vdb-note">('+Math.round(x/Math.max(1,t)*1000)/10+' %)</span>':'');
-  var h='<div style="overflow-x:auto"><table><thead><tr><th>Indicateur</th><th>Stocké (ce que voit le chat)</th><th>Parseur actuel (même nom brut)</th></tr></thead><tbody>'+
+  var h='<div style="overflow-x:auto"><table><thead><tr><th>Indicateur</th><th>'+esc(labels[0])+'</th><th>'+esc(labels[1])+'</th></tr></thead><tbody>'+
     row('Articles analysés',S.articles,C&&C.articles)+
     row('Variétés de base · déclinaisons',S.bases+' · '+S.variantes,C&&(C.bases+' · '+C.variantes))+
     row('1. Pack non découpé (graines inconnues)',n(S.packInconnu,S.articles),C&&n(C.packInconnu,C.articles))+
+    row('· assortiments sans nombre de graines (normal)',S.assort||0,C&&(C.assort||0))+
     row('2. Déclinaison non identifiée (mot de déclinaison resté dans le nom de base)',n(S.declNonId,S.articles),C&&n(C.declNonId,C.articles))+
     row('3. Variétés dont seuls des formats vrac sont visibles côté client',S.granelSeul,C&&C.granelSeul)+
     row('4. Variétés coupées en plusieurs groupes (même breeder, noms quasi identiques)',S.coupees,C&&C.coupees)+
@@ -2468,7 +2543,7 @@ function auditHtml(S,C,list){
   function formes(A,t){return '<div class="vdb-sub">'+t+'</div><ul class="vdb-list">'+topN(A.formes,15).map(x=>'<li><b>'+esc(x[0])+'</b> · '+x[1].n+' article(s) — ex. '+x[1].ex.map(esc).join(' ; ')+'</li>').join('')+'</ul>';}
   h+='<div class="vdb-info">'+formes(S,'1. Motifs de pack non reconnus — stocké')+(C?formes(C,'1. Motifs de pack non reconnus — parseur actuel'):'')+'</div>';
   h+='<div class="vdb-info"><div class="vdb-sub">2. Mots les plus fréquents restant dans les noms de base (parseur actuel'+(C?'':' indisponible : stocké')+')</div>'+
-    topN((C||S).residus,40).map(x=>'<span class="td-badge'+(SUSPECT_RE.test(x[0])?' gold':'')+'" style="margin:2px">'+esc(x[0])+' · '+x[1]+'</span>').join(' ')+
+    topN((C||S).residus,40).map(x=>'<span class="td-badge'+(isSuspect(x[0])?' gold':'')+'" style="margin:2px">'+esc(x[0])+' · '+x[1]+'</span>').join(' ')+
     '<div class="vdb-note">En doré : mots de déclinaison connus qui ne devraient plus rester dans un nom de base.</div></div>';
   h+='<div class="vdb-info"><div class="vdb-sub">3. Exemples — seuls des formats vrac visibles</div>'+(S.granelSeulEx.map(esc).join(' · ')||'—')+(C?'<br><span class="vdb-note">parseur actuel :</span> '+(C.granelSeulEx.map(esc).join(' · ')||'—'):'')+'</div>';
   h+='<div class="vdb-info"><div class="vdb-sub">4. Exemples — variétés coupées</div>'+(S.coupeesEx.map(esc).join(' · ')||'—')+(C?'<br><span class="vdb-note">parseur actuel :</span> '+(C.coupeesEx.map(esc).join(' · ')||'—'):'')+'</div>';
@@ -2480,7 +2555,7 @@ function auditHtml(S,C,list){
 function auditText(S,C){
   var L=['QUALITÉ DU CATALOGUE — '+new Date().toLocaleString('fr-FR'),'indicateur ; stocké ; parseur actuel',
     'articles ; '+S.articles+' ; '+(C?C.articles:'-'),'bases · déclinaisons ; '+S.bases+' · '+S.variantes+' ; '+(C?C.bases+' · '+C.variantes:'-'),
-    '1 pack non découpé ; '+S.packInconnu+' ; '+(C?C.packInconnu:'-'),'2 déclinaison non identifiée ; '+S.declNonId+' ; '+(C?C.declNonId:'-'),
+    '1 pack non découpé ; '+S.packInconnu+' ; '+(C?C.packInconnu:'-'),'  assortiments ; '+(S.assort||0)+' ; '+(C?C.assort||0:'-'),'2 déclinaison non identifiée ; '+S.declNonId+' ; '+(C?C.declNonId:'-'),
     '3 seuls formats vrac visibles ; '+S.granelSeul+' ; '+(C?C.granelSeul:'-'),'4 variétés coupées ; '+S.coupees+' ; '+(C?C.coupees:'-'),
     '5 packs normaux tous en rupture ; '+S.ruptureNormale+' (vrac dispo '+S.ruptureAvecVrac+') ; '+(C?C.ruptureNormale+' (vrac dispo '+C.ruptureAvecVrac+')':'-'),
     'articles sans nom brut ; '+S.sansRaw,'','MOTIFS NON RECONNUS (stocké)'];
@@ -2496,10 +2571,11 @@ window.gstAudit=async function(fromDocs){
   if(fromDocs&&!window.confirm('Analyser depuis les documents catalogue_gst : ≈ '+((G.meta&&G.meta.count)||'?')+' lectures Firestore (aucune écriture). Continuer ?'))return;
   G.busy=true;FSG.begin('Audit du catalogue');$('gstAuditOut').innerHTML='<div class="vdb-info">Analyse en cours…</div>';
   try{
+    await loadSettings();compileRules(G.settings.regles);
     var list=await auditEntries(!!fromDocs),showG=!!(G.meta&&G.meta.showGranel);
     var S=auditOf(list,'stored',showG),C=list.some(a=>a.current)?auditOf(list,'current',showG):null;
     G.audit={S:S,C:C,list:list,at:Date.now()};
-    $('gstAuditOut').innerHTML=auditHtml(S,C,list)+'<div class="vdb-info">Coût : '+esc(FSG.summary())+' · aucune écriture.</div>';
+    $('gstAuditOut').innerHTML=auditHtml(S,C)+'<div class="vdb-info">Coût : '+esc(FSG.summary())+' · aucune écriture.</div>';
     console.info('[GST] audit',{stocke:S,actuel:C});
   }catch(e){$('gstAuditOut').innerHTML='<div class="vdb-info" style="color:var(--red)">'+esc(FSG.why(e))+'</div>';}
   G.busy=false;
@@ -2525,14 +2601,56 @@ window.gstInspect=async function(){
   G.inspectText='INSPECTION « '+q+' » ('+hits.length+' articles)\nnom brut | variété stockée → actuelle | base stockée → actuelle | déclinaison | graines (offertes) stocké → actuel | vrac stocké → actuel | dispo | groupe stocké → actuel | rapprochement\n'+
     hits.slice(0,80).map(a=>{var s=a.stored,c=a.current||{};return [a.raw,s.variete+' → '+c.variete,s.base+' → '+c.base,s.decl+' → '+c.decl,(s.nb==null?'?':s.nb)+'('+s.off+') → '+(c.nb==null?'?':c.nb)+'('+(c.off||0)+')',s.granel+' → '+c.granel,a.retire?'retiré':a.dispo,s.groupe+' → '+c.groupe,STATUT[a.statut]||a.statut||'-'].join(' | ');}).join('\n');
 };
+/* ── RÉAPPLIQUER LE DÉCOUPAGE DES NOMS (sans appel à Garden Seeds) ──
+   Recalcule, depuis le nom brut gardé dans l'index : nom affiché, graines (payées + offertes), vrac, nom de base, déclinaison.
+   N'écrit que les documents dont une donnée change ; index : seules les parties modifiées. Audit avant / après. */
+function reparseLine(e){
+  var p=String(e).split('|');while(p.length<27)p.push('');
+  if(!p[15])return {line:p.join('|'),data:null};
+  var np=p.slice(),pn=parseNombre(p[15],p[2],'',p[16]),c=cleanName(pn.variete||p[1],[p[2],p[16]]);
+  np[1]=clean(pn.variete||p[1]);np[4]=pn.nbGraines==null?'':String(pn.nbGraines);np[24]=pn.offertes?String(pn.offertes):'';np[25]=pn.granel?'G':'';
+  np[26]=clean(c.strict);np[21]=clean(groupOf(c.variant,p[2],p[3]));
+  var data=dtuple(np)!==dtuple(p)?{variete:np[1],nbGraines:np[4]===''?null:Number(np[4]),offertes:np[24]?Number(np[24]):0,granel:np[25]==='G',base:np[26]}:null;
+  return {line:np.join('|'),data:data,codigo:p[0]};
+}
+function auditSummary(A){return {articles:A.articles,packInconnu:A.packInconnu,assort:A.assort,declNonId:A.declNonId,granelSeul:A.granelSeul,coupees:A.coupees,ruptureNormale:A.ruptureNormale,bases:A.bases,variantes:A.variantes};}
+var PKEY='ss_gst_reparse';
+window.gstReparse=async function(){
+  if(G.busy)return;G.busy=true;FSG.begin('Réappliquer le découpage des noms');
+  var out=$('gstAuditOut');out.innerHTML='<div class="vdb-info">Lecture des règles et de l\'index…</div>';
+  try{
+    await loadSettings();compileRules(G.settings.regles);
+    await loadIndex();
+    var raw=G.entries.map(e=>e.raw),showG=!!(G.meta&&G.meta.showGranel);
+    var missing=raw.filter(e=>!String(e).split('|')[15]).length;
+    if(missing)throw new Error(missing+' article(s) sans nom brut dans l\'index : lance d\'abord « Recalculer le rapprochement » une fois (il ajoute les noms bruts), puis recommence.');
+    var before=auditOf(raw.map(viewsOf),'stored',showG);
+    var res=raw.map(reparseLine),entries=res.map(r=>r.line);
+    var changes=res.filter(r=>r.data).map(r=>({codigo:r.codigo,data:r.data})),todo=pendingChanges(changes,PKEY);
+    var est=todo.length+2+Math.ceil(entries.length/PART);
+    out.innerHTML='<div class="vdb-info">'+esc(FSG.estimate(est,FSG.cur.reads))+' — '+todo.length+' article(s) à corriger, '+(raw.length-changes.length)+' inchangé(s).</div>';
+    if(!FSG.confirmCost('Réappliquer le découpage des noms : '+todo.length+' article(s) à corriger',est,FSG.cur.reads)){out.innerHTML+='<div class="vdb-info">Annulé avant toute écriture · '+esc(FSG.summary())+'</div>';G.busy=false;return;}
+    await writeMatchChanges(todo,(n,t)=>{out.innerHTML='<div class="vdb-info">Écriture… '+n+' / '+t+' · '+esc(FSG.summary())+'</div>';},PKEY);
+    var after=auditOf(entries.map(viewsOf),'stored',showG);
+    await writeIndexParts(entries,{reparseAt:Date.now(),auditAvant:auditSummary(before),auditApres:auditSummary(after)},true);
+    clearDone(PKEY);
+    G.audit={S:before,C:after,list:entries.map(viewsOf),labels:['Avant','Après'],at:Date.now()};
+    out.innerHTML='<div class="vdb-info"><b>Découpage réappliqué : '+todo.length+' article(s) corrigé(s) · '+esc(FSG.summary())+'</b><br>Lance maintenant « Recalculer le rapprochement ».</div>'+auditHtml(before,after,['Avant','Après']);
+  }catch(e){out.innerHTML='<div class="vdb-info" style="color:var(--red)">'+esc(e&&e.code?FSG.why(e):(e.message||String(e)))+'</div><div class="vdb-row"><button class="btn btn-primary" onclick="gstReparse()">⏯ Reprendre</button></div>';}
+  G.busy=false;
+  await loadIndex().catch(()=>{});renderLast();renderList();
+};
 var st=null;window.gstFilter=function(){clearTimeout(st);st=setTimeout(renderList,150);};
 async function loadSettings(){var x=await FSG.get(db.collection('adminData').doc('gstSettings'),'réglages du catalogue');G.settings=x.exists?x.data():{alias:[],showGranel:false};return G.settings;}
-function renderSettings(){var s=G.settings||{};if(!$('gstAlias'))return;$('gstShowGranel').checked=!!s.showGranel;$('gstAlias').value=(s.alias||[]).map(a=>a.alias+' = '+a.nom).join('\n');}
+function renderRules(r){r=Object.assign({},DEF_RULES,r||{});$('gstRuleUnites').value=r.unites;$('gstRuleTypes').value=r.types;$('gstRuleVrac').value=r.vrac;$('gstRuleSeuil').value=r.seuilVrac;$('gstRuleAssort').value=r.assortiments;$('gstRuleDecl').value=r.declinaisons;}
+function readRules(){return {unites:$('gstRuleUnites').value.trim(),types:$('gstRuleTypes').value.trim(),vrac:$('gstRuleVrac').value.trim(),seuilVrac:Number($('gstRuleSeuil').value)||0,assortiments:$('gstRuleAssort').value.trim(),declinaisons:$('gstRuleDecl').value.trim()};}
+window.gstRulesDefault=function(){renderRules(DEF_RULES);$('gstSettingsNote').textContent='Règles par défaut affichées : clique sur « Enregistrer les réglages » pour les appliquer.';};
+function renderSettings(){var s=G.settings||{};if(!$('gstAlias'))return;$('gstShowGranel').checked=!!s.showGranel;$('gstAlias').value=(s.alias||[]).map(a=>a.alias+' = '+a.nom).join('\n');renderRules(s.regles);}
 window.gstSaveSettings=async function(){
   if(G.busy)return;
   var list=[];$('gstAlias').value.split('\n').forEach(l=>{var m=l.split('=');if(m.length<2)return;var a=m[0].trim(),n=m.slice(1).join('=').trim();if(a&&n)list.push({alias:a,nom:n});});
-  var next={alias:list,showGranel:$('gstShowGranel').checked},cur=G.settings||{};
-  if(JSON.stringify(next)===JSON.stringify({alias:cur.alias||[],showGranel:!!cur.showGranel})){$('gstSettingsNote').textContent='Aucun changement : rien n\'a été écrit.';return;}
+  var next={alias:list,showGranel:$('gstShowGranel').checked,regles:readRules()},cur=G.settings||{};
+  if(JSON.stringify(next)===JSON.stringify({alias:cur.alias||[],showGranel:!!cur.showGranel,regles:Object.assign({},DEF_RULES,cur.regles||{})})){$('gstSettingsNote').textContent='Aucun changement : rien n\'a été écrit.';return;}
   FSG.begin('Réglages du catalogue');
   try{
     // réglages + copie dans la meta de l'index (lue par le chat) : 2 écritures
@@ -2541,12 +2659,12 @@ window.gstSaveSettings=async function(){
     b.set(db.collection('adminData').doc('gstSettings'),Object.assign({},next,{updatedAt:Date.now()}));
     b.set(db.collection(IDX).doc('meta'),{alias:amap,showGranel:next.showGranel},{merge:true});
     await FSG.commit(b,2,'réglages du catalogue');
-    G.settings=next;G.M=null;
+    G.settings=next;G.M=null;compileRules(next.regles);
     $('gstSettingsNote').textContent='Enregistré ('+FSG.summary()+'). Relance « Recalculer le rapprochement » pour appliquer les alias au rapprochement.';
   }catch(e){$('gstSettingsNote').textContent=FSG.why(e);}
 };
 window.gstOpen=async function(){try{await loadIndex();}catch(e){console.warn('[GST] index illisible',e&&e.message);}try{await loadSettings();renderSettings();}catch(e){}renderLast();renderList();renderResume();renderMatch();};
-window.__gst={parseNombre:parseNombre,dtuple:dtuple,mtuple:mtuple,parseDesc:parseDesc,stripHtml:stripHtml,cleanName:cleanName,matchVariety:matchVariety,similar:similar,loadMatcher:loadMatcher,matchStats:matchStats,applyMatch:applyMatch,G:G};
+window.__gst={compileRules:compileRules,findPack:findPack,reparseLine:reparseLine,auditOf:auditOf,viewsOf:viewsOf,parseNombre:parseNombre,dtuple:dtuple,mtuple:mtuple,parseDesc:parseDesc,stripHtml:stripHtml,cleanName:cleanName,matchVariety:matchVariety,similar:similar,loadMatcher:loadMatcher,matchStats:matchStats,applyMatch:applyMatch,G:G};
 })();
 </script>
 </body>
