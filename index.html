@@ -677,7 +677,7 @@ html{-webkit-tap-highlight-color:rgba(0,112,60,.12)}
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="gd-reference.js"></script>
-<script src="varietes.js?v=20261019e"></script>
+<script src="varietes.js?v=20261020a"></script>
 <script>
 /* ══ THÈME ══ */
 function updateThemeLabel(t){
@@ -1144,7 +1144,8 @@ function buildCard(s){
   var g=window.VarDB&&VarDB.gstFor?VarDB.gstFor(s.gst||s.name)||VarDB.gstFor(s.name):null;
   var st=findInStock(s.name),stamp='';
   if(st){var ok=!st.dispo||/^(o|oui)$/i.test(st.dispo);stamp='<div class="sc-stamp'+(ok?'':' out')+'">'+(ok?'En stock':'En rupture')+(st.prix?'<small>'+esc(st.prix)+' €'+(st.graines?' · '+esc(st.graines)+' graines':'')+'</small>':'')+'</div>';}
-  else if(g&&g.pvp!=null)stamp='<div class="sc-stamp">'+(g.dispo===2?'Stock limité':'À commander')+'<small>'+esc(VarDB.euro(g.pvp))+(g.nb?' · '+esc(g.nb)+' graines':'')+'</small></div>';
+  else if(g&&g.pvp!=null){var gp=VarDB.packsOf?VarDB.packsOf(g):[g],minP=Math.min.apply(null,gp.map(function(p){return p.pvp==null?Infinity:p.pvp;}));
+    stamp='<div class="sc-stamp">'+(g.dispo===2?'Stock limité':'À commander')+'<small>'+(gp.length>1&&isFinite(minP)?'dès '+esc(VarDB.euro(minP))+' · '+gp.length+' packs':esc(VarDB.euro(g.pvp))+(g.nb?' · '+esc(g.nb)+' graines':''))+'</small></div>';}
   // chiffres
   var thc=fiche?rangeTxt(fiche.thc_min,fiche.thc_max,' %'):'';if(!thc)thc=cleanVal(s.thc);
   var cbd=fiche?rangeTxt(fiche.cbd_min,fiche.cbd_max,' %'):'';if(!cbd)cbd=cleanVal(s.cbd);
@@ -1157,7 +1158,12 @@ function buildCard(s){
   var rows='';
   function row(l,v,cls){if(v)rows+='<div class="sc-row'+(cls?' '+cls:'')+'"><span class="sc-label">'+l+'</span><span class="sc-val">'+v+'</span></div>';}
   row('Pourquoi elle',s.why?esc(s.why):'','why');
-  if(g)row('À commander',esc([g.breeder,g.type?({fem:'féminisée',auto:'autofloraison',regular:'régulière'})[g.type]:'',g.nb?g.nb+' graines':''].filter(Boolean).join(' · '))+(g.pvp!=null?' · <b>'+esc(VarDB.euro(g.pvp))+'</b>':'')+(g.dispo===2?' · <span style="color:#a50d26">stock limité</span>':''));
+  if(g){
+    // tous les packs commandables de la variété : nombre de graines, prix public, stock limité
+    var packs=VarDB.packsOf?VarDB.packsOf(g):[g];
+    var packHtml=packs.map(function(p){return (p.nb?esc(p.nb)+' graine'+(p.nb>1?'s':''):'paquet')+(p.pvp!=null?' <b>'+esc(VarDB.euro(p.pvp))+'</b>':'')+(p.dispo===2?' <span style="color:#a50d26">(stock limité)</span>':'');}).join(' · ');
+    row('À commander',esc([g.breeder,g.type?({fem:'féminisée',auto:'autofloraison',regular:'régulière'})[g.type]:''].filter(Boolean).join(' · '))+(packHtml?(g.breeder||g.type?' — ':'')+packHtml:' — actuellement en rupture'));
+  }
   var eff=(s.effects&&s.effects.length?s.effects:(fiche&&fiche.effets)||[]);row('Effets',eff.map(esc).join(', '));
   row('Arômes',s.flavor&&cleanVal(s.flavor)?esc(s.flavor):(fiche&&fiche.gouts&&fiche.gouts.length?esc(fiche.gouts.join(', ')):''));
   row('Culture',s.culture_tips?esc(s.culture_tips):'');
@@ -1377,7 +1383,7 @@ let lastCtxInfo=null;
 function renderCtxStrip(info){
   if(!info)return '';
   var html='';
-  if(info.gst&&info.gst.count)html+='<div class="crit-line"><span class="crit-lead">Disponibles en boutique</span><span class="crit-chip base">'+info.gst.count+' variété'+(info.gst.count>1?'s':'')+' proposée'+(info.gst.count>1?'s':'')+' à l\'IA</span><span class="crit-count">sur '+info.gst.available+' commandables</span></div>';
+  if(info.gst&&info.gst.count)html+='<div class="crit-line"><span class="crit-lead">Disponibles en boutique</span><span class="crit-chip base">'+info.gst.count+' variété'+(info.gst.count>1?'s':'')+' proposée'+(info.gst.count>1?'s':'')+' à l\'IA</span><span class="crit-count">sur '+info.gst.available+' variétés commandables</span></div>';
   if(info.found&&info.found.length)html+='<div class="crit-line"><span class="crit-lead">Fiches de la base</span>'+info.found.map(n=>'<span class="crit-chip base">'+esc(n)+'</span>').join('')+'</div>';
   if(info.similarTo||(info.criteria&&info.criteria.length)||(info.unsupported&&info.unsupported.length)){
     var chips=(info.similarTo?'<span class="crit-chip type">profil proche de '+esc(info.similarTo)+'</span>':'')+(info.criteria||[]).map(c=>'<span class="crit-chip '+c.fam+'">'+(c.fam==='avoid'?'✕ ':'')+esc(c.l)+'<button type="button" class="crit-x" aria-label="Retirer le critère '+escA(c.l)+'" data-k="'+escA(c.k)+'" data-l="'+escA(c.l)+'" onclick="refineDrop(this.dataset.k,this.dataset.l)"><span aria-hidden="true">×</span></button></span>').join('')+(info.unsupported||[]).map(l=>'<span class="crit-chip na" title="Ce critère n\'est pas renseigné dans la base : l\'IA le vérifie avec ses connaissances">'+esc(l)+' (non renseigné)</span>').join('');
