@@ -514,8 +514,8 @@ td{font-size:13.5px}
         <div class="page-sub">Le chat ne recommande que les graines disponibles chez Garden Seeds Trading. Synchronise le catalogue pour mettre à jour les variétés, les prix et la disponibilité.<br>Lecture seule : aucune commande ne peut partir de l'app.</div>
         <div class="table-wrap">
           <div class="vdb-body">
-            <div class="vdb-row"><button class="btn btn-primary" id="gstBtn" onclick="gstSync()">🔄 Synchroniser le catalogue Garden Seeds</button><span class="vdb-note" id="gstLast">—</span></div>
-            <div id="gstProgress" style="display:none"><div class="vdb-info" id="gstProgTxt"></div><div class="vdb-progress"><i id="gstProg"></i></div></div>
+            <div class="vdb-row"><button class="btn btn-primary" id="gstBtn" onclick="gstSync()">🔄 Synchroniser le catalogue Garden Seeds</button><button class="btn btn-secondary" id="gstResumeBtn" style="display:none" onclick="gstResume()">⏯ Reprendre la synchro</button><span class="vdb-note" id="gstLast">—</span></div>
+            <div id="gstProgress" style="display:none"><div class="vdb-info" id="gstProgTxt"></div><div class="vdb-progress"><i id="gstProg"></i></div><div class="vdb-info" id="gstWait" role="status" aria-live="polite" style="display:none;color:var(--badge-gold-color)"></div></div>
             <div id="gstReport"></div>
           </div>
         </div>
@@ -1647,13 +1647,49 @@ function stripHtml(h){if(!h)return '';h=String(h).replace(/<(br|p|div|li|tr|td|h
 function pick(o,keys){for(var i=0;i<keys.length;i++){var v=o&&o[keys[i]];if(v!==undefined&&v!==null&&v!=='')return v;}return null;}
 function hash(s){var h=5381;for(var i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))|0;return (h>>>0).toString(36);}
 
-/* ── appels au Worker ── */
+/* ── appels au Worker : une requête à la fois, ~50/min (limite Garden Seeds ~60/min) ── */
+var PAUSE=1200,MAX_TRIES=5,lastCall=0;
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+function retryAfterSec(res){var ra=res.headers.get('Retry-After');if(!ra)return null;ra=ra.trim();if(/^\d+$/.test(ra))return parseInt(ra,10);var d=Date.parse(ra);return isNaN(d)?null:Math.max(1,Math.round((d-Date.now())/1000));}
 async function gstGet(path,params){
+  var wait=lastCall+PAUSE-Date.now();if(wait>0)await sleep(wait);
   var qs=params?'?'+new URLSearchParams(params).toString():'';
-  var res=await fetch(PROXY_URL+'/gst/'+path+qs,{headers:{'X-Shop-Token':TOKEN}});
+  var res;
+  try{res=await fetch(PROXY_URL+'/gst/'+path+qs,{headers:{'X-Shop-Token':TOKEN}});}
+  catch(e){lastCall=Date.now();var ne=new Error('réseau : '+e.message);ne.status=0;throw ne;}
+  lastCall=Date.now();
   var txt=await res.text();
-  if(!res.ok){var msg=txt;try{msg=(JSON.parse(txt).error)||txt;}catch(e){}throw new Error('HTTP '+res.status+' : '+String(msg).slice(0,180));}
-  try{return JSON.parse(txt);}catch(e){throw new Error('réponse illisible');}
+  if(!res.ok){var msg=txt;try{var pj=JSON.parse(txt);msg=pj.error||pj.message||txt;}catch(e){}var err=new Error('HTTP '+res.status+' : '+String(msg).slice(0,180));err.status=res.status;err.retryAfter=retryAfterSec(res);throw err;}
+  try{return JSON.parse(txt);}catch(e){var pe=new Error('réponse illisible');pe.status=-1;throw pe;}
+}
+/* même requête, 5 tentatives au plus :
+   429 → Retry-After (s'il est lisible) ou 60/90/120/150 s ; réseau ou 5xx → 5/10/20/40 s ; autre erreur → échec immédiat */
+async function gstGetRetry(path,params,label){
+  for(var t=1;;t++){
+    try{return await gstGet(path,params);}
+    catch(e){
+      var s=e.status;
+      if(!(s===429||s===0||s>=500)||t>=MAX_TRIES)throw e;
+      var sec=s===429?Math.max(e.retryAfter||0,60+30*(t-1)):5*Math.pow(2,t-1);
+      await countdown(sec,(s===429?'Limite atteinte':(s?'Erreur HTTP '+s:'Erreur réseau'))+' ('+label+'), nouvelle tentative '+(t+1)+'/'+MAX_TRIES+' dans ');
+    }
+  }
+}
+async function countdown(sec,prefix){
+  var end=Date.now()+sec*1000,el=$('gstWait');
+  while(Date.now()<end){el.style.display='';el.textContent='⏳ '+prefix+Math.ceil((end-Date.now())/1000)+' s';await sleep(Math.min(1000,end-Date.now()));}
+  el.style.display='none';el.textContent='';
+}
+// liste paginée (groupes, familles) : per_page=100, arrêt à la dernière page ou si l'API renvoie la même page
+async function fetchList(path,label){
+  var all=[],seen={};
+  for(var page=1;page<=MAX_PAGES;page++){
+    var j=await gstGetRetry(path,{per_page:PER_PAGE,page:page},label+' p.'+page);
+    var arr=listOf(j),fresh=arr.filter(x=>{var k=JSON.stringify(x);if(seen[k])return false;seen[k]=1;return true;});
+    all=all.concat(fresh);var last=lastPage(j);
+    if(!fresh.length||(last?page>=last:arr.length<PER_PAGE))break;
+  }
+  return all;
 }
 function listOf(j){if(Array.isArray(j))return j;if(j&&Array.isArray(j.data))return j.data;if(j&&j.data&&Array.isArray(j.data.data))return j.data.data;return [];}
 function lastPage(j){return (j&&(j.last_page||(j.meta&&j.meta.last_page)||(j.data&&j.data.last_page)))||null;}
@@ -1714,99 +1750,142 @@ async function loadIndex(){
   var meta=await db.collection(IDX).doc('meta').get();G.meta=meta.exists?meta.data():null;
   var parts=G.meta?(G.meta.parts||0):0;
   var snaps=await Promise.all(Array.from({length:parts},(_,i)=>db.collection(IDX).doc('part_'+i).get()));
-  var list=[];snaps.forEach(s=>{if(s.exists)(s.data().entries||[]).forEach(e=>list.push(parseEntry(e)));});
+  var list=[];snaps.forEach(s=>{if(s.exists)(s.data().entries||[]).forEach(e=>list.push(Object.assign(parseEntry(e),{raw:String(e)})));});
   G.entries=list;G.loaded=true;return list;
 }
 
-/* ── synchronisation ── */
+/* ── synchronisation reprenable ──
+   La progression (familles, dernière page lue, échecs, index en cours) est gardée dans ce navigateur.
+   Chaque page est écrite dans Firestore dès sa lecture : une reprise ne relit que les pages manquantes.
+   Rien n'est supprimé tant qu'une famille reste en échec. */
+var SKEY='ss_gst_sync';
+function loadState(){try{var s=JSON.parse(localStorage.getItem(SKEY)||'null');return s&&s.v===1&&Array.isArray(s.fams)?s:null;}catch(e){return null;}}
+function saveState(s){try{localStorage.setItem(SKEY,JSON.stringify(s));return true;}catch(e){if(!saveState.warned){saveState.warned=true;console.warn('[GST] progression non enregistrée dans le navigateur : la reprise ne sera pas possible',e&&e.message);}return false;}}
+function clearState(){try{localStorage.removeItem(SKEY);}catch(e){}}
 function progress(txt,pct){$('gstProgress').style.display='';$('gstProgTxt').textContent=txt;if(pct!=null)$('gstProg').style.width=Math.max(2,Math.min(100,pct))+'%';}
-async function fetchAllPages(params,label,onPage,errors){
-  var page=1,last=null,all=[];
-  while(page<=MAX_PAGES){
-    var j=null;
-    for(var attempt=0;attempt<2&&!j;attempt++){try{j=await gstGet('articulos',Object.assign({},params,{per_page:PER_PAGE,page:page}));}catch(e){if(attempt===1){errors.push(label+' · page '+page+' : '+e.message);}else await new Promise(r=>setTimeout(r,800));}}
-    if(!j){if(last&&page<last){page++;continue;}break;}
-    var arr=listOf(j);last=lastPage(j)||last;all=all.concat(arr);onPage(page,last,all.length);
-    if(last?page>=last:arr.length<PER_PAGE)break;
-    page++;
-  }
-  return all;
+function famKey(f){return f.id==null?'_all':String(f.id);}
+function sigOf(entry){return String(entry||'').split('|')[14]||'';}
+function buildItem(a,ix,now){
+  var nom=pick(a,['nombre'])||'',marca=pick(a,['marca']),grupo=pick(a,['grupoFamilia'])||'';
+  var pn=parseNombre(nom,marca,grupo),dc=stripHtml(pick(a,['descripcionCorta'])),dl=stripHtml(pick(a,['descripcionLarga']));
+  var pd=parseDesc(dc+' '+dl.slice(0,800));
+  var fotos=a.fotos||{},photos=['thumbnail','foto1','foto2','foto3','foto4','foto5'].map(k=>fotos[k]).filter(u=>typeof u==='string'&&/^https?:\/\//.test(u));
+  var dispo=String(pick(a,['disponible'])||''),low=a.stockBajo===true||a.stockBajo===1||a.stockBajo==='1'||a.stockBajo==='true';
+  var it=Object.assign({codigo:String(pick(a,['codigo','id'])),nombre:nom},pn,pd,{
+    pvp:pick(a,['pvp'])!=null?Number(String(pick(a,['pvp'])).replace(',','.')):null,iva:pick(a,['iva']),
+    disponible:dispo||null,stockBajo:low,dispoFlag:/out\s*of\s*stock|agotado|sin stock/i.test(dispo)?0:(low?2:1),
+    photo:photos[0]||null,photos:photos,marca:marca||null,familia:pick(a,['familia']),idFamilia:pick(a,['idFamilia']),grupoFamilia:grupo||null,
+    descCourte:dc.slice(0,800),descLongue:dl.slice(0,3000)});
+  it.varieteId=matchBase(ix,it.variete,it.breeder);
+  it.sig=hash(JSON.stringify([it.nombre,it.pvp,it.disponible,it.stockBajo,it.photo,it.descCourte,it.varieteId,it.familia]));
+  it.syncAt=now;return it;
 }
-window.gstSync=async function(){
-  if(G.busy)return;G.busy=true;var btn=$('gstBtn');btn.disabled=true;$('gstReport').innerHTML='';
-  var errors=[],t0=Date.now(),rep={};
+// une page d'articles : analyse, écriture groupée des nouveaux ou modifiés, puis ajout à l'index en cours
+async function writePage(arts,R,st){
+  var pending={},ops=[];
+  arts.forEach(a=>{
+    var code=pick(a,['codigo','id']);if(code==null)return;
+    var grp=String(pick(a,['grupoFamilia'])||'');if(grp&&!/semilla/i.test(grp))return;
+    var it=buildItem(a,R.ix,R.now),c=it.codigo;
+    if(pending[c]||(st.entries[c]&&sigOf(st.entries[c])===it.sig))return;
+    pending[c]=entryOf(it);
+    if(R.prevSig[c]!==it.sig)ops.push(it);
+  });
+  for(var o=0;o<ops.length;o+=BATCH){var b=db.batch();ops.slice(o,o+BATCH).forEach(it=>b.set(db.collection(COL).doc(it.codigo.replace(/\//g,'_')),it));await b.commit();}
+  Object.assign(st.entries,pending);st.written+=ops.length;
+}
+async function runSync(resume){
+  if(G.busy)return;
+  var st=resume?loadState():null;
+  if(resume&&!st){renderResume();return;}
+  G.busy=true;$('gstBtn').disabled=true;$('gstResumeBtn').style.display='none';$('gstReport').innerHTML='';
+  var t0=Date.now(),rep={},R={};
   try{
-    progress('Lecture des groupes et familles…',2);
-    var grupos=listOf(await gstGet('grupos')),familias=[];
-    try{familias=listOf(await gstGet('familias',{per_page:'false'}));}catch(e){errors.push('familias : '+e.message);}
-    var seedGroupIds={},seedGroupNames=[];
-    grupos.forEach(g=>{var name=String(pick(g,['nombre','descripcion','grupoFamilia','name'])||'');if(/semilla/i.test(name)){var id=pick(g,['id','idGrupoFamilia','codigo']);if(id!=null)seedGroupIds[id]=1;seedGroupNames.push(name);}});
-    var fams=familias.filter(f=>{var gid=pick(f,['idGrupoFamilia','idGrupo','grupo_id']);var gname=String(pick(f,['grupoFamilia','grupo'])||'');return (gid!=null&&seedGroupIds[gid])||/semilla/i.test(gname);})
-      .map(f=>({id:pick(f,['id','idFamilia','codigo']),nom:String(pick(f,['nombre','descripcion','familia'])||'')})).filter(f=>f.id!=null);
-    console.info('[GST] groupes de graines :',seedGroupNames,'· familles retenues :',fams.length);
-    var raw=[];
-    if(fams.length){
-      for(var i=0;i<fams.length;i++){
-        var f=fams[i];
-        var got=await fetchAllPages({idFamilia:f.id},f.nom||('famille '+f.id),(p,l,n)=>progress('Famille '+(i+1)+'/'+fams.length+' · '+(f.nom||f.id)+' · page '+p+(l?'/'+l:'')+' · '+(raw.length+n)+' articles',5+80*(i+(l?p/l:0.5))/fams.length),errors);
-        raw=raw.concat(got);
+    progress('Préparation : base StrainSage et index actuel…',1);
+    R.ix=await baseIndex();R.now=Date.now();R.prevSig={};R.prevRaw={};
+    try{(await loadIndex()).forEach(e=>{R.prevSig[e.codigo]=e.sig;R.prevRaw[e.codigo]=e.raw;});}catch(e){}
+    if(!st){
+      progress('Lecture des groupes et familles…',2);
+      var grupos=await fetchList('grupos','groupes'),familias=[],famErr=null;
+      try{familias=await fetchList('familias','familles');}catch(e){famErr=e.message;}
+      var seedGroupIds={},seedGroupNames=[];
+      grupos.forEach(g=>{var name=String(pick(g,['nombre','descripcion','grupoFamilia','grupo','name'])||'');if(/semilla/i.test(name)){var id=pick(g,['id','idGrupoFamilia','idGrupo','codigo']);if(id!=null)seedGroupIds[id]=1;seedGroupNames.push(name);}});
+      var list=familias.filter(f=>{var gid=pick(f,['idGrupoFamilia','idGrupo','grupo_id']);var gname=String(pick(f,['grupoFamilia','grupo'])||'');return (gid!=null&&seedGroupIds[gid])||/semilla/i.test(gname);})
+        .map(f=>({id:pick(f,['id','idFamilia','codigo']),nom:String(pick(f,['nombre','descripcion','familia'])||'')})).filter(f=>f.id!=null);
+      // familles non identifiables : tout le catalogue, filtré ensuite sur grupoFamilia
+      if(!list.length)list=[{id:null,nom:'catalogue complet'}];
+      console.info('[GST] groupes de graines :',seedGroupNames,'· familles retenues :',list.length);
+      st={v:1,startedAt:Date.now(),groups:seedGroupNames,fams:list,done:{},failed:{},entries:{},written:0,famErr:famErr};
+      saveState(st);
+    }
+    var fams=st.fams;
+    for(var i=0;i<fams.length;i++){
+      var f=fams[i],k=famKey(f),d=st.done[k]||{page:0,last:null,complete:false},name=f.nom||('famille '+f.id);
+      if(d.complete)continue;
+      delete st.failed[k];
+      for(var page=d.page+1;page<=MAX_PAGES;page++){
+        progress('Famille '+(i+1)+'/'+fams.length+' · '+name+' · page '+page+(d.last?'/'+d.last:'')+' · '+Object.keys(st.entries).length+' articles',3+85*(i+(d.last?(page-1)/d.last:0.5))/fams.length);
+        var j;
+        try{j=await gstGetRetry('articulos',Object.assign(f.id==null?{}:{idFamilia:f.id},{per_page:PER_PAGE,page:page}),name+' p.'+page);}
+        catch(e){st.failed[k]={nom:name,page:page,raison:e.message};break;}
+        var arr=listOf(j);d.last=lastPage(j)||d.last;
+        await writePage(arr,R,st);
+        d.page=page;if(d.last?page>=d.last:arr.length<PER_PAGE)d.complete=true;
+        st.done[k]=d;saveState(st);
+        if(d.complete)break;
       }
-    }else{
-      // familles non identifiables : on lit tout le catalogue et on filtre sur grupoFamilia
-      raw=await fetchAllPages({},'catalogue complet',(p,l,n)=>progress('Catalogue complet · page '+p+(l?'/'+l:'')+' · '+n+' articles',5+(l?80*p/l:Math.min(80,p))),errors);
+      if(!d.complete&&!st.failed[k])st.failed[k]={nom:name,page:d.page+1,raison:'plus de '+MAX_PAGES+' pages'};
+      saveState(st);
     }
-    var seen={},arts=[];
-    raw.forEach(a=>{var code=pick(a,['codigo','id']);if(code==null||seen[code])return;var grp=String(pick(a,['grupoFamilia'])||'');if(grp&&!/semilla/i.test(grp))return;seen[code]=1;arts.push(a);});
-    progress('Analyse de '+arts.length+' articles et rapprochement avec la base StrainSage…',87);
-    var ix=await baseIndex();
-    var now=Date.now(),items=arts.map(a=>{
-      var nom=pick(a,['nombre'])||'',marca=pick(a,['marca']),grupo=pick(a,['grupoFamilia'])||'';
-      var pn=parseNombre(nom,marca,grupo),dc=stripHtml(pick(a,['descripcionCorta'])),dl=stripHtml(pick(a,['descripcionLarga']));
-      var pd=parseDesc(dc+' '+dl.slice(0,800));
-      var fotos=a.fotos||{},photos=['thumbnail','foto1','foto2','foto3','foto4','foto5'].map(k=>fotos[k]).filter(u=>typeof u==='string'&&/^https?:\/\//.test(u));
-      var dispo=String(pick(a,['disponible'])||''),low=a.stockBajo===true||a.stockBajo===1||a.stockBajo==='1'||a.stockBajo==='true';
-      var it=Object.assign({codigo:String(pick(a,['codigo','id'])),nombre:nom},pn,pd,{
-        pvp:pick(a,['pvp'])!=null?Number(String(pick(a,['pvp'])).replace(',','.')):null,iva:pick(a,['iva']),
-        disponible:dispo||null,stockBajo:low,dispoFlag:/out\s*of\s*stock|agotado|sin stock/i.test(dispo)?0:(low?2:1),
-        photo:photos[0]||null,photos:photos,marca:marca||null,familia:pick(a,['familia']),idFamilia:pick(a,['idFamilia']),grupoFamilia:grupo||null,
-        descCourte:dc.slice(0,800),descLongue:dl.slice(0,3000)});
-      it.varieteId=matchBase(ix,it.variete,it.breeder);
-      var sig=hash(JSON.stringify([it.nombre,it.pvp,it.disponible,it.stockBajo,it.photo,it.descCourte,it.varieteId,it.familia]));
-      it.sig=sig;it.syncAt=now;return it;
-    });
-    // écritures : uniquement les articles nouveaux ou modifiés, suppression des articles disparus
-    var prev={};try{(await loadIndex()).forEach(e=>{prev[e.codigo]=e.sig;});}catch(e){}
-    var changed=items.filter(it=>prev[it.codigo]!==it.sig),gone=Object.keys(prev).filter(c=>!seen[c]);
-    var ops=changed.map(it=>({t:'set',id:it.codigo,data:Object.assign({},it,{sig:it.sig})})).concat(gone.map(c=>({t:'del',id:c})));
-    for(var o=0;o<ops.length;o+=BATCH){
-      var b=db.batch();ops.slice(o,o+BATCH).forEach(op=>{var r=db.collection(COL).doc(op.id.replace(/\//g,'_'));if(op.t==='set')b.set(r,op.data);else b.delete(r);});
-      await b.commit();progress('Écriture… '+Math.min(ops.length,o+BATCH)+' / '+ops.length,88+10*Math.min(1,(o+BATCH)/ops.length));
-    }
-    // index compact
-    var entries=items.map(entryOf),parts=Math.max(1,Math.ceil(entries.length/PART)),oldParts=(G.meta&&G.meta.parts)||0;
+    // index lu par le chat : ancien index + articles relus ; les familles en échec gardent leurs anciens articles
+    var failedKeys=Object.keys(st.failed),complete=!failedKeys.length;
+    progress('Mise à jour de l\'index lu par le chat…',92);
+    var gone=complete?Object.keys(R.prevRaw).filter(c=>!st.entries[c]):[];
+    for(var o=0;o<gone.length;o+=BATCH){var b=db.batch();gone.slice(o,o+BATCH).forEach(c=>b.delete(db.collection(COL).doc(c.replace(/\//g,'_'))));await b.commit();}
+    var merged=Object.assign({},complete?{}:R.prevRaw,st.entries),entries=Object.keys(merged).map(c=>merged[c]),parsed=entries.map(parseEntry);
+    var parts=Math.max(1,Math.ceil(entries.length/PART)),oldParts=(G.meta&&G.meta.parts)||0;
     var bi=db.batch();
     for(var p=0;p<parts;p++)bi.set(db.collection(IDX).doc('part_'+p),{entries:entries.slice(p*PART,(p+1)*PART)});
     for(var q=parts;q<oldParts;q++)bi.delete(db.collection(IDX).doc('part_'+q));
-    rep={count:items.length,dispo:items.filter(i=>i.dispoFlag!==0).length,low:items.filter(i=>i.dispoFlag===2).length,matched:items.filter(i=>i.varieteId).length,
-      written:changed.length,removed:gone.length,groups:seedGroupNames,families:fams.length,errors:errors.slice(0,50),syncAt:now,ms:Date.now()-t0,baseSize:ix.size};
+    rep={count:entries.length,dispo:parsed.filter(e=>e.dispo!=='0').length,low:parsed.filter(e=>e.dispo==='2').length,matched:parsed.filter(e=>e.varieteId).length,
+      read:Object.keys(st.entries).length,written:st.written,removed:gone.length,groups:st.groups,families:fams.length,
+      famOk:fams.filter(f=>(st.done[famKey(f)]||{}).complete).length,famFailed:failedKeys.map(k=>st.failed[k]),complete:complete,
+      famErr:st.famErr||null,syncAt:Date.now(),ms:Date.now()-t0,baseSize:R.ix.size};
     bi.set(db.collection(IDX).doc('meta'),Object.assign({parts:parts},rep));
     await bi.commit();
-    progress('Synchronisation terminée',100);
+    if(complete)clearState();
+    progress(complete?'Synchronisation terminée':'Synchronisation partielle : '+failedKeys.length+' famille(s) à reprendre',100);
     console.info('[GST] synchro :',rep);
-  }catch(e){errors.push(e.message);rep.fatal=e.message;console.error('[GST] synchro interrompue',e);}
-  G.busy=false;btn.disabled=false;
-  renderReport(rep,errors);
-  await loadIndex().catch(()=>{});renderLast();renderList();
+  }catch(e){rep.fatal=e.message;if(st)saveState(st);console.error('[GST] synchro interrompue',e);}
+  G.busy=false;$('gstBtn').disabled=false;$('gstWait').style.display='none';
+  renderReport(rep);
+  await loadIndex().catch(()=>{});renderLast();renderList();renderResume();
+}
+function renderResume(){
+  var b=$('gstResumeBtn'),st=loadState();if(!b)return;
+  if(!st||G.busy){b.style.display='none';return;}
+  var ok=st.fams.filter(f=>(st.done[famKey(f)]||{}).complete).length;
+  b.style.display='';b.textContent='⏯ Reprendre la synchro ('+ok+'/'+st.fams.length+' familles faites)';
+}
+window.gstSync=async function(){
+  if(G.busy)return;
+  if(loadState()&&!confirm('Une synchronisation est inachevée.\nOK : tout recommencer depuis le début.\nAnnuler : garder la progression (bouton « Reprendre la synchro »).'))return;
+  clearState();return runSync(false);
 };
-function renderReport(r,errors){
-  if(r.fatal){$('gstReport').innerHTML='<div class="vdb-info" style="color:var(--red)">Synchronisation interrompue : '+esc(r.fatal)+'</div>'+(errors.length>1?'<ul class="vdb-list">'+errors.map(e=>'<li>'+esc(e)+'</li>').join('')+'</ul>':'');return;}
+window.gstResume=async function(){return runSync(true);};
+window.addEventListener('beforeunload',function(e){if(G.busy){e.preventDefault();e.returnValue='';}});
+function renderReport(r){
+  if(r.fatal){$('gstReport').innerHTML='<div class="vdb-info" style="color:var(--red)">Synchronisation interrompue : '+esc(r.fatal)+'<br>La progression est gardée : « Reprendre la synchro » repartira de la dernière page enregistrée.</div>';return;}
+  var ff=r.famFailed||[];
   $('gstReport').innerHTML='<div class="vdb-grid">'+
-    gcard(r.count,'Articles (graines)')+gcard(r.dispo,'Disponibles')+gcard(r.low,'Stock bas')+gcard(r.matched,'Rapprochés avec la base')+gcard(r.written,'Écrits (nouveaux ou modifiés)')+gcard(r.removed,'Retirés')+'</div>'+
-    '<div class="vdb-info">Groupes retenus : '+esc((r.groups||[]).join(', ')||'—')+' · '+r.families+' familles · '+Math.round(r.ms/1000)+' s</div>'+
-    (errors.length?'<div class="vdb-info"><div class="vdb-sub" style="color:var(--red)">Pages en erreur ('+errors.length+')</div><ul class="vdb-list">'+errors.map(e=>'<li>'+esc(e)+'</li>').join('')+'</ul></div>':'');
+    gcard(r.famOk+' / '+r.families,'Familles réussies')+gcard(ff.length,'Familles en échec')+gcard(r.read,'Articles lus')+gcard(r.count,'Articles au catalogue')+
+    gcard(r.dispo,'Disponibles')+gcard(r.low,'Stock bas')+gcard(r.matched,'Rapprochés avec la base')+gcard(r.written,'Écrits (nouveaux ou modifiés)')+gcard(r.removed,'Retirés')+'</div>'+
+    '<div class="vdb-info">Groupes retenus : '+esc((r.groups||[]).join(', ')||'—')+' · '+Math.round(r.ms/1000)+' s'+(r.complete?'':' · aucun article supprimé tant que des familles restent à reprendre')+'</div>'+
+    (r.famErr?'<div class="vdb-info" style="color:var(--red)">Liste des familles illisible ('+esc(r.famErr)+') : catalogue complet lu à la place.</div>':'')+
+    (ff.length?'<div class="vdb-info"><div class="vdb-sub" style="color:var(--red)">Familles en échec ('+ff.length+') : clique sur « Reprendre la synchro »</div><ul class="vdb-list">'+ff.map(x=>'<li><b>'+esc(x.nom)+'</b> · page '+x.page+' : '+esc(x.raison)+'</li>').join('')+'</ul></div>':'');
 }
 function gcard(v,l){return '<div class="stat-card"><div class="stat-val">'+v+'</div><div class="stat-label">'+l+'</div></div>';}
-function renderLast(){var m=G.meta;$('gstLast').textContent=m&&m.syncAt?'Dernière synchronisation : '+new Date(m.syncAt).toLocaleString('fr-FR')+' · '+m.count+' articles · '+m.dispo+' disponibles · '+m.matched+' rapprochés':'Jamais synchronisé';}
+function renderLast(){var m=G.meta;$('gstLast').textContent=m&&m.syncAt?'Dernière synchronisation'+(m.complete===false?' (partielle)':'')+' : '+new Date(m.syncAt).toLocaleString('fr-FR')+' · '+m.count+' articles · '+m.dispo+' disponibles · '+m.matched+' rapprochés':'Jamais synchronisé';}
 var TYPE_TXT={f:'Féminisée',a:'Auto',r:'Régulière'};
 function renderList(){
   var q=nrm(($('gstSearch')||{}).value||''),onlyDispo=($('gstOnlyDispo')||{}).checked;
@@ -1819,7 +1898,7 @@ function renderList(){
     '<td>'+(e.varieteId?'<span class="td-badge green">✓</span>':'<span class="vdb-null">—</span>')+'</td></tr>').join('')||'<tr><td colspan="9"><div class="empty-state">Lance une synchronisation pour charger le catalogue.</div></td></tr>';
 }
 var st=null;window.gstFilter=function(){clearTimeout(st);st=setTimeout(renderList,150);};
-window.gstOpen=async function(){try{await loadIndex();}catch(e){console.warn('[GST] index illisible',e&&e.message);}renderLast();renderList();};
+window.gstOpen=async function(){try{await loadIndex();}catch(e){console.warn('[GST] index illisible',e&&e.message);}renderLast();renderList();renderResume();};
 window.__gst={parseNombre:parseNombre,parseDesc:parseDesc,stripHtml:stripHtml,matchBase:matchBase};
 })();
 </script>
