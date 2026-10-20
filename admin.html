@@ -519,6 +519,17 @@ td{font-size:13.5px}
             <div id="gstReport"></div>
           </div>
         </div>
+        <div class="section-title">Qualité du catalogue</div>
+        <div class="table-wrap">
+          <div class="vdb-body">
+            <div class="vdb-info">Analyse en lecture seule de l'index du catalogue : compare ce que voit le chat (stocké) à ce que donnerait le parseur actuel sur les mêmes noms bruts. Aucune écriture, aucun appel à Garden Seeds.</div>
+            <div class="vdb-row"><button class="btn btn-primary" onclick="gstAudit()">🔍 Lancer l'audit</button><button class="btn btn-secondary" onclick="gstAudit(true)">Analyser depuis les documents</button><button class="btn btn-secondary" onclick="gstAuditCopy()">📋 Copier le résultat</button></div>
+            <div id="gstAuditOut"></div>
+            <div class="vdb-row" style="margin-top:10px"><input class="vdb-search" id="gstInspectQ" placeholder="Inspecter une variété (ex. sad)" onkeydown="if(event.key==='Enter')gstInspect()"/><button class="btn btn-secondary" onclick="gstInspect()">Inspecter</button></div>
+            <div id="gstInspectOut"></div>
+            <textarea class="field-input" id="gstAuditText" rows="8" style="display:none;font-family:monospace;font-size:11px"></textarea>
+          </div>
+        </div>
         <div class="section-title">Réglages du catalogue</div>
         <div class="table-wrap">
           <div class="vdb-body">
@@ -2367,6 +2378,153 @@ async function renderMatch(){
       '<td>'+(tag[0]?'<span class="td-badge '+tag[0]+'">'+tag[1]+'</span>':tag[1])+'</td></tr>';
   }).join('')||'<tr><td colspan="5"><div class="empty-state">Toutes les variétés sont rapprochées ou à vérifier.</div></td></tr>';
 }
+/* ── QUALITÉ DU CATALOGUE (lecture seule) ──
+   Compare, pour chaque article, ce que voit le chat (index stocké) et ce que donnerait le parseur actuel
+   sur le même nom brut. Aucune écriture, aucun appel à l'API Garden Seeds. */
+var SUSPECT_RE=/^(?:fast|version|auto|autos|autoflowering|autoflower|autoflorecientes?|autofloraison|automatic|automatica|xl|xxl|cbd|f1|s1|s2|bx\d*|ibl|regular|regulares|reg|fem|feminizadas?|feminizados?|feminized|feminised|granel|profesionales?)$/;
+function viewsOf(e){
+  var p=String(e).split('|');while(p.length<27)p.push('');
+  var raw=p[15]||'',hasRaw=!!p[15];
+  // ce que voit le chat : champs stockés (avec les mêmes valeurs par défaut que le client)
+  var sBase=p[26]||joinLetters(base0(p[1]));
+  var stored={variete:p[1],nb:p[4]===''?null:Number(p[4]),off:Number(p[24]||0),granel:p[25]==='G',base:sBase,decl:(p[21]||'').split('~')[0]||sBase,groupe:p[21]||(nrm(p[1])+'~'+nrm(p[2])+'~'+(p[3]||''))};
+  var current=null;
+  if(hasRaw){var pn=parseNombre(raw,p[2],''),c=cleanName(pn.variete||p[1],[p[2],p[16]]);
+    current={variete:pn.variete,nb:pn.nbGraines,off:pn.offertes||0,granel:!!pn.granel,base:c.strict,decl:c.variant,groupe:groupOf(c.variant,p[2],p[3])};}
+  return {p:p,raw:raw,hasRaw:hasRaw,code:p[0],breeder:p[2]||'—',famille:p[16]||'—',type:p[3],dispo:p[10],retire:p[23]==='R',statut:p[17],stored:stored,current:current};
+}
+// forme d'un motif de pack non reconnu : chiffres remplacés par N
+function packShape(raw){
+  var s=String(raw||'');
+  if(/granel/i.test(s))return 'Granel / vrac pro';
+  var m;
+  if((m=s.match(/\d{1,3}\s*\+\s*\d{1,3}\s*\S*/)))return 'N+N '+m[0].replace(/^[\d\s+]+/,'').replace(/\d+/g,'N');
+  if(/\bx\s*\d{1,3}\b/i.test(s))return 'xN';
+  if((m=s.match(/\d{1,3}\s*(seeds?|semillas?|graines?|uds?\.?|u\.|unid\w*|pcs?)\b/i)))return 'N '+m[1].toLowerCase();
+  if((m=s.match(/(\S+\s+)?(\S*\d+\S*)(\s+\S+)?/)))return 'autre : '+m[0].replace(/\d+/g,'N').toLowerCase();
+  return 'aucun nombre';
+}
+function auditOf(list,view,showGranel){
+  var A={articles:0,sansRaw:0,packInconnu:0,formes:{},declNonId:0,residus:{},granelSeul:0,granelSeulEx:[],coupees:0,coupeesEx:[],ruptureNormale:0,ruptureAvecVrac:0,mauvaisParBreeder:{}};
+  var byBase={},byGroup={},byBreederBases={};
+  list.forEach(a=>{
+    var v=a[view];if(!v){A.sansRaw++;return;}
+    A.articles++;
+    var bad=false;
+    if(v.nb==null||isNaN(v.nb)){A.packInconnu++;bad=true;var f=packShape(a.raw||v.variete);var F=A.formes[f]||(A.formes[f]={n:0,ex:[]});F.n++;if(F.ex.length<3)F.ex.push(a.raw||v.variete);}
+    var toks=String(v.base||'').split(' ').filter(Boolean),sus=toks.filter(t=>SUSPECT_RE.test(t));
+    if(sus.length){A.declNonId++;bad=true;}
+    toks.forEach(t=>{if(/^\d+$/.test(t))return;A.residus[t]=(A.residus[t]||0)+1;});
+    if(bad){var k=a.breeder;A.mauvaisParBreeder[k]=(A.mauvaisParBreeder[k]||0)+1;}
+    var bk=v.base+'|'+base0(a.breeder);(byBase[bk]=byBase[bk]||[]).push({a:a,v:v});
+    (byGroup[v.groupe]=byGroup[v.groupe]||[]).push({a:a,v:v});
+    var bb=byBreederBases[a.breeder]||(byBreederBases[a.breeder]={});bb[v.base]=(bb[v.base]||0)+1;
+  });
+  // variétés de base dont seuls des formats vrac sont visibles côté client
+  Object.keys(byBase).forEach(k=>{
+    var arts=byBase[k],visible=arts.filter(x=>showGranel||!x.v.granel);
+    if(visible.length&&visible.every(x=>/granel/i.test(x.a.raw||x.v.variete))){A.granelSeul++;if(A.granelSeulEx.length<10)A.granelSeulEx.push(k.split('|')[0]+' ('+arts[0].a.breeder+')');}
+  });
+  // même breeder, noms de base quasi identiques mais groupes séparés
+  Object.keys(byBreederBases).forEach(br=>{
+    var bases=Object.keys(byBreederBases[br]),compact={},seen={};
+    bases.forEach(b=>{var c=b.replace(/[\s\d]+/g,'');(compact[c]=compact[c]||[]).push(b);});
+    Object.keys(compact).forEach(c=>{if(compact[c].length>1){compact[c].forEach(b=>seen[b]=1);if(A.coupeesEx.length<10)A.coupeesEx.push(compact[c].join(' / ')+' ('+br+')');}});
+    if(bases.length<=400)for(var i=0;i<bases.length;i++)for(var j=i+1;j<bases.length;j++){
+      if(seen[bases[i]]&&seen[bases[j]])continue;
+      var t1=trig(bases[i]),t2=trig(bases[j]),inter=t1.filter(x=>t2.indexOf(x)>-1).length,d=2*inter/(t1.length+t2.length);
+      if(d>=0.9){seen[bases[i]]=1;seen[bases[j]]=1;if(A.coupeesEx.length<10)A.coupeesEx.push(bases[i]+' / '+bases[j]+' ('+br+')');}
+    }
+    A.coupees+=Object.keys(seen).length;
+  });
+  // déclinaisons dont tous les packs normaux sont en rupture
+  Object.keys(byGroup).forEach(g=>{
+    var arts=byGroup[g],normal=arts.filter(x=>!(x.v.granel||/granel/i.test(x.a.raw)));
+    if(normal.length&&normal.every(x=>x.a.dispo==='0')){A.ruptureNormale++;if(arts.some(x=>(x.v.granel||/granel/i.test(x.a.raw))&&x.a.dispo!=='0'))A.ruptureAvecVrac++;}
+  });
+  A.variantes=Object.keys(byGroup).length;A.bases=Object.keys(byBase).length;
+  return A;
+}
+async function auditEntries(forceDocs){
+  if(!G.loaded)await loadIndex();
+  var raw=G.entries.map(e=>e.raw);
+  if(forceDocs)raw=await readCatalogueDocs(n=>{$('gstAuditOut').innerHTML='<div class="vdb-info">Lecture des articles enregistrés… '+n+' · '+esc(FSG.summary())+'</div>';});
+  return raw.map(viewsOf);
+}
+function topN(obj,n){return Object.keys(obj).map(k=>[k,obj[k]]).sort((a,b)=>(b[1].n||b[1])-(a[1].n||a[1])).slice(0,n);}
+function auditHtml(S,C,list){
+  var row=(l,a,b)=>'<tr><td>'+l+'</td><td>'+a+'</td><td><b style="font-weight:600">'+(C?b:'—')+'</b></td></tr>';
+  var n=(x,t)=>x+(t?' <span class="vdb-note">('+Math.round(x/Math.max(1,t)*1000)/10+' %)</span>':'');
+  var h='<div style="overflow-x:auto"><table><thead><tr><th>Indicateur</th><th>Stocké (ce que voit le chat)</th><th>Parseur actuel (même nom brut)</th></tr></thead><tbody>'+
+    row('Articles analysés',S.articles,C&&C.articles)+
+    row('Variétés de base · déclinaisons',S.bases+' · '+S.variantes,C&&(C.bases+' · '+C.variantes))+
+    row('1. Pack non découpé (graines inconnues)',n(S.packInconnu,S.articles),C&&n(C.packInconnu,C.articles))+
+    row('2. Déclinaison non identifiée (mot de déclinaison resté dans le nom de base)',n(S.declNonId,S.articles),C&&n(C.declNonId,C.articles))+
+    row('3. Variétés dont seuls des formats vrac sont visibles côté client',S.granelSeul,C&&C.granelSeul)+
+    row('4. Variétés coupées en plusieurs groupes (même breeder, noms quasi identiques)',S.coupees,C&&C.coupees)+
+    row('5. Déclinaisons dont tous les packs normaux sont en rupture',S.ruptureNormale+' <span class="vdb-note">(dont '+S.ruptureAvecVrac+' avec vrac dispo)</span>',C&&(C.ruptureNormale+' <span class="vdb-note">(dont '+C.ruptureAvecVrac+' avec vrac dispo)</span>'))+
+    '</tbody></table></div>';
+  if(S.sansRaw)h+='<div class="vdb-info" style="color:var(--red)">'+S.sansRaw+' article(s) sans nom brut dans l\'index : la colonne « parseur actuel » ne les couvre pas. Utilise « Analyser depuis les documents ».</div>';
+  function formes(A,t){return '<div class="vdb-sub">'+t+'</div><ul class="vdb-list">'+topN(A.formes,15).map(x=>'<li><b>'+esc(x[0])+'</b> · '+x[1].n+' article(s) — ex. '+x[1].ex.map(esc).join(' ; ')+'</li>').join('')+'</ul>';}
+  h+='<div class="vdb-info">'+formes(S,'1. Motifs de pack non reconnus — stocké')+(C?formes(C,'1. Motifs de pack non reconnus — parseur actuel'):'')+'</div>';
+  h+='<div class="vdb-info"><div class="vdb-sub">2. Mots les plus fréquents restant dans les noms de base (parseur actuel'+(C?'':' indisponible : stocké')+')</div>'+
+    topN((C||S).residus,40).map(x=>'<span class="td-badge'+(SUSPECT_RE.test(x[0])?' gold':'')+'" style="margin:2px">'+esc(x[0])+' · '+x[1]+'</span>').join(' ')+
+    '<div class="vdb-note">En doré : mots de déclinaison connus qui ne devraient plus rester dans un nom de base.</div></div>';
+  h+='<div class="vdb-info"><div class="vdb-sub">3. Exemples — seuls des formats vrac visibles</div>'+(S.granelSeulEx.map(esc).join(' · ')||'—')+(C?'<br><span class="vdb-note">parseur actuel :</span> '+(C.granelSeulEx.map(esc).join(' · ')||'—'):'')+'</div>';
+  h+='<div class="vdb-info"><div class="vdb-sub">4. Exemples — variétés coupées</div>'+(S.coupeesEx.map(esc).join(' · ')||'—')+(C?'<br><span class="vdb-note">parseur actuel :</span> '+(C.coupeesEx.map(esc).join(' · ')||'—'):'')+'</div>';
+  var br=topN(S.mauvaisParBreeder,30);
+  h+='<div class="vdb-info"><div class="vdb-sub">6. Top 30 des breeders avec le plus d\'articles mal découpés (stocké → parseur actuel)</div><ul class="vdb-list">'+
+    br.map(x=>'<li>'+esc(x[0])+' : '+x[1]+(C?' → '+(C.mauvaisParBreeder[x[0]]||0):'')+'</li>').join('')+'</ul></div>';
+  return h;
+}
+function auditText(S,C){
+  var L=['QUALITÉ DU CATALOGUE — '+new Date().toLocaleString('fr-FR'),'indicateur ; stocké ; parseur actuel',
+    'articles ; '+S.articles+' ; '+(C?C.articles:'-'),'bases · déclinaisons ; '+S.bases+' · '+S.variantes+' ; '+(C?C.bases+' · '+C.variantes:'-'),
+    '1 pack non découpé ; '+S.packInconnu+' ; '+(C?C.packInconnu:'-'),'2 déclinaison non identifiée ; '+S.declNonId+' ; '+(C?C.declNonId:'-'),
+    '3 seuls formats vrac visibles ; '+S.granelSeul+' ; '+(C?C.granelSeul:'-'),'4 variétés coupées ; '+S.coupees+' ; '+(C?C.coupees:'-'),
+    '5 packs normaux tous en rupture ; '+S.ruptureNormale+' (vrac dispo '+S.ruptureAvecVrac+') ; '+(C?C.ruptureNormale+' (vrac dispo '+C.ruptureAvecVrac+')':'-'),
+    'articles sans nom brut ; '+S.sansRaw,'','MOTIFS NON RECONNUS (stocké)'];
+  topN(S.formes,15).forEach(x=>L.push('- '+x[0]+' : '+x[1].n+' — ex. '+x[1].ex.join(' ; ')));
+  if(C){L.push('','MOTIFS NON RECONNUS (parseur actuel)');topN(C.formes,15).forEach(x=>L.push('- '+x[0]+' : '+x[1].n+' — ex. '+x[1].ex.join(' ; ')));}
+  L.push('','MOTS RESTANTS DANS LES NOMS DE BASE');L.push(topN((C||S).residus,40).map(x=>x[0]+' '+x[1]).join(', '));
+  L.push('','SEULS FORMATS VRAC (ex.) : '+S.granelSeulEx.join(' · '),'VARIÉTÉS COUPÉES (ex.) : '+S.coupeesEx.join(' · '),'','TOP BREEDERS MAL DÉCOUPÉS (stocké → actuel)');
+  topN(S.mauvaisParBreeder,30).forEach(x=>L.push('- '+x[0]+' : '+x[1]+(C?' → '+(C.mauvaisParBreeder[x[0]]||0):'')));
+  return L.join('\n');
+}
+window.gstAudit=async function(fromDocs){
+  if(G.busy)return;
+  if(fromDocs&&!window.confirm('Analyser depuis les documents catalogue_gst : ≈ '+((G.meta&&G.meta.count)||'?')+' lectures Firestore (aucune écriture). Continuer ?'))return;
+  G.busy=true;FSG.begin('Audit du catalogue');$('gstAuditOut').innerHTML='<div class="vdb-info">Analyse en cours…</div>';
+  try{
+    var list=await auditEntries(!!fromDocs),showG=!!(G.meta&&G.meta.showGranel);
+    var S=auditOf(list,'stored',showG),C=list.some(a=>a.current)?auditOf(list,'current',showG):null;
+    G.audit={S:S,C:C,list:list,at:Date.now()};
+    $('gstAuditOut').innerHTML=auditHtml(S,C,list)+'<div class="vdb-info">Coût : '+esc(FSG.summary())+' · aucune écriture.</div>';
+    console.info('[GST] audit',{stocke:S,actuel:C});
+  }catch(e){$('gstAuditOut').innerHTML='<div class="vdb-info" style="color:var(--red)">'+esc(FSG.why(e))+'</div>';}
+  G.busy=false;
+};
+window.gstAuditCopy=async function(){
+  if(!G.audit){toast('Lance d\'abord l\'audit','error');return;}
+  var t=auditText(G.audit.S,G.audit.C)+(G.inspectText?'\n\n'+G.inspectText:'');
+  try{await navigator.clipboard.writeText(t);toast('📋 Résultat copié : colle-le dans la conversation','info');}
+  catch(e){var ta=$('gstAuditText');ta.style.display='';ta.value=t;ta.select();toast('Copie automatique impossible : sélectionne le texte affiché','error');}
+};
+// inspecter une variété : tous les articles dont le nom brut, le nom stocké ou le nom de base contient la recherche
+window.gstInspect=async function(){
+  var q=joinLetters(base0($('gstInspectQ').value||''));if(!q)return;
+  if(!G.audit){try{G.audit={list:await auditEntries(false)};}catch(e){toast(FSG.why(e),'error');return;}}
+  var re=new RegExp('(^| )'+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'( |$)');
+  var hits=G.audit.list.filter(a=>[a.raw,a.stored.variete,a.stored.base,a.current&&a.current.base].some(x=>re.test(joinLetters(base0(x||'')))));
+  var pk=v=>v?(v.nb==null||isNaN(v.nb)?'<span class="td-badge red">inconnu</span>':(v.off?(v.nb-v.off)+' + '+v.off+' offerte(s) = '+v.nb:v.nb)):'—';
+  var cell=(a,k)=>{var s=a.stored[k],c=a.current&&a.current[k];var same=!a.current||String(s)===String(c);return esc(String(s==null?'—':s))+(same?'':'<div class="vdb-note" style="color:var(--badge-gold-color)">→ '+esc(String(c==null?'—':c))+'</div>');};
+  $('gstInspectOut').innerHTML='<div class="vdb-note">'+hits.length+' article(s) pour « '+esc(q)+' » · en doré : ce que donnerait le parseur actuel</div><div style="overflow-x:auto"><table><thead><tr><th>Nom brut</th><th>Variété stockée</th><th>Nom de base</th><th>Déclinaison</th><th>Pack</th><th>Vrac</th><th>Dispo</th><th>Groupe</th><th>Rapprochement</th></tr></thead><tbody>'+
+    hits.slice(0,80).map(a=>'<tr><td>'+esc(a.raw||'—')+'<div class="vdb-note">'+esc(a.code)+' · '+esc(a.breeder)+'</div></td><td>'+cell(a,'variete')+'</td><td>'+cell(a,'base')+'</td><td>'+cell(a,'decl')+'</td>'+
+      '<td>'+pk(a.stored)+(a.current&&String(a.current.nb)!==String(a.stored.nb)?'<div class="vdb-note" style="color:var(--badge-gold-color)">→ '+pk(a.current)+'</div>':'')+'</td><td>'+cell(a,'granel')+'</td>'+
+      '<td>'+(a.retire?'retiré':a.dispo==='0'?'rupture':a.dispo==='2'?'stock bas':'oui')+'</td><td>'+cell(a,'groupe')+'</td><td>'+esc(STATUT[a.statut]||a.statut||'—')+'</td></tr>').join('')+'</tbody></table></div>';
+  G.inspectText='INSPECTION « '+q+' » ('+hits.length+' articles)\nnom brut | variété stockée → actuelle | base stockée → actuelle | déclinaison | graines (offertes) stocké → actuel | vrac stocké → actuel | dispo | groupe stocké → actuel | rapprochement\n'+
+    hits.slice(0,80).map(a=>{var s=a.stored,c=a.current||{};return [a.raw,s.variete+' → '+c.variete,s.base+' → '+c.base,s.decl+' → '+c.decl,(s.nb==null?'?':s.nb)+'('+s.off+') → '+(c.nb==null?'?':c.nb)+'('+(c.off||0)+')',s.granel+' → '+c.granel,a.retire?'retiré':a.dispo,s.groupe+' → '+c.groupe,STATUT[a.statut]||a.statut||'-'].join(' | ');}).join('\n');
+};
 var st=null;window.gstFilter=function(){clearTimeout(st);st=setTimeout(renderList,150);};
 async function loadSettings(){var x=await FSG.get(db.collection('adminData').doc('gstSettings'),'réglages du catalogue');G.settings=x.exists?x.data():{alias:[],showGranel:false};return G.settings;}
 function renderSettings(){var s=G.settings||{};if(!$('gstAlias'))return;$('gstShowGranel').checked=!!s.showGranel;$('gstAlias').value=(s.alias||[]).map(a=>a.alias+' = '+a.nom).join('\n');}
