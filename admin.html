@@ -1987,14 +1987,14 @@ async function loadMatcher(){
   var bsnaps=await Promise.all(Array.from({length:bparts},(_,i)=>FSG.get(db.collection(VIDX).doc('b_'+i),'index de la base')));
   var br={};
   bsnaps.forEach(s=>{if(s.exists)(s.data().entries||[]).forEach(e=>{var p=String(e).split('|');br[p[0]]=(p[1]||'').split(',').filter(Boolean);});});
-  var M={strict:{},soft:{},nums:{},nom:{},br:{},auto:{},ini:{},short:{},alias:{},keys:[],tri:{},ktri:[],size:0,hasBreeders:bparts>0};
+  var M={strict:{},soft:{},nums:{},nom:{},br:{},names:{},brRaw:{},auto:{},ini:{},short:{},alias:{},keys:[],tri:{},ktri:[],size:0,hasBreeders:bparts>0};
   var set=await FSG.get(db.collection('adminData').doc('gstSettings'),'réglages du catalogue');M.settings=set.exists?set.data():{};
   G.settings=Object.assign({alias:[],showGranel:false},M.settings);compileRules(M.settings.regles);
   (M.settings.alias||[]).forEach(x=>{var a=cleanName(x.alias,[]).strict,n=cleanName(x.nom,[]).strict;if(a&&n&&a!==n){M.alias[a]=n;if(!M.alias[n])M.alias[n]=a;}});
   function add(map,k,id){var a=map[k]||(map[k]=[]);if(a.indexOf(id)<0)a.push(id);}
   snaps.forEach(s=>{if(!s.exists)return;(s.data().entries||[]).forEach(e=>{
     var p=String(e).split('|'),id=p[0],bl=br[id]||[];
-    M.nom[id]=p[1]||id;M.br[id]=bl.map(base0).filter(Boolean);M.size++;
+    M.nom[id]=p[1]||id;M.br[id]=bl.map(base0).filter(Boolean);M.names[id]=p.slice(1).filter(Boolean);M.brRaw[id]=bl;M.size++;
     p.slice(1).forEach(n=>{if(!n)return;var c=cleanName(n,bl);if(!c.strict)return;
       add(M.strict,c.strict,id);add(M.soft,c.soft,id);
       (M.nums[id]=M.nums[id]||{})[c.soft]=c.nums;
@@ -2600,6 +2600,10 @@ window.gstInspect=async function(){
       '<td>'+(a.retire?'retiré':a.dispo==='0'?'rupture':a.dispo==='2'?'stock bas':'oui')+'</td><td>'+cell(a,'groupe')+'</td><td>'+esc(STATUT[a.statut]||a.statut||'—')+'</td></tr>').join('')+'</tbody></table></div>';
   G.inspectText='INSPECTION « '+q+' » ('+hits.length+' articles)\nnom brut | variété stockée → actuelle | base stockée → actuelle | déclinaison | graines (offertes) stocké → actuel | vrac stocké → actuel | dispo | groupe stocké → actuel | rapprochement\n'+
     hits.slice(0,80).map(a=>{var s=a.stored,c=a.current||{};return [a.raw,s.variete+' → '+c.variete,s.base+' → '+c.base,s.decl+' → '+c.decl,(s.nb==null?'?':s.nb)+'('+s.off+') → '+(c.nb==null?'?':c.nb)+'('+(c.off||0)+')',s.granel+' → '+c.granel,a.retire?'retiré':a.dispo,s.groupe+' → '+c.groupe,STATUT[a.statut]||a.statut||'-'].join(' | ');}).join('\n');
+  // partie 2 : base StrainSage et raisons du rapprochement (lecture seule)
+  var box=document.createElement('div');box.innerHTML='<div class="vdb-info">Diagnostic du rapprochement…</div>';$('gstInspectOut').appendChild(box);
+  try{var dg=await inspectMatch(q,hits);box.innerHTML=dg.html;G.inspectText+='\n\n'+dg.text;}
+  catch(e){box.innerHTML='<div class="vdb-info" style="color:var(--red)">Diagnostic impossible : '+esc(e&&e.code?FSG.why(e):(e.message||String(e)))+'</div>';}
 };
 /* ── RÉAPPLIQUER LE DÉCOUPAGE DES NOMS (sans appel à Garden Seeds) ──
    Recalcule, depuis le nom brut gardé dans l'index : nom affiché, graines (payées + offertes), vrac, nom de base, déclinaison.
@@ -2640,6 +2644,71 @@ window.gstReparse=async function(){
   G.busy=false;
   await loadIndex().catch(()=>{});renderLast();renderList();
 };
+/* ── DIAGNOSTIC DU RAPPROCHEMENT (lecture seule) ──
+   Partie 2 de « Inspecter une variété » : fiches de la base StrainSage correspondant au terme,
+   puis, pour chaque variété du catalogue inspectée, les 3 meilleures fiches candidates, leur score
+   à chaque niveau et la raison exacte du rejet. */
+function initialsOf(k){var a=alphaToks(k);return a.length>=2?a.map(t=>t[0]).join(''):'';}
+function diceOf(a,b){var t1=trig(a),t2=trig(b),i=t1.filter(x=>t2.indexOf(x)>-1).length;return Math.round(2*i/(t1.length+t2.length)*100)/100;}
+function baseHitsFor(M,q){
+  var out=[];
+  Object.keys(M.names).forEach(id=>{
+    var bl=M.brRaw[id]||[],rows=M.names[id].map(n=>{var c=cleanName(n,bl);return {raw:n,strict:c.strict,soft:c.soft,ini:initialsOf(c.strict)};});
+    if(rows.some(r=>(' '+joinLetters(base0(r.raw))+' ').indexOf(' '+q+' ')>-1||r.ini===q||r.strict===q))out.push({id:id,rows:rows,bl:bl});
+  });
+  return out;
+}
+// tous les niveaux pour une variété du catalogue, sans rien écrire
+function diagnoseMatch(M,D,variete,breeder,familia,type){
+  var c=cleanName(variete,[breeder,familia]),b=base0(breeder),res=matchVariety(M,D,variete,breeder,familia,type);
+  var L1=M.strict[c.strict]||[],L2=M.soft[c.soft]||[],al=alphaToks(c.strict),acro={mode:'',key:'',pool:[]};
+  if(al.length===1&&c.strict.split(' ').length<=2&&/^[a-z]{2,4}$/.test(al[0]))acro={mode:'nom court → initiales des noms de la base',key:al[0],pool:M.ini[al[0]]||[]};
+  else if(al.length>=2&&al.length===c.strict.split(' ').length)acro={mode:'nom long → nom court de la base',key:al.map(t=>t[0]).join(''),pool:M.short[al.map(t=>t[0]).join('')]||[]};
+  else acro.mode='acronyme non calculé ('+(al.length===0?'aucun mot alphabétique':al.length===1?'nom de '+al[0].length+' lettres, hors 2–4':'nom mêlant chiffres et mots')+')';
+  var sim=similar(M,c.soft,3),ids=[];
+  [L1,L2,acro.pool,sim.map(x=>x.id)].forEach(l=>l.forEach(id=>{if(ids.indexOf(id)<0)ids.push(id);}));
+  var cands=ids.slice(0,3).map(id=>{
+    var bl=M.brRaw[id]||[],names=M.names[id]||[M.nom[id]];
+    var softs=names.map(n=>cleanName(n,bl).soft),dice=Math.max.apply(null,softs.map(s=>diceOf(c.soft,s)));
+    var inL1=L1.indexOf(id)>-1,inL2=L2.indexOf(id)>-1,inA=acro.pool.indexOf(id)>-1,sb=sameBreeder(M,id,b),why=[];
+    if(inL1&&L1.length>1)why.push(L1.length+' fiches ont ce nom strict');
+    if(!inL1&&inL2&&L2.length>1)why.push(L2.length+' fiches ont ce nom souple');
+    if(!inL1&&!inL2){
+      if(inA){if(acro.pool.length>1)why.push('initiales partagées par '+acro.pool.length+' fiches');if(!sb)why.push(bl.length?'breeder différent ('+bl.join(', ')+')':'breeder vide dans la base');}
+      else why.push('acronyme : '+(acro.key?'clé « '+acro.key+' » absente pour cette fiche':acro.mode));
+      if(dice<SIM_REVIEW)why.push('similarité '+dice+' < '+SIM_REVIEW);
+    }
+    if(res.candidat===id&&res.statut==='r')why=['retenue'];
+    return {id:id,nom:M.nom[id],breederBrut:bl.join(', ')||'(vide)',breederNorm:(M.br[id]||[]).join(', ')||'(vide)',strict:inL1,souple:inL2,acronyme:inA,dice:dice,memeBreeder:sb,raison:why.join(' ; ')||'—'};
+  });
+  return {variete:variete,breeder:breeder,breederNorm:b,strict:c.strict,soft:c.soft,initiales:initialsOf(c.strict),acro:acro,L1:L1.length,L2:L2.length,resultat:STATUT[res.statut]+(res.niveau?' (niveau '+res.niveau+')':''),cands:cands};
+}
+async function inspectMatch(q,hits){
+  await ensureMatcher();var M=G.M,D=G.D||{};
+  var fiches=baseHitsFor(M,q),T=[];
+  var h='<div class="vdb-sub" style="margin-top:12px">Base StrainSage : '+fiches.length+' fiche(s) pour « '+esc(q)+' »</div>'+(M.hasBreeders?'':'<div class="vdb-info" style="color:var(--red)">Breeders de la base non indexés : « Reconstruire l\'index » de la base de variétés.</div>')+
+    '<div style="overflow-x:auto"><table><thead><tr><th>Fiche</th><th>Nom brut</th><th>Nom nettoyé strict / souple</th><th>Initiales</th><th>Breeder brut → normalisé</th><th>Clés de rapprochement</th></tr></thead><tbody>'+
+    fiches.slice(0,30).map(f=>f.rows.map((r,i)=>'<tr><td>'+(i?'':esc(f.id))+'</td><td>'+esc(r.raw)+'</td><td>'+esc(r.strict)+(r.soft!==r.strict?' / '+esc(r.soft):'')+'</td><td>'+esc(r.ini||'—')+'</td><td>'+(i?'':esc(f.bl.join(', ')||'(vide)')+' → '+esc((M.br[f.id]||[]).join(', ')||'(vide)'))+'</td><td>'+
+      esc(['strict:'+r.strict,'souple:'+r.soft].concat(r.ini&&r.ini.length<=5?['initiales:'+r.ini]:[]).concat(/^[a-z]{2,4}$/.test(r.strict)?['nom court:'+r.strict]:[]).join(' · '))+'</td></tr>').join('')).join('')+'</tbody></table></div>';
+  T.push('BASE STRAINSAGE « '+q+' » ('+fiches.length+' fiches)');
+  fiches.slice(0,30).forEach(f=>{T.push('- '+f.id+' | breeder '+(f.bl.join(', ')||'(vide)')+' → '+((M.br[f.id]||[]).join(', ')||'(vide)'));f.rows.forEach(r=>T.push('    nom « '+r.raw+' » → strict « '+r.strict+' » souple « '+r.soft+' » initiales « '+(r.ini||'-')+' »'));});
+  // une ligne par variété (même nom de base et breeder) du catalogue inspectée
+  var seen={},vars=[];
+  hits.forEach(a=>{var v=a.current||a.stored,k=(v.base||'')+'|'+base0(a.breeder);if(seen[k])return;seen[k]=1;vars.push({a:a,v:v});});
+  h+='<div class="vdb-sub" style="margin-top:12px">Rapprochement : '+vars.length+' variété(s) du catalogue</div>';
+  T.push('','RAPPROCHEMENT ('+vars.length+' variétés)');
+  vars.slice(0,15).forEach(x=>{
+    var d=diagnoseMatch(M,D,x.v.variete,x.a.breeder==='—'?'':x.a.breeder,x.a.famille==='—'?'':x.a.famille,x.a.type);
+    h+='<div class="vdb-info"><b>'+esc(d.variete)+'</b> · '+esc(d.breeder||'—')+' → <code>'+esc(d.breederNorm||'(vide)')+'</code> · strict « '+esc(d.strict)+' » · souple « '+esc(d.soft)+' » · initiales « '+esc(d.initiales||'—')+' »<br>'+
+      'Niveau 1 : '+d.L1+' fiche(s) · niveau 2 : '+d.L2+' · acronyme : '+esc(d.acro.mode)+(d.acro.key?' (clé « '+esc(d.acro.key)+' », '+d.acro.pool.length+' fiche(s))':'')+' · <b>résultat : '+esc(d.resultat)+'</b>'+
+      '<div style="overflow-x:auto"><table><thead><tr><th>Candidate</th><th>Breeder brut → normalisé</th><th>Strict</th><th>Souple</th><th>Acronyme</th><th>Similarité</th><th>Même breeder</th><th>Raison</th></tr></thead><tbody>'+
+      (d.cands.map(c=>'<tr><td>'+esc(c.nom)+'<div class="vdb-note">'+esc(c.id)+'</div></td><td>'+esc(c.breederBrut)+' → '+esc(c.breederNorm)+'</td><td>'+(c.strict?'✓':'—')+'</td><td>'+(c.souple?'✓':'—')+'</td><td>'+(c.acronyme?'✓':'—')+'</td><td>'+c.dice+'</td><td>'+(c.memeBreeder?'oui':'non')+'</td><td>'+esc(c.raison)+'</td></tr>').join('')||'<tr><td colspan="8">Aucune fiche candidate (aucun nom, initiale ni trigramme en commun).</td></tr>')+'</tbody></table></div></div>';
+    T.push('* '+d.variete+' | breeder '+(d.breeder||'-')+' → '+(d.breederNorm||'(vide)')+' | strict « '+d.strict+' » souple « '+d.soft+' » initiales « '+(d.initiales||'-')+' » | N1 '+d.L1+' · N2 '+d.L2+' · acronyme : '+d.acro.mode+(d.acro.key?' clé « '+d.acro.key+' » '+d.acro.pool.length+' fiche(s)':'')+' | résultat : '+d.resultat);
+    d.cands.forEach(c=>T.push('    - '+c.nom+' ('+c.id+') breeder '+c.breederBrut+' → '+c.breederNorm+' | strict '+(c.strict?'oui':'non')+' souple '+(c.souple?'oui':'non')+' acronyme '+(c.acronyme?'oui':'non')+' similarité '+c.dice+' même breeder '+(c.memeBreeder?'oui':'non')+' | '+c.raison));
+    if(!d.cands.length)T.push('    (aucune fiche candidate)');
+  });
+  return {html:h,text:T.join('\n')};
+}
 var st=null;window.gstFilter=function(){clearTimeout(st);st=setTimeout(renderList,150);};
 async function loadSettings(){var x=await FSG.get(db.collection('adminData').doc('gstSettings'),'réglages du catalogue');G.settings=x.exists?x.data():{alias:[],showGranel:false};return G.settings;}
 function renderRules(r){r=Object.assign({},DEF_RULES,r||{});$('gstRuleUnites').value=r.unites;$('gstRuleTypes').value=r.types;$('gstRuleVrac').value=r.vrac;$('gstRuleSeuil').value=r.seuilVrac;$('gstRuleAssort').value=r.assortiments;$('gstRuleDecl').value=r.declinaisons;}
