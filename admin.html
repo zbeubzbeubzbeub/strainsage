@@ -519,6 +519,15 @@ td{font-size:13.5px}
             <div id="gstReport"></div>
           </div>
         </div>
+        <div class="section-title">Réglages du catalogue</div>
+        <div class="table-wrap">
+          <div class="vdb-body">
+            <label class="vdb-check"><input type="checkbox" id="gstShowGranel"/> Proposer aussi les formats vrac pro (« Granel Profesionales », 25 / 100 graines) aux clients</label>
+            <div class="vdb-info">Alias de variétés : une correspondance par ligne, sous la forme <code>alias = nom</code> (ex. <code>SAD = Sweet Afghani Delicious</code>). Ils servent au rapprochement et à la recherche du chat.</div>
+            <textarea class="field-input" id="gstAlias" rows="4" style="font-family:inherit;resize:vertical" placeholder="SAD = Sweet Afghani Delicious"></textarea>
+            <div class="vdb-row"><button class="btn btn-secondary" onclick="gstSaveSettings()">💾 Enregistrer les réglages</button><span class="vdb-note" id="gstSettingsNote"></span></div>
+          </div>
+        </div>
         <div class="section-title">Rapprochement avec la base StrainSage</div>
         <div class="table-wrap">
           <div class="vdb-body">
@@ -1812,16 +1821,20 @@ function lastPage(j){return (j&&(j.last_page||(j.meta&&j.meta.last_page)||(j.dat
 
 /* ── analyse de « nombre » : variété, graines, type, breeder ── */
 function parseNombre(nombre,marca,grupo){
-  var s=String(nombre||'').replace(/\s+/g,' ').trim();
-  var m=s.match(/^(.*?)\s+(\d{1,3})\s*(?:u\.?|uds?\.?|unid\w*\.?|semillas?|seeds?|pcs?\.?)(?=[\s.,]|$)/i);
-  var variete=m?m[1]:s,nb=m?parseInt(m[2],10):null,rest=m?s.slice(m[0].length):'';
+  var s0=String(nombre||'').replace(/\s+/g,' ').trim();
+  // vrac pro : gardé au catalogue, mention retirée du nom de variété
+  var granel=/\bgranel\b/i.test(s0),s=s0.replace(/\s*\bgranel(?:\s+profesionales?)?\b/ig,' ').replace(/\s+/g,' ').trim();
+  // « 5 u. », « 3+1 u. » (3 payées + 1 offerte = 4 graines)
+  var m=s.match(/^(.*?)\s+(\d{1,3})(?:\s*\+\s*(\d{1,3}))?\s*(?:u\.?|uds?\.?|unid\w*\.?|semillas?|seeds?|pcs?\.?)(?=[\s.,]|$)/i);
+  var offertes=m&&m[3]?parseInt(m[3],10):0;
+  var variete=m?m[1]:s,nb=m?parseInt(m[2],10)+offertes:null,rest=m?s.slice(m[0].length):'';
   var g=nrm(grupo),n=nrm(s),type=null;
   if(/autoflor/.test(g)||/\bauto/.test(n))type='auto';
   else if(/feminiz/.test(g)||/\bfem/.test(n))type='fem';
   else if(/regular/.test(g)||/\breg(ular|ulares)?\b/.test(n))type='regular';
   var breeder=marca?clean(marca):null;
   if(!breeder&&rest)breeder=clean(rest.replace(/^[\s.,-]*((auto(floreciente)?s?|fem(inizad[ao]s?)?|reg(ular(es)?)?|cbd)[\s.,-]*)+/ig,''))||null;
-  return {variete:clean(variete),nbGraines:nb,typeGraine:type,cbd:/\bcbd\b/.test(n)||/cbd/.test(g),breeder:breeder};
+  return {variete:clean(variete),nbGraines:nb,offertes:offertes,granel:granel,typeGraine:type,cbd:/\bcbd\b/.test(n)||/cbd/.test(g),breeder:breeder};
 }
 /* ── analyse de « descripcionCorta » : THC, floraison, production, hauteur, récolte ext. ── */
 var LABELS=/\b(thc|cbd|producci[oó]n|production|rendement|yield|floraci[oó]n|floraison|flowering|altura|hauteur|height|cosecha|r[ée]colte|harvest|gen[ée]tica|genetics|sabor|efecto)\b/i;
@@ -1854,7 +1867,10 @@ var TYPE_SUFFIX=/ (?:feminizadas?|feminizados?|feminized|feminised|feminisees?|f
 var TYPE_PREFIX=/^(?:feminizadas?|feminized|feminised|fem|autoflowering|autoflower|autoflorecientes?|autos?|regular) /;
 function breederWords(list){
   var out=[];
-  (list||[]).forEach(function(b){b=base0(b);if(!b||b.length<2)return;out.push(b);var c=b.replace(/ (?:seeds?|seed ?bank|seedbank|genetics?|semillas|bank|company|co)$/,'').trim();if(c&&c!==b&&c.length>=3)out.push(c);});
+  (list||[]).forEach(function(b){b=base0(b);if(!b||b.length<2)return;out.push(b);var c=b.replace(/ (?:seeds?|seed ?bank|seedbank|genetics?|semillas|bank|company|co)$/,'').trim();
+    // forme courte (« Royal Queen » pour « Royal Queen Seeds ») : seulement si elle est assez distinctive,
+    // sinon « Sweet » (Sweet Seeds) amputerait « Sweet Afghani Delicious »
+    if(c&&c!==b&&(c.indexOf(' ')>0||c.length>=7))out.push(c);});
   return out.sort(function(a,b){return b.length-a.length;});
 }
 function stripEdges(s,words){
@@ -1869,13 +1885,20 @@ function stripEdges(s,words){
   }
   return s;
 }
+var VARIANT={auto:'auto',autos:'auto',autoflowering:'auto',autoflower:'auto',autofloreciente:'auto',autoflorecientes:'auto',autofloraison:'auto',automatic:'auto',automatica:'auto',fast:'fast',xl:'xl',xxl:'xxl',cbd:'cbd',f1:'f1'};
+function joinLetters(s){return s.replace(/\b(?:[a-z] )+[a-z]\b/g,function(m){return m.replace(/ /g,'');});}
 function cleanName(name,breeders){
-  var s=base0(name);PACK_RE.forEach(function(re){s=s.replace(re,' ');});s=s.replace(/\s+/g,' ').trim();
+  // packs promo « 3+1 u. » retirés avant la normalisation (le « + » disparaît ensuite)
+  var s=joinLetters(base0(String(name==null?'':name).replace(/\b\d{1,3}\s*\+\s*\d{1,3}\s*(?:u\.?|uds?\.?|unid\w*\.?|semillas?|seeds?)(?=[\s.,]|$)/gi,' ')));PACK_RE.forEach(function(re){s=s.replace(re,' ');});
+  s=s.replace(/\bgranel(?: profesionales?)?\b/g,' ').replace(/\s+/g,' ').trim();
   var strict=stripEdges(s,breederWords(breeders))||s;
   var toks=strict.split(' '),nums=toks.filter(function(t){return /^\d+$/.test(t);});
   var soft=toks.filter(function(t){return !/^\d+$/.test(t);}).join(' ')||strict;
-  return {strict:strict,soft:soft,nums:nums.join(' ')};
+  // déclinaison : mentions auto / fast / xl / cbd présentes dans le nom, ajoutées triées au nom de base
+  var vt=[];s.split(' ').forEach(function(t){var v=VARIANT[t];if(v&&vt.indexOf(v)<0)vt.push(v);});
+  return {strict:strict,soft:soft,nums:nums.join(' '),variant:strict+(vt.length?' '+vt.sort().join(' '):'')};
 }
+function alphaToks(k){return String(k||'').split(' ').filter(function(t){return /^[a-z]+$/.test(t);});}
 function trig(s){var t=' '+s+' ',o={};for(var i=0;i<t.length-2;i++)o[t.substr(i,3)]=1;return Object.keys(o);}
 
 /* base StrainSage : noms + alias nettoyés, breeders (parties b_N de l'index), trigrammes des noms souples */
@@ -1886,7 +1909,9 @@ async function loadMatcher(){
   var bsnaps=await Promise.all(Array.from({length:bparts},(_,i)=>FSG.get(db.collection(VIDX).doc('b_'+i),'index de la base')));
   var br={};
   bsnaps.forEach(s=>{if(s.exists)(s.data().entries||[]).forEach(e=>{var p=String(e).split('|');br[p[0]]=(p[1]||'').split(',').filter(Boolean);});});
-  var M={strict:{},soft:{},nums:{},nom:{},br:{},auto:{},keys:[],tri:{},ktri:[],size:0,hasBreeders:bparts>0};
+  var M={strict:{},soft:{},nums:{},nom:{},br:{},auto:{},ini:{},short:{},alias:{},keys:[],tri:{},ktri:[],size:0,hasBreeders:bparts>0};
+  var set=await FSG.get(db.collection('adminData').doc('gstSettings'),'réglages du catalogue');M.settings=set.exists?set.data():{};
+  (M.settings.alias||[]).forEach(x=>{var a=cleanName(x.alias,[]).strict,n=cleanName(x.nom,[]).strict;if(a&&n&&a!==n){M.alias[a]=n;if(!M.alias[n])M.alias[n]=a;}});
   function add(map,k,id){var a=map[k]||(map[k]=[]);if(a.indexOf(id)<0)a.push(id);}
   snaps.forEach(s=>{if(!s.exists)return;(s.data().entries||[]).forEach(e=>{
     var p=String(e).split('|'),id=p[0],bl=br[id]||[];
@@ -1894,6 +1919,9 @@ async function loadMatcher(){
     p.slice(1).forEach(n=>{if(!n)return;var c=cleanName(n,bl);if(!c.strict)return;
       add(M.strict,c.strict,id);add(M.soft,c.soft,id);
       (M.nums[id]=M.nums[id]||{})[c.soft]=c.nums;
+      var al=alphaToks(c.strict);
+      if(al.length>=2){var ini=al.map(t=>t[0]).join('');if(ini.length<=5)add(M.ini,ini,id);}
+      if(/^[a-z]{2,4}$/.test(c.strict))add(M.short,c.strict,id);
       if(/\bauto/.test(base0(n)))M.auto[id]=1;});
   });});
   M.keys=Object.keys(M.soft);
@@ -1920,9 +1948,9 @@ function decisionKey(strict,breeder){return strict+'|'+base0(breeder);}
 function decisionId(k){return (k.replace(/\|/g,'__').replace(/[^a-z0-9_]+/g,'_')||'_').slice(0,400);}
 function sameBreeder(M,id,b){if(!b)return false;return (M.br[id]||[]).some(x=>x===b||(x.length>=4&&b.length>=4&&(x.indexOf(b)>-1||b.indexOf(x)>-1)));}
 /* une variété Garden Seeds → {statut r/v/n/x, niveau 1/2/3/m, candidat, score} */
-function matchVariety(M,D,variete,breeder,familia,type){
+function matchVariety(M,D,variete,breeder,familia,type,noAlias){
   var c=cleanName(variete,[breeder,familia]),key=decisionKey(c.strict,breeder),d=D[key]||null,rej=(d&&d.rejetes)||[];
-  var r={strict:c.strict,soft:c.soft,nums:c.nums,key:key,statut:'n',niveau:'',candidat:'',score:0,nb:0};
+  var r={strict:c.strict,soft:c.soft,nums:c.nums,variant:c.variant,key:key,statut:'n',niveau:'',candidat:'',score:0,nb:0};
   if(d&&d.valide){r.statut='r';r.niveau='m';r.candidat=d.valide;r.score=1;return r;}
   if(!c.strict)return r;
   var ok=id=>rej.indexOf(id)<0,b=base0(breeder);
@@ -1941,6 +1969,20 @@ function matchVariety(M,D,variete,breeder,familia,type){
     var good=ids.filter(id=>!clash(id)),p2=pick(good.length?good:ids);
     r.niveau=2;r.candidat=p2[0];r.score=good.length?0.95:0.9;r.nb=ids.length;r.statut=(ids.length===1&&good.length===1)?'r':'v';return r;
   }
+  // alias manuel (réglages du catalogue) : même recherche avec l'autre nom
+  if(!noAlias&&M.alias&&M.alias[c.strict]){
+    var ra=matchVariety(M,{},M.alias[c.strict],breeder,familia,type,true);
+    if((ra.statut==='r'||ra.statut==='v')&&ok(ra.candidat)){r.niveau=ra.niveau;r.candidat=ra.candidat;r.score=ra.score;r.statut=ra.statut;r.via='alias';return r;}
+  }
+  // acronyme : nom court (2 à 4 lettres) ↔ initiales d'un nom long de la base, ou l'inverse.
+  // Automatique seulement si une seule fiche de toute la base a ces initiales ET qu'elle est vendue par ce breeder ; sinon « à vérifier ».
+  var al=alphaToks(c.strict),pool=null;
+  if(al.length===1&&c.strict.split(' ').length<=2&&/^[a-z]{2,4}$/.test(al[0]))pool=M.ini[al[0]]||null;
+  else if(al.length>=2&&al.length===c.strict.split(' ').length)pool=M.short[al.map(t=>t[0]).join('')]||null;
+  if(pool&&pool.length){
+    var cand=pool.filter(ok);
+    if(cand.length){var byB=cand.filter(id=>sameBreeder(M,id,b));r.niveau='a';r.candidat=byB[0]||cand[0];r.score=0.9;r.nb=pool.length;r.statut=(pool.length===1&&byB.length===1)?'r':'v';return r;}
+  }
   var top=similar(M,c.soft,1,id=>!ok(id));
   if(top.length){r.candidat=top[0].id;r.score=top[0].score;if(top[0].score>=SIM_REVIEW){r.niveau=3;r.statut='v';}}
   if(r.statut==='n'&&rej.length)r.statut='x';
@@ -1948,16 +1990,25 @@ function matchVariety(M,D,variete,breeder,familia,type){
 }
 var TL={fem:'f',auto:'a',regular:'r'};
 function groupOf(strict,breeder,type){return [strict,base0(breeder),type||''].join('~');}
-function matchFields(m,breeder,type){return {varieteId:m.statut==='r'?m.candidat:null,matchCode:m.statut,matchStatut:STATUT[m.statut],matchNiveau:m.niveau===''?null:m.niveau,matchCandidat:m.candidat||null,matchScore:m.score||null,nomStrict:m.strict,groupe:groupOf(m.strict,breeder,type)};}
-function mtuple(e){var p=String(e||'').split('|');return [p[12]||''].concat(p.slice(17,22)).join('|');}
+function matchFields(m,breeder,type){return {varieteId:m.statut==='r'?m.candidat:null,matchCode:m.statut,matchStatut:STATUT[m.statut],matchNiveau:m.niveau===''?null:m.niveau,matchCandidat:m.candidat||null,matchScore:m.score||null,nomStrict:m.strict,groupe:groupOf(m.variant||m.strict,breeder,type)};}
+// rapprochement (écrit dans le document) ; le groupe et la base ne servent qu'à l'index
+function mtuple(e){var p=Array.isArray(e)?e:String(e||'').split('|');return [p[12]||''].concat(p.slice(17,21)).join('|');}
+// données corrigées depuis le nom brut : variété, graines, offertes, vrac pro
+function dtuple(e){var p=Array.isArray(e)?e:String(e||'').split('|');return [p[1]||'',p[4]||'',p[24]||'',p[25]||''].join('|');}
 /* applique le rapprochement à des lignes d'index ; renvoie les nouvelles lignes et les documents à mettre à jour */
 function applyMatch(M,D,raw){
   var cache={},changes=[],out=raw.map(e=>{
-    var p=String(e).split('|');while(p.length<22)p.push('');
-    var ck=[p[1],p[2],p[16],p[3]].join('|'),m=cache[ck]||(cache[ck]=matchVariety(M,D,p[1]||p[15],p[2],p[16],p[3]));
-    var f=matchFields(m,p[2],p[3]),np=p.slice();
-    np[12]=f.varieteId||'';np[17]=m.statut;np[18]=String(f.matchNiveau==null?'':f.matchNiveau);np[19]=f.matchCandidat||'';np[20]=f.matchScore?String(f.matchScore):'';np[21]=clean(f.groupe);
-    if(np[12]!==p[12]||np.slice(17,22).join('|')!==p.slice(17,22).join('|'))changes.push({codigo:p[0],data:f});
+    var p=String(e).split('|');while(p.length<27)p.push('');
+    var np=p.slice();
+    if(p[15]){var pn=parseNombre(p[15],p[2],'');if(pn.variete)np[1]=clean(pn.variete);np[4]=pn.nbGraines==null?'':String(pn.nbGraines);np[24]=pn.offertes?String(pn.offertes):'';np[25]=pn.granel?'G':'';}
+    var ck=[np[1],np[2],np[16],np[3]].join('|'),m=cache[ck]||(cache[ck]=matchVariety(M,D,np[1]||np[15],np[2],np[16],np[3]));
+    var f=matchFields(m,np[2],np[3]);
+    np[12]=f.varieteId||'';np[17]=m.statut;np[18]=String(f.matchNiveau==null?'':f.matchNiveau);np[19]=f.matchCandidat||'';np[20]=f.matchScore?String(f.matchScore):'';np[21]=clean(f.groupe);np[26]=clean(m.strict);
+    // un document n'est écrit que si son rapprochement ou ses données corrigées changent
+    var data={};
+    if(mtuple(np)!==mtuple(p))Object.assign(data,f);
+    if(dtuple(np)!==dtuple(p))Object.assign(data,{variete:np[1],nbGraines:np[4]===''?null:Number(np[4]),offertes:np[24]?Number(np[24]):0,granel:np[25]==='G'});
+    if(Object.keys(data).length)changes.push({codigo:p[0],data:data});
     return np.join('|');
   });
   return {entries:out,changes:changes};
@@ -1981,12 +2032,12 @@ async function writeMatchChanges(changes,onStep){
 }
 /* statistiques : articles et variétés uniques (articles qui ne diffèrent que par le conditionnement regroupés) */
 function matchStats(raw){
-  var s={articles:{total:0,r:0,v:0,n:0,x:0,n1:0,n2:0,nm:0},uniques:{total:0,r:0,v:0,n:0,x:0,n1:0,n2:0,nm:0}},seen={};
-  function add(o,st,lv){o.total++;o[st]=(o[st]||0)+1;if(st==='r'){if(lv==='1')o.n1++;else if(lv==='2')o.n2++;else if(lv==='m')o.nm++;}}
+  var s={articles:{total:0,r:0,v:0,n:0,x:0,n1:0,n2:0,na:0,nm:0},uniques:{total:0,r:0,v:0,n:0,x:0,n1:0,n2:0,na:0,nm:0}},seen={};
+  function add(o,st,lv){o.total++;o[st]=(o[st]||0)+1;if(st==='r'){if(lv==='1')o.n1++;else if(lv==='2')o.n2++;else if(lv==='a')o.na=(o.na||0)+1;else if(lv==='m')o.nm++;}}
   raw.forEach(e=>{
     var p=String(e).split('|'),st=p[17]||(p[12]?'r':'n'),lv=p[18]||'';
     add(s.articles,st,lv);
-    var g=groupOf(cleanName(p[1]||p[15],[p[2],p[16]]).strict,p[2],p[3]);
+    var g=p[21]||groupOf(cleanName(p[1]||p[15],[p[2],p[16]]).variant,p[2],p[3]);
     if(!seen[g]){seen[g]=1;add(s.uniques,st,lv);}
   });
   s.at=Date.now();return s;
@@ -1994,9 +2045,10 @@ function matchStats(raw){
 
 /* ── index compact lu par le chat ; sert aussi de MANIFESTE de la synchro (code → empreinte + date de modification) ──
    codigo|variete|breeder|type(f/a/r)|graines|thcMin|thcMax|floMin|floMax|pvp|dispo(0 rupture ou retiré,1 dispo,2 stock bas)|photo|varieteId|extrait|empreinte
-   |nom brut|famille|statut(r/v/n/x)|niveau(1/2/3/m)|candidat StrainSage|score|groupe (nom strict~breeder~type)|modifié le (ms, base 36)|R si retiré du catalogue */
-function entryOf(a){return [a.codigo,a.variete,a.breeder||'',({fem:'f',auto:'a',regular:'r'})[a.typeGraine]||'',a.nbGraines==null?'':a.nbGraines,a.thcMin==null?'':a.thcMin,a.thcMax==null?'':a.thcMax,a.floMin==null?'':a.floMin,a.floMax==null?'':a.floMax,a.pvp==null?'':a.pvp,a.dispoFlag,a.photo||'',a.varieteId||'',clean(a.descCourte).slice(0,150),a.sig,a.nombre||'',a.familia==null?'':a.familia,a.matchCode||'',a.matchNiveau==null?'':a.matchNiveau,a.matchCandidat||'',a.matchScore||'',a.groupe||'',a.majAt?Number(a.majAt).toString(36):'',a.retire?'R':''].map(clean).join('|');}
-function parseEntry(e){var p=String(e).split('|');return {codigo:p[0],variete:p[1],breeder:p[2],type:p[3],nb:p[4],thcMin:p[5],thcMax:p[6],floMin:p[7],floMax:p[8],pvp:p[9],dispo:p[10],photo:p[11],varieteId:p[12],extrait:p[13],sig:p[14],nombre:p[15]||'',familia:p[16]||'',statut:p[17]||'',niveau:p[18]||'',candidat:p[19]||'',score:p[20]||'',groupe:p[21]||'',maj:p[22]?parseInt(p[22],36):null,retire:p[23]==='R'};}
+   |nom brut|famille|statut(r/v/n/x)|niveau(1/2/3/a/m)|candidat StrainSage|score|groupe = déclinaison (nom~breeder~type)|modifié le (ms, base 36)|R si retiré du catalogue
+   |graines offertes|G si vrac pro (Granel)|variété de base (sans auto / fast / xl / cbd) */
+function entryOf(a){return [a.codigo,a.variete,a.breeder||'',({fem:'f',auto:'a',regular:'r'})[a.typeGraine]||'',a.nbGraines==null?'':a.nbGraines,a.thcMin==null?'':a.thcMin,a.thcMax==null?'':a.thcMax,a.floMin==null?'':a.floMin,a.floMax==null?'':a.floMax,a.pvp==null?'':a.pvp,a.dispoFlag,a.photo||'',a.varieteId||'',clean(a.descCourte).slice(0,150),a.sig,a.nombre||'',a.familia==null?'':a.familia,a.matchCode||'',a.matchNiveau==null?'':a.matchNiveau,a.matchCandidat||'',a.matchScore||'',a.groupe||'',a.majAt?Number(a.majAt).toString(36):'',a.retire?'R':'',a.offertes||'',a.granel?'G':'',a.base||''].map(clean).join('|');}
+function parseEntry(e){var p=String(e).split('|');return {codigo:p[0],variete:p[1],breeder:p[2],type:p[3],nb:p[4],thcMin:p[5],thcMax:p[6],floMin:p[7],floMax:p[8],pvp:p[9],dispo:p[10],photo:p[11],varieteId:p[12],extrait:p[13],sig:p[14],nombre:p[15]||'',familia:p[16]||'',statut:p[17]||'',niveau:p[18]||'',candidat:p[19]||'',score:p[20]||'',groupe:p[21]||'',maj:p[22]?parseInt(p[22],36):null,retire:p[23]==='R',offertes:p[24]||'',granel:p[25]==='G',base:p[26]||''};}
 async function loadIndex(){
   var meta=await FSG.get(db.collection(IDX).doc('meta'),'index du catalogue');G.meta=meta.exists?meta.data():null;
   var parts=G.meta?(G.meta.parts||0):0;
@@ -2048,7 +2100,7 @@ function buildItem(a,R,now){
     descCourte:dc.slice(0,800),descLongue:dl.slice(0,3000)});
   var tl=TL[it.typeGraine]||'',ck=[it.variete,it.breeder||'',it.familia==null?'':it.familia,tl].join('|');
   var m=R.mcache[ck]||(R.mcache[ck]=matchVariety(R.M,R.D,it.variete,it.breeder,it.familia,tl));
-  Object.assign(it,matchFields(m,it.breeder,tl));
+  Object.assign(it,matchFields(m,it.breeder,tl));it.base=m.strict;
   it.sig=sig2(it);it.syncAt=now;return it;
 }
 // une page d'articles : comparaison avec le manifeste, puis écriture groupée des seuls nouveaux / modifiés
@@ -2067,7 +2119,7 @@ async function writePage(arts,R,st){
     it.majAt=kind==='inchanges'?(pp[22]?parseInt(pp[22],36):null):now;
     var e=entryOf(it);pending[c]=e;cnt[kind]++;
     if(kind!=='inchanges')full.push(it);
-    else if(mtuple(prev)!==mtuple(e))matchOnly.push({codigo:c,data:{varieteId:it.varieteId,matchCode:it.matchCode,matchStatut:it.matchStatut,matchNiveau:it.matchNiveau,matchCandidat:it.matchCandidat,matchScore:it.matchScore,nomStrict:it.nomStrict,groupe:it.groupe}});
+    else if(mtuple(prev)!==mtuple(e)||dtuple(prev)!==dtuple(e))matchOnly.push({codigo:c,data:{varieteId:it.varieteId,matchCode:it.matchCode,matchStatut:it.matchStatut,matchNiveau:it.matchNiveau,matchCandidat:it.matchCandidat,matchScore:it.matchScore,nomStrict:it.nomStrict,variete:it.variete,nbGraines:it.nbGraines,offertes:it.offertes||0,granel:!!it.granel}});
   });
   var nw=full.length+matchOnly.length;
   if(nw&&!st.costOk&&st.written+nw>FSG.CONFIRM_WRITES){
@@ -2093,6 +2145,7 @@ async function runSync(resume){
     R.prevSig={};R.prevRaw={};
     // manifeste illisible = arrêt (sinon tout serait considéré comme nouveau et réécrit)
     (await loadIndex()).forEach(e=>{R.prevSig[e.codigo]=e.sig;R.prevRaw[e.codigo]=e.raw;});
+    R.keep={alias:(G.meta&&G.meta.alias)||{},showGranel:!!(G.meta&&G.meta.showGranel)};
     var last=G.meta&&G.meta.lastWrites!=null?G.meta.lastWrites:null;
     if(!st&&last!=null&&!FSG.confirmCost('Synchro Garden Seeds (la dernière synchro a écrit '+last+' articles)',last,FSG.cur.reads)){progress('Synchro annulée avant toute écriture · '+FSG.summary(),0);G.busy=false;$('gstBtn').disabled=false;renderResume();return;}
     R.M=await loadMatcher();R.D=await loadDecisions();G.M=R.M;G.D=R.D;R.mcache={};R.now=Date.now();
@@ -2150,7 +2203,7 @@ async function runSync(resume){
       read:Object.keys(st.entries).length,written:st.written,counts:st.counts,groups:st.groups,families:fams.length,
       famOk:fams.filter(f=>(st.done[famKey(f)]||{}).complete).length,famFailed:failedKeys.map(k=>st.failed[k]),complete:complete,
       famErr:st.famErr||null,syncAt:Date.now(),ms:Date.now()-t0,baseSize:R.M.size,lastWrites:st.written};
-    await writeIndexParts(entries,Object.assign({},rep,{syncPartielle:false,matchAvant:matchStats(Object.keys(R.prevRaw).map(c=>R.prevRaw[c])),matchApres:matchStats(entries),matchAt:Date.now()}),false);
+    await writeIndexParts(entries,Object.assign({},rep,R.keep,{syncPartielle:false,matchAvant:matchStats(Object.keys(R.prevRaw).map(c=>R.prevRaw[c])),matchApres:matchStats(entries),matchAt:Date.now()}),false);
     if(complete)clearState();
     rep.cost=FSG.summary();
     progress((complete?'Synchronisation terminée':'Synchronisation partielle : '+failedKeys.length+' famille(s) à reprendre')+' · '+rep.cost,100);
@@ -2273,7 +2326,7 @@ window.gstDecide=async function(i,action){
 function pct(a,b){return b?Math.round(a/b*1000)/10+' %':'—';}
 function statRows(a,b){
   var rows=[['Variétés uniques',x=>x.uniques.total],['Variétés rapprochées',x=>x.uniques.r+' ('+pct(x.uniques.r,x.uniques.total)+')'],
-    ['· niveau 1 (nom strict)',x=>x.uniques.n1],['· niveau 2 (nom souple)',x=>x.uniques.n2],['· validées à la main',x=>x.uniques.nm],
+    ['· niveau 1 (nom strict)',x=>x.uniques.n1],['· niveau 2 (nom souple)',x=>x.uniques.n2],['· acronyme (SAD ↔ Sweet Afghani Delicious)',x=>x.uniques.na||0],['· validées à la main',x=>x.uniques.nm],
     ['À vérifier',x=>x.uniques.v||0],['Non trouvées',x=>x.uniques.n||0],['Rejetées',x=>x.uniques.x||0],
     ['Articles rapprochés',x=>x.articles.r+' / '+x.articles.total+' ('+pct(x.articles.r,x.articles.total)+')']];
   return rows.map(r=>'<tr><td>'+r[0]+'</td><td>'+(a?esc(String(r[1](a))):'—')+'</td><td><b style="font-weight:600">'+(b?esc(String(r[1](b))):'—')+'</b></td></tr>').join('');
@@ -2295,9 +2348,11 @@ async function renderMatch(){
   raw.forEach(e=>{var p=e.split('|');var g=p[21]||p[0];var o=groups[g]||(groups[g]={p:p,n:0});o.n++;});
   var list=Object.keys(groups).map(k=>groups[k]).sort((a,b)=>b.n-a.n);
   G.review=list.filter(g=>g.p[17]==='v').map(g=>{var p=g.p,c=cleanName(p[1]||p[15],[p[2],p[16]]);return {key:decisionKey(c.strict,p[2]),nom:p[1]||p[15],brut:p[15],breeder:p[2],candidat:p[19],niveau:p[18],score:p[20],n:g.n};});
+  // une seule ligne par décision (SAD, SAD Fast Version et Auto SAD partagent la même variété de base)
+  var byKey={};G.review=G.review.filter(r=>{var k=r.key+'>'+r.candidat;if(byKey[k]){byKey[k].n+=r.n;if(byKey[k].nom.indexOf(r.nom)<0)byKey[k].nom+=' / '+r.nom;return false;}byKey[k]=r;return true;});
   $('gstReviewCount').textContent='('+G.review.length+')';
   $('gstReviewBody').innerHTML=G.review.slice(0,150).map((r,i)=>'<tr><td><b style="font-weight:600">'+esc(r.nom)+'</b><div class="vdb-note">'+esc(r.breeder||'—')+(r.brut&&r.brut!==r.nom?' · '+esc(r.brut):'')+'</div></td>'+
-    '<td>'+esc(G.M.nom[r.candidat]||r.candidat)+'<div class="vdb-note">'+esc(r.candidat)+'</div></td><td>'+esc(r.niveau)+'</td><td>'+esc(r.score)+'</td><td>'+r.n+'</td>'+
+    '<td>'+esc(G.M.nom[r.candidat]||r.candidat)+'<div class="vdb-note">'+esc(r.candidat)+'</div></td><td>'+esc(({'1':'1 · nom strict','2':'2 · nom souple','3':'3 · similarité','a':'acronyme','m':'manuel'})[r.niveau]||r.niveau)+'</td><td>'+esc(r.score)+'</td><td>'+r.n+'</td>'+
     '<td style="white-space:nowrap"><button class="btn btn-primary" onclick="gstDecide('+i+',\'valide\')">Valider</button> <button class="btn btn-secondary" onclick="gstDecide('+i+',\'rejete\')">Rejeter</button></td></tr>').join('')
     ||'<tr><td colspan="6"><div class="empty-state">Rien à vérifier.</div></td></tr>';
   // diagnostic : les ~50 variétés non rapprochées les plus représentées
@@ -2313,8 +2368,27 @@ async function renderMatch(){
   }).join('')||'<tr><td colspan="5"><div class="empty-state">Toutes les variétés sont rapprochées ou à vérifier.</div></td></tr>';
 }
 var st=null;window.gstFilter=function(){clearTimeout(st);st=setTimeout(renderList,150);};
-window.gstOpen=async function(){try{await loadIndex();}catch(e){console.warn('[GST] index illisible',e&&e.message);}renderLast();renderList();renderResume();renderMatch();};
-window.__gst={parseNombre:parseNombre,parseDesc:parseDesc,stripHtml:stripHtml,cleanName:cleanName,matchVariety:matchVariety,similar:similar,loadMatcher:loadMatcher,matchStats:matchStats,applyMatch:applyMatch,G:G};
+async function loadSettings(){var x=await FSG.get(db.collection('adminData').doc('gstSettings'),'réglages du catalogue');G.settings=x.exists?x.data():{alias:[],showGranel:false};return G.settings;}
+function renderSettings(){var s=G.settings||{};if(!$('gstAlias'))return;$('gstShowGranel').checked=!!s.showGranel;$('gstAlias').value=(s.alias||[]).map(a=>a.alias+' = '+a.nom).join('\n');}
+window.gstSaveSettings=async function(){
+  if(G.busy)return;
+  var list=[];$('gstAlias').value.split('\n').forEach(l=>{var m=l.split('=');if(m.length<2)return;var a=m[0].trim(),n=m.slice(1).join('=').trim();if(a&&n)list.push({alias:a,nom:n});});
+  var next={alias:list,showGranel:$('gstShowGranel').checked},cur=G.settings||{};
+  if(JSON.stringify(next)===JSON.stringify({alias:cur.alias||[],showGranel:!!cur.showGranel})){$('gstSettingsNote').textContent='Aucun changement : rien n\'a été écrit.';return;}
+  FSG.begin('Réglages du catalogue');
+  try{
+    // réglages + copie dans la meta de l'index (lue par le chat) : 2 écritures
+    var amap={};list.forEach(x=>{var a=cleanName(x.alias,[]).strict,n=cleanName(x.nom,[]).strict;if(a&&n&&a!==n){amap[a]=n;if(!amap[n])amap[n]=a;}});
+    var b=db.batch();
+    b.set(db.collection('adminData').doc('gstSettings'),Object.assign({},next,{updatedAt:Date.now()}));
+    b.set(db.collection(IDX).doc('meta'),{alias:amap,showGranel:next.showGranel},{merge:true});
+    await FSG.commit(b,2,'réglages du catalogue');
+    G.settings=next;G.M=null;
+    $('gstSettingsNote').textContent='Enregistré ('+FSG.summary()+'). Relance « Recalculer le rapprochement » pour appliquer les alias au rapprochement.';
+  }catch(e){$('gstSettingsNote').textContent=FSG.why(e);}
+};
+window.gstOpen=async function(){try{await loadIndex();}catch(e){console.warn('[GST] index illisible',e&&e.message);}try{await loadSettings();renderSettings();}catch(e){}renderLast();renderList();renderResume();renderMatch();};
+window.__gst={parseNombre:parseNombre,dtuple:dtuple,mtuple:mtuple,parseDesc:parseDesc,stripHtml:stripHtml,cleanName:cleanName,matchVariety:matchVariety,similar:similar,loadMatcher:loadMatcher,matchStats:matchStats,applyMatch:applyMatch,G:G};
 })();
 </script>
 </body>

@@ -399,17 +399,25 @@
 
   /* ══ CATALOGUE GARDEN SEEDS (variétés réellement commandables) ══
      Index compact catalogue_gst_index, lu une fois par session (synchronisé depuis l'admin).
-     Le chat ne recommande QUE des articles de ce catalogue ; la base StrainSage sert à les enrichir. */
+     Le chat ne recommande QUE des articles de ce catalogue ; la base StrainSage sert à les enrichir.
+     - recherche par nom dans TOUT le catalogue (y compris rupture et retirés), acronymes et alias compris ;
+     - les variétés déjà présentées dans la conversation sont réinjectées à chaque message ;
+     - une « déclinaison » (SAD, SAD Fast Version, Auto SAD) regroupe ses packs ; la « variété de base » (sad) les réunit. */
   var GIDX='catalogue_gst_index';
-  var gst=null,gstLoading=null,gstByCode={},gstByName={},gstByVar={};
+  var gst=null,gstLoading=null,gstByCode={},gstByName={},gstByVar={},gstByBase={},gstShort={},gstIni={},gstAlias={},gstMeta={};
   function numOrNull(v){return v===''||v==null?null:parseFloat(v);}
+  // même normalisation que le rapprochement de l'admin (lettres isolées recollées : « S.A.D. » → « sad »)
+  function key0(s){return String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[’'`´]/g,'').replace(/[™®©]/g,'').replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim().replace(/\b(?:[a-z] )+[a-z]\b/g,function(m){return m.replace(/ /g,'');});}
+  function keyMsg(s){return key0(String(s||'').replace(/[’'`´]/g,' '));}
+  function alphaToks(k){return k.split(' ').filter(function(t){return /^[a-z]+$/.test(t);});}
   function loadCatalogue(){
     if(gst)return Promise.resolve(gst);
     if(gstLoading)return gstLoading;
     gstLoading=(async function(){
       try{
         var meta=await db.collection(GIDX).doc('meta').get();
-        var parts=meta.exists?(meta.data().parts||0):0;
+        gstMeta=meta.exists?meta.data():{};gstAlias=gstMeta.alias||{};
+        var parts=gstMeta.parts||0;
         var snaps=await Promise.all(Array.from({length:parts},function(_,i){return db.collection(GIDX).doc('part_'+i).get();}));
         var list=[];
         snaps.forEach(function(s){if(!s.exists)return;(s.data().entries||[]).forEach(function(e){
@@ -417,15 +425,25 @@
           list.push({codigo:p[0],variete:p[1],breeder:p[2],type:({f:'fem',a:'auto',r:'regular'})[p[3]]||null,nb:numOrNull(p[4]),
             thcMin:numOrNull(p[5]),thcMax:numOrNull(p[6]),floMin:numOrNull(p[7]),floMax:numOrNull(p[8]),pvp:numOrNull(p[9]),
             dispo:p[10]==='0'?0:(p[10]==='2'?2:1),photo:p[11]||'',varieteId:p[12]||'',extrait:p[13]||'',
+            retire:p[23]==='R',offertes:numOrNull(p[24])||0,granel:p[25]==='G',base:p[26]||key0(p[1]),
             gk:p[21]||(nrm(p[1])+'~'+nrm(p[2])+'~'+(p[3]||''))});
         });});
-        gstByCode={};gstByName={};gstByVar={};
-        list.forEach(function(it){gstByCode[it.codigo]=it;var k=nrm(it.variete);(gstByName[k]=gstByName[k]||[]).push(it);if(it.varieteId)(gstByVar[it.varieteId]=gstByVar[it.varieteId]||[]).push(it);});
-        // tous les packs d'une même variété (même nom nettoyé, breeder et type), du plus petit au plus grand
+        gstByCode={};gstByName={};gstByVar={};gstByBase={};gstShort={};gstIni={};
+        list.forEach(function(it){
+          gstByCode[it.codigo]=it;var k=nrm(it.variete);(gstByName[k]=gstByName[k]||[]).push(it);
+          if(it.varieteId)(gstByVar[it.varieteId]=gstByVar[it.varieteId]||[]).push(it);
+          (gstByBase[it.base]=gstByBase[it.base]||[]).push(it);
+        });
+        // acronymes : noms courts du catalogue (sad, gg) et initiales des noms longs (sweet afghani delicious → sad)
+        Object.keys(gstByBase).forEach(function(b){
+          if(/^[a-z]{2,4}$/.test(b))gstShort[b]=1;
+          var a=alphaToks(b);if(a.length>=2){var ini=a.map(function(t){return t[0];}).join('');if(ini.length<=5)(gstIni[ini]=gstIni[ini]||[]).push(b);}
+        });
+        // tous les packs d'une même déclinaison (même nom, breeder et type), du plus petit au plus grand
         var byG={};list.forEach(function(it){(byG[it.gk]=byG[it.gk]||[]).push(it);});
         Object.keys(byG).forEach(function(k){var g=byG[k].sort(function(a,b){return (a.nb||0)-(b.nb||0)||(a.pvp||0)-(b.pvp||0);});g.forEach(function(it){it.packs=g;});});
         gst=list;
-        console.info('[GST] catalogue chargé : '+list.length+' articles, '+list.filter(function(i){return i.dispo!==0;}).length+' disponibles'+(meta.exists&&meta.data().syncAt?' (synchro du '+new Date(meta.data().syncAt).toLocaleDateString('fr-FR')+')':''));
+        console.info('[GST] catalogue chargé : '+list.length+' articles, '+list.filter(function(i){return i.dispo!==0;}).length+' disponibles'+(gstMeta.syncAt?' (synchro du '+new Date(gstMeta.syncAt).toLocaleDateString('fr-FR')+')':''));
         if(!list.length){gst=null;console.warn('[GST] catalogue vide : lance « Synchroniser le catalogue Garden Seeds » dans l\'admin');}
       }catch(e){console.error('[GST] lecture du catalogue impossible ('+(e&&e.code||'erreur')+') : '+(e&&e.message)+'. Nouvel essai au prochain message.');gst=null;}
       gstLoading=null;
@@ -439,13 +457,21 @@
     if(gstByCode[nameOrCode])return gstByCode[nameOrCode];
     var k=nrm(nameOrCode),pool=gstByName[k];
     if(!pool){var e=resolve(nameOrCode);if(e)pool=gstByVar[e.id];}
+    if(!pool){var b=key0(nameOrCode);pool=gstByBase[b];}
     if(!pool)return null;
-    return pool.filter(function(i){return i.dispo!==0;}).sort(function(a,b){return (a.pvp||999)-(b.pvp||999);})[0]||pool[0];
+    return pool.filter(function(i){return i.dispo!==0&&(!i.granel||gstMeta.showGranel);}).sort(function(a,b){return (a.pvp||999)-(b.pvp||999);})[0]||pool[0];
   }
   function euro(v){return v==null||isNaN(v)?'':Number(v).toFixed(2).replace('.',',')+' €';}
-  function packsOf(it){return it?(it.packs||[it]).filter(function(p){return p.dispo!==0;}):[];}
-  function packLabel(p){return (p.nb?p.nb+' graine'+(p.nb>1?'s':''):'paquet')+(p.pvp!=null?' '+euro(p.pvp):'')+(p.dispo===2?' (stock bas)':'');}
+  // packs proposés aux clients : commandables, sans le vrac pro (Granel) sauf option de l'admin
+  function packsOf(it){return it?(it.packs||[it]).filter(function(p){return p.dispo!==0&&(!p.granel||gstMeta.showGranel);}):[];}
+  function seedsLabel(p){if(!p.nb)return 'paquet';if(p.offertes&&p.offertes<p.nb)return p.nb+' graines ('+(p.nb-p.offertes)+' + '+p.offertes+' offerte'+(p.offertes>1?'s':'')+')';return p.nb+' graine'+(p.nb>1?'s':'');}
+  function packLabel(p){return seedsLabel(p)+(p.pvp!=null?' '+euro(p.pvp):'')+(p.dispo===2?' (stock bas)':'');}
   function packsText(it){return packsOf(it).map(packLabel).join(' · ');}
+  function statusOf(it){
+    var pk=packsOf(it);if(pk.length)return pk.some(function(p){return p.dispo===1;})?'disponible':'stock limité';
+    var all=(it.packs||[it]).filter(function(p){return !p.granel||gstMeta.showGranel;});
+    return all.length&&all.every(function(p){return p.retire;})?'retirée du catalogue du grossiste':'en rupture chez le grossiste';
+  }
   var BUDGET={'moins de 30€':30,'30-60€':60,'60-100€':100};
   var TYPE_FR={fem:'féminisée',auto:'autofloraison',regular:'régulière'};
   function gstLine(it,f){
@@ -454,29 +480,71 @@
     if(it.type)p.push(TYPE_FR[it.type]);
     var thc=it.thcMax!=null?(it.thcMin!=null&&it.thcMin!==it.thcMax?it.thcMin+'–'+it.thcMax:it.thcMax)+'% THC':(f&&f.thcMax!=null?f.thcMax+'% THC (base)':null);if(thc)p.push(thc);
     var flo=it.floMax!=null?(it.floMin!=null&&it.floMin!==it.floMax?it.floMin+'–'+it.floMax:it.floMax)+' sem.':(f&&f.floMax!=null?f.floMax+' sem. (base)':null);if(flo)p.push('flo '+flo);
-    var pk=packsText(it);if(pk)p.push('packs disponibles : '+pk);
+    var pk=packsText(it);p.push(pk?'packs disponibles : '+pk:statusOf(it)+' (aucun pack commandable)');
     var l='- '+it.variete+' [code '+it.codigo+'] · '+p.join(' · ');
     if(f){var x=[];if(f.eff.length)x.push('effets : '+f.eff.slice(0,4).join(', '));if(f.gouts.length)x.push('goûts : '+f.gouts.slice(0,4).join(', '));if(x.length)l+=' · [base StrainSage : '+x.join(' ; ')+']';}
     else if(it.extrait)l+=' · '+it.extrait.slice(0,110);
     return l;
   }
-  /* sélection des ~20 candidates disponibles :
-     filtres durs (rupture, type de graine demandé, budget du profil), puis score :
-     variété citée > critères de la demande (effets, goûts, floraison, THC via la fiche StrainSage rapprochée) */
+  function oneByVariety(arr){var seen={};return arr.filter(function(i){if(seen[i.gk])return false;seen[i.gk]=1;return true;});}
+  // représentant d'une déclinaison : pack commandable le moins cher, sinon le premier
+  function repOf(it){var pk=packsOf(it);return pk.length?pk.slice().sort(function(a,b){return (a.pvp||999)-(b.pvp||999);})[0]:it;}
+
+  /* ── variétés citées par le client : recherchées dans TOUT le catalogue ── */
+  var STOP=' le la les de des du un une et ou en au aux pour par sur pas que qui quoi est sont ai as avec sans mon ma mes ton ta tes son sa ses ce cet cette ces il elle on nous vous ils me te se lui leur plus moins tres bien bon bonne quel quelle quels dans fait faire peu tout tous dit moi toi oui non si car mais donc ni ne the and for you can auto autos fem cbd thc xl xxl fast kush haze skunk diesel cheese lemon sativa indica hybride hybrid graine graines seed seeds pack packs prix stock dispo bio indoor outdoor premiere premier deuxieme seconde troisieme derniere dernier celle celui ca cela elle elles variete varietes strain autre autres meme toutes combien temps fruitee fruite debutant budget euros ';
+  function isStop(t){return STOP.indexOf(' '+t+' ')>-1;}
+  // mots génériques de variété : ignorés seuls, mais gardés dans un nom (« Purple Unicornio Haze »)
+  var GENERIC_W=' auto autos fem cbd thc xl xxl fast kush haze skunk diesel cheese lemon ';
+  function isFrStop(t){return isStop(t)&&GENERIC_W.indexOf(' '+t+' ')<0;}
+  function findNamed(txt){
+    if(!gst)return {named:[],ficheAbsent:[]};
+    var toks=keyMsg(txt).split(' ').filter(Boolean),found={},order=[],ficheAbsent=[];
+    function hit(base,via,q){if(!gstByBase[base]||found[base])return;found[base]={base:base,via:via,query:q};order.push(base);}
+    for(var n=Math.min(6,toks.length);n>=1;n--){
+      for(var i=0;i+n<=toks.length;i++){
+        var g=toks.slice(i,i+n),q=g.join(' ');
+        if(n===1&&(isStop(q)||/^\d+$/.test(q)||q.length<2))continue;
+        if(n===1&&q.length<4&&!gstShort[q]&&!gstIni[q]&&!gstAlias[q])continue; // mots courts : seulement les acronymes
+        if(isStop(g[0])&&n>1)continue;
+        if(gstByBase[q])hit(q,'nom',q);
+        if(gstAlias[q])hit(gstAlias[q],'alias',q);
+        if(n>=2&&alphaToks(q).length===n&&!g.some(isStop)){var ini=g.map(function(t){return t[0];}).join('');if(gstShort[ini])hit(ini,'initiales',q);}
+        if(n===1&&q.length<=4&&gstIni[q])gstIni[q].forEach(function(b){hit(b,'acronyme',q);});
+      }
+    }
+    // fiches de la base StrainSage citées : leurs articles rapprochés, sinon « absente du catalogue »
+    try{detect(txt,5).forEach(function(e){
+      var arts=gstByVar[e.id];
+      if(arts&&arts.length)hit(arts[0].base,'fiche',e.nom);
+      else if(!gstByBase[key0(e.nom)]&&!order.length&&String(e.nom||'').length>=4)ficheAbsent.push(e.nom);
+    });}catch(err){}
+    return {named:order.map(function(b){return found[b];}),ficheAbsent:ficheAbsent};
+  }
+  // nom de variété visé par une question (« parle-moi de… », « tu as… ») : sert à dire « absente » avec certitude
+  var ASK=/(?:parle[sz]? ?moi|parlez ?moi|infos? sur|que penses tu|tu (?:as|aurais|connais|vends)|vous (?:avez|auriez|vendez)|avez vous|as tu|dispo(?:nible)?s?)\s+(?:(?:de|du|des|d|la|le|les|l|une|un|en|sur)\s+)*([a-z0-9][a-z0-9 ]{1,40})/;
+  function askedName(txt){
+    var m=keyMsg(txt).match(ASK);if(!m)return '';
+    var q=m[1].split(' ').filter(Boolean).slice(0,5);while(q.length&&isFrStop(q[q.length-1]))q.pop();while(q.length&&isFrStop(q[0]))q.shift();
+    if(!q.some(function(t){return !isStop(t);}))return '';
+    q=q.join(' ');if(q.length<3)return '';
+    try{var pc=parseCriteria(q,[]);if(pc&&pc.length)return '';}catch(e){}
+    return q;
+  }
+  /* sélection pour l'IA :
+     1. variétés déjà présentées dans la conversation (toujours valables) ;
+     2. variétés citées par le client, toutes déclinaisons et tous statuts ;
+     3. ~20 autres variétés disponibles classées selon la demande (rupture, type, budget, critères). */
   async function catalogueContext(txt,opts){
     opts=opts||{};
     var cat=await loadCatalogue();if(!cat.length)return {ctx:'',info:{available:0,count:0}};
-    var msg=' '+nrm(txt)+' ',prof=opts.profile||{};
-    var avail=cat.filter(function(i){return i.dispo!==0;});
-    // type de graine demandé
+    var raw=opts.raw||txt,msg=' '+nrm(txt)+' ',prof=opts.profile||{};
+    var avail=cat.filter(function(i){return i.dispo!==0&&(!i.granel||gstMeta.showGranel);});
     var wantType=/\b(auto|autos|autofloraison\w*|autoflo\w*)\b/.test(msg)?'auto':(/\b(feminis\w*|feminiz\w*|fem)\b/.test(msg)?'fem':(/\b(reguliere\w*|regular\w*)\b/.test(msg)?'regular':null));
     if(!wantType&&/\bphotoperiod\w*/.test(msg))wantType='notauto';
     var pool=avail.filter(function(i){if(wantType==='notauto')return i.type!=='auto';return !wantType||!i.type||i.type===wantType;});
-    // budget du profil (prix d'un paquet)
     var maxBudget=BUDGET[prof.budget]||null;
-    var mb=msg.match(/\b(?:moins de|max\w*|budget|sous)\s*(\d{2,3})\s*(?:e|eur|euros?)\b/);if(mb)maxBudget=parseInt(mb[1],10);
+    var mb=msg.match(/\b(?:moins de|max\w*|budget|sous)\s*(\d{2,3})\s*(?:e|eur|euros?)?\b/);if(mb)maxBudget=parseInt(mb[1],10);
     if(maxBudget){var inB=pool.filter(function(i){return i.pvp==null||i.pvp<=maxBudget;});if(inB.length)pool=inB;}
-    // critères et variétés citées, via la base StrainSage
     var scores={},facetsById={},r={criteria:[],items:[]};
     try{r=await search(txt,{drop:opts.drop,limit:6000,stockInfo:null});(r.items||[]).forEach(function(x){scores[x.f.id]=x.score;facetsById[x.f.id]=x.f;});}catch(e){}
     var detected=detect(txt,5).map(function(e){return e.id;});
@@ -486,33 +554,56 @@
     pool.forEach(function(it){
       var s=0;
       if(it.varieteId&&detected.indexOf(it.varieteId)>-1)s+=10;
-      else if(detected.length&&detected.some(function(id){var e=entries.filter(function(x){return x.id===id;})[0];return e&&nrm(it.variete).indexOf(nrm(e.nom))>-1;}))s+=8;
       if(it.varieteId&&scores[it.varieteId]!=null)s+=scores[it.varieteId]*5;
       if(floMaxWanted&&it.floMax!=null)s+=it.floMax<=floMaxWanted?1.5:-1;
       if(it.dispo===2)s-=0.2;
       it._s=s;
     });
-    function oneByVariety(arr){var seen={};return arr.filter(function(i){if(seen[i.gk])return false;seen[i.gk]=1;return true;});}
     var picked=oneByVariety(pool.slice().sort(function(a,b){return b._s-a._s||(a.pvp||999)-(b.pvp||999);}));
     var matching=picked.filter(function(i){return i._s>0;}),availV=oneByVariety(avail).length;
     if(!hasCrit&&!detected.length){
-      // pas de critère : un échantillon varié (types et breeders différents), en commençant par les fiches rapprochées
       var seenB={};picked=picked.filter(function(i){return i.varieteId;}).concat(picked.filter(function(i){return !i.varieteId;})).filter(function(i){var k=(i.breeder||'')+'|'+(i.type||'');if((seenB[k]=(seenB[k]||0)+1)>2)return false;return true;});
     }
-    var top=(matching.length?matching:picked).slice(0,20);
-    if(!top.length)return {ctx:'',info:{available:availV,articles:avail.length,count:0}};
     if(r.criteria&&r.criteria.length&&!Object.keys(facetsById).length){try{await loadFacets();}catch(e){}}
-    var head=matching.length?(matching.length+' variété(s) disponible(s) correspondent à la demande ; voici les mieux classées')
-      :((hasCrit||detected.length)?'aucune variété disponible ne correspond exactement à la demande ; voici les plus proches':'sélection variée du catalogue disponible');
-    var ctx='\n\n[VARIÉTÉS DISPONIBLES EN BOUTIQUE — catalogue du grossiste Garden Seeds Trading, commandables par la boutique] '+head+' ('+availV+' variétés disponibles au total, '+avail.length+' packs'+(maxBudget?', budget ≤ '+maxBudget+' €':'')+(wantType&&wantType!=='notauto'?', type '+TYPE_FR[wantType]:'')+') :\n'+
-      top.map(function(it){return gstLine(it,it.varieteId?facetsById[it.varieteId]:null);}).join('\n')+
-      '\nChaque ligne est une variété ; « packs disponibles » donne toutes les tailles commandables (nombre de graines et prix public) : cite-les si on te demande la disponibilité ou le prix.'+
-      '\nRÈGLE ABSOLUE : recommande UNIQUEMENT des variétés de cette liste, avec leur nom exact. Dans le JSON des cartes, ajoute pour chacune le champ "gst" avec son code (ex. "gst":"'+top[0].codigo+'"). Si rien ne correspond vraiment, dis-le franchement et propose la plus proche de la liste. La base StrainSage et le web servent seulement à décrire ces variétés, jamais à en proposer d\'autres.';
-    console.info('[GST] '+top.length+' variétés injectées ('+(matching.length?matching.length+' correspondent':'aucune correspondance exacte')+', '+availV+' variétés / '+avail.length+' packs disponibles)');
-    return {ctx:ctx,info:{available:availV,articles:avail.length,count:top.length,matching:matching.length}};
+    var fct=function(it){return it.varieteId?facetsById[it.varieteId]:null;},seenG={},blocks=[];
+    // 1. déjà présentées
+    var remembered=[];
+    (opts.remember||[]).forEach(function(x){var it=(x.gst&&gstByCode[x.gst])||gstFor(x.name);if(!it||seenG[it.gk])return;seenG[it.gk]=1;remembered.push(repOf(it));});
+    if(remembered.length)blocks.push('[VARIÉTÉS DÉJÀ PRÉSENTÉES AU CLIENT DANS CETTE CONVERSATION — toujours valables ; « la première » = n°1, « la deuxième » = n°2…]\n'+
+      remembered.map(function(it,i){return (i+1)+'. '+gstLine(it,fct(it)).slice(2)+' · statut : '+statusOf(it);}).join('\n'));
+    // 2. citées par le client
+    var fn=findNamed(raw),named=fn.named,namedCount=0;
+    if(named.length)blocks.push('[VARIÉTÉS CITÉES PAR LE CLIENT — trouvées au catalogue du grossiste ; présente toutes les déclinaisons commandables]\n'+named.map(function(nm){
+      // une ligne par déclinaison ; une déclinaison vendue seulement en vrac pro (Granel) n'est pas proposée, sauf option
+      var groups=oneByVariety(gstByBase[nm.base]||[]).filter(function(it){return gstMeta.showGranel||(it.packs||[it]).some(function(p){return !p.granel;});}).map(repOf)
+        .sort(function(a,b){return (packsOf(b).length?1:0)-(packsOf(a).length?1:0);});
+      groups.forEach(function(it){seenG[it.gk]=1;});namedCount+=groups.length;
+      var label=groups.length?groups[0].variete:nm.base;
+      return '« '+nm.query+' »'+(nm.via==='initiales'||nm.via==='acronyme'||nm.via==='alias'||nm.via==='fiche'?' = '+label+' ('+(nm.via==='fiche'?'même variété':nm.via==='alias'?'autre nom':'acronyme / nom complet')+')':'')+' : '+groups.length+' déclinaison'+(groups.length>1?'s':'')+'\n'+
+        groups.map(function(it){return gstLine(it,fct(it))+' · statut : '+statusOf(it);}).join('\n');
+    }).join('\n'));
+    // absentes : nom visé par la question sans aucun article, ou fiche StrainSage sans article
+    var asked=named.length?'':askedName(raw),absent=(asked?[asked]:[]).concat(fn.ficheAbsent.filter(function(n){return !asked||nrm(n)!==nrm(asked);}));
+    if(absent.length)blocks.push('[ABSENTES DU CATALOGUE DU GROSSISTE] '+absent.map(function(a){return '« '+a+' »';}).join(', ')+' : aucun article correspondant chez le grossiste (ni en stock, ni en rupture). Dis-le clairement et sans hésiter, puis propose la variété disponible la plus proche parmi celles ci-dessous.');
+    // 3. autres variétés disponibles
+    var top=(matching.length?matching:picked).filter(function(i){return !seenG[i.gk];}).slice(0,20);
+    var head=matching.length?'les mieux adaptées à la demande':((hasCrit||detected.length)?'les plus proches de la demande':'sélection variée');
+    if(top.length)blocks.push('[AUTRES VARIÉTÉS DISPONIBLES CHEZ LE GROSSISTE — '+head+' ; '+availV+' variétés commandables au total'+(maxBudget?', budget ≤ '+maxBudget+' € par pack':'')+(wantType&&wantType!=='notauto'?', type '+TYPE_FR[wantType]:'')+']\n'+top.map(function(it){return gstLine(it,fct(it));}).join('\n'));
+    if(!blocks.length)return {ctx:'',info:{available:availV,articles:avail.length,count:0}};
+    var example=(remembered[0]||top[0]||(named.length&&gstByBase[named[0].base][0])||{}).codigo||'12345';
+    var ctx='\n\n[CATALOGUE DU GROSSISTE GARDEN SEEDS TRADING — variétés commandables par la boutique]\n'+blocks.join('\n\n')+
+      '\nRÈGLES (à appliquer sans jamais les évoquer devant le client) :'+
+      '\n- Recommande UNIQUEMENT des variétés présentes ci-dessus, avec leur nom exact. Dans le JSON des cartes, ajoute pour chacune "gst" avec son code (ex. "gst":"'+example+'").'+
+      '\n- Une variété déjà présentée dans la conversation reste valable : ne la désavoue jamais et ne te corrige pas sur sa disponibilité, sauf si son statut ci-dessus le contredit explicitement.'+
+      '\n- Quand le client cite une variété trouvée (même par un acronyme ou son nom complet), présente toutes ses déclinaisons commandables avec leurs packs et prix.'+
+      '\n- Prix et conditionnements : cite uniquement ceux indiqués ci-dessus, à l\'identique ; n\'en invente aucun. Les cartes font foi.'+
+      '\n- Ne parle jamais de « liste », « candidates », « classement », « contexte », « données », « base » ni du fonctionnement de l\'application : parle comme un vendeur qui connaît son catalogue.'+
+      '\n- Si rien ne correspond vraiment, dis-le franchement et propose la variété disponible la plus proche.';
+    console.info('[GST] '+remembered.length+' déjà présentées, '+named.length+' citée(s) ('+namedCount+' déclinaisons), '+absent.length+' absente(s), '+top.length+' autres ; '+availV+' variétés disponibles');
+    return {ctx:ctx,info:{available:availV,articles:avail.length,count:top.length+namedCount+remembered.length,matching:matching.length,named:named.map(function(n){return n.query;}),absent:absent,remembered:remembered.length}};
   }
 
-  window.VarDB={euro:euro,packsOf:packsOf,packsText:packsText,loadCatalogue:loadCatalogue,gstFor:gstFor,catalogueContext:catalogueContext,gstSize:function(){return gst?gst.length:0;},lineage:lineage,load:load,detect:detect,resolve:resolve,idOf:idOf,get:get,cached:cached,prefetch:prefetch,
+  window.VarDB={euro:euro,packsOf:packsOf,packsText:packsText,seedsLabel:seedsLabel,statusOf:statusOf,findNamed:findNamed,askedName:askedName,loadCatalogue:loadCatalogue,gstFor:gstFor,catalogueContext:catalogueContext,gstSize:function(){return gst?gst.length:0;},lineage:lineage,load:load,detect:detect,resolve:resolve,idOf:idOf,get:get,cached:cached,prefetch:prefetch,
     compact:compact,buildContext:buildContext,stockFacts:stockFacts,banques:banques,domain:domain,norm:nrm,
     search:search,criteriaContext:criteriaContext,parseCriteria:parseCriteria,loadFacets:loadFacets,
     size:function(){return entries.length;}};

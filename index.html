@@ -317,8 +317,8 @@ html{-webkit-tap-highlight-color:rgba(0,112,60,.12)}
 .sc-specs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-bottom:1px solid var(--line)}
 .sc-spec{padding:14px 16px;border-right:1px solid var(--line);min-width:0}
 .sc-spec:last-child{border-right:0}
-.sc-spec b{font-variant-numeric:tabular-nums;display:block;font-family:var(--font-display);font-size:24px;font-weight:600;letter-spacing:-.02em;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sc-spec b.na{color:var(--ink3);font-weight:400}
+.sc-spec b{font-variant-numeric:tabular-nums;display:block;font-family:var(--font-display);font-size:24px;font-weight:600;letter-spacing:-.02em;line-height:1.1;white-space:normal;overflow-wrap:anywhere}
+.sc-spec b.na{color:var(--ink3);font-weight:400;font-size:15px;line-height:1.3;letter-spacing:0}
 .sc-spec small{font-size:12px;color:var(--ink3)}
 .sc-flo{padding:12px 20px 14px;border-bottom:1px solid var(--line)}
 .sc-flo-head{display:flex;justify-content:space-between;font-size:13px;color:var(--ink2);margin-bottom:8px}
@@ -677,7 +677,7 @@ html{-webkit-tap-highlight-color:rgba(0,112,60,.12)}
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="gd-reference.js"></script>
-<script src="varietes.js?v=20261020a"></script>
+<script src="varietes.js?v=20261021b"></script>
 <script>
 /* ══ THÈME ══ */
 function updateThemeLabel(t){
@@ -735,6 +735,9 @@ CONTEXTE BOUTIQUE :
 - Budget moyen : 30-80€ pour 5-10 graines, clientèle premium jusqu'à 150€
 - Saison : demande outdoor forte avril-juin, indoor toute l'année
 - Priorité absolue : proposer des variétés EN STOCK si elles correspondent
+- Ne parle jamais au client de liste, de candidates, de classement, de contexte ni du fonctionnement interne de l'application.
+- Une variété que tu as déjà proposée dans la conversation reste valable : ne la désavoue pas et ne te contredis pas sur sa disponibilité.
+- Prix et conditionnements : uniquement ceux fournis par le catalogue, à l'identique (les cartes font foi).
 
 COMPORTEMENT :
 - Si le client mentionne qu'il n'a PAS aimé une variété ou un effet → ne jamais proposer de variétés similaires dans TOUTE la session
@@ -1108,16 +1111,24 @@ async function processStock(rows,fname){var mapped=rows.map(mapRow).filter(r=>r.
 function escA(t){return esc(t).replace(/"/g,'&quot;');}
 function typeKey(t){var n=String(t||'').toLowerCase();var i=/indica/.test(n),s=/sativa/.test(n);if(/hybri/.test(n)||(i&&s))return 'hybride';if(i)return 'indica';if(s)return 'sativa';return 'unknown';}
 function capFirst(t){t=String(t||'');return t.charAt(0).toUpperCase()+t.slice(1);}
-function cleanVal(v){v=String(v==null?'':v).trim();if(!v||/^(null|undefined|n\/?a|inconnu\w*|non renseign\w*|—|-)$/i.test(v))return '';return v.replace(/\s*\(.*$/,'').slice(0,22);}
+function cleanVal(v){v=String(v==null?'':v).trim();if(!v||/^(null|undefined|n\/?a|inconnu\w*|non renseign\w*|—|-)$/i.test(v))return '';
+  if(/non pr[ée]cis|non communiqu|non indiqu|inconnu|non disponible|variable|selon|d[ée]pend/i.test(v))return '';
+  v=v.replace(/\s*\(.*$/,'');return v.length>22?v.slice(0,22).replace(/\s+\S*$/,'')+'…':v;}
 function rangeTxt(a,b,u){if(a==null&&b==null)return '';u=u||'';var f=x=>String(x).replace('.',',');if(a===b||b==null)return f(a)+u;if(a==null)return '≤ '+f(b)+u;return f(a)+'–'+f(b)+u;}
 function nums(v){return (String(v||'').replace(/(\d),(\d)/g,'$1.$2').match(/\d+(?:\.\d+)?/g)||[]).map(Number);}
-function floraisonOf(s,fiche){
+// floraison : catalogue du grossiste (propre à la déclinaison : SAD ≠ Auto SAD), puis base StrainSage, puis estimation IA vérifiée
+function floraisonOf(s,fiche,g,isAuto){
+  if(g&&(g.floMin!=null||g.floMax!=null)){var c=g.floMin,d=g.floMax;return {min:c!=null?c:d,max:d!=null?d:c,src:''};}
   if(fiche&&(fiche.floraison_sem_min!=null||fiche.floraison_sem_max!=null)){var a=fiche.floraison_sem_min,b=fiche.floraison_sem_max;return {min:a!=null?a:b,max:b!=null?b:a,src:''};}
   var n=nums(s.flowering);if(!n.length)return null;
   if(/jour|day/i.test(s.flowering))n=n.map(x=>Math.round(x/7*2)/2);
   var a=n[0],b=n[1]!=null?n[1]:n[0];if(a>30||b>30)return null;
-  return {min:Math.min(a,b),max:Math.max(a,b),src:'estimation IA'};
+  var lo=Math.min(a,b),hi=Math.max(a,b);
+  // estimation IA incohérente (autofloraison > 9 sem., photopériode hors 6–16 sem.) : « non précisé »
+  if(isAuto?(hi>9||lo<4):(lo<6||hi>16))return null;
+  return {min:lo,max:hi,src:'estimation IA'};
 }
+function thcEstimate(v){var t=cleanVal(v),n=nums(t);if(!t||!n.length||Math.max.apply(null,n)>35)return '';return t;}
 function buildFrieze(fl){
   if(!fl)return '';
   var total=Math.max(12,Math.ceil(fl.max)+1),cells='';
@@ -1129,10 +1140,13 @@ function buildFrieze(fl){
 }
 function buildCard(s){
   var ref=window.GDRef?window.GDRef.get(s.name):null;
-  var fiche=window.VarDB?window.VarDB.cached(s.name):null;
+  // fiche StrainSage : par le nom affiché, sinon par l'article du catalogue rapproché (« Auto Cream Mandarine » → fiche « Cream Mandarine »)
+  var gEarly=window.VarDB&&VarDB.gstFor?VarDB.gstFor(s.gst||s.name)||VarDB.gstFor(s.name):null;
+  var fiche=window.VarDB?(window.VarDB.cached(s.name)||(gEarly&&gEarly.varieteId?window.VarDB.cached(gEarly.varieteId):null)):null;
   var faved=favorites.some(f=>f.name===s.name);
   var tk=fiche&&fiche.type?fiche.type:typeKey(s.type);if(['indica','sativa','hybride'].indexOf(tk)<0)tk='unknown';
   var kind=fiche&&fiche.type?capFirst(fiche.type)+(fiche.type==='hybride'&&fiche.dominante&&fiche.dominante!=='equilibree'?' à dominante '+fiche.dominante:''):(cleanVal(s.type)||'Type non renseigné');
+  if(!(fiche&&fiche.autofloraison===true)&&gEarly&&gEarly.type==='auto'&&!/auto/i.test(kind))kind+=', autofloraison';
   if(fiche&&fiche.autofloraison===true)kind+=', autofloraison';
   // lignée : base, puis GrowDiaries, puis estimation de l'IA (signalée)
   var parents=[],linSrc='';
@@ -1145,14 +1159,15 @@ function buildCard(s){
   var st=findInStock(s.name),stamp='';
   if(st){var ok=!st.dispo||/^(o|oui)$/i.test(st.dispo);stamp='<div class="sc-stamp'+(ok?'':' out')+'">'+(ok?'En stock':'En rupture')+(st.prix?'<small>'+esc(st.prix)+' €'+(st.graines?' · '+esc(st.graines)+' graines':'')+'</small>':'')+'</div>';}
   else if(g&&g.pvp!=null){var gp=VarDB.packsOf?VarDB.packsOf(g):[g],minP=Math.min.apply(null,gp.map(function(p){return p.pvp==null?Infinity:p.pvp;}));
-    stamp='<div class="sc-stamp">'+(g.dispo===2?'Stock limité':'À commander')+'<small>'+(gp.length>1&&isFinite(minP)?'dès '+esc(VarDB.euro(minP))+' · '+gp.length+' packs':esc(VarDB.euro(g.pvp))+(g.nb?' · '+esc(g.nb)+' graines':''))+'</small></div>';}
+    stamp='<div class="sc-stamp">'+(g.dispo===2?'Stock limité':'À commander')+'<small>'+(gp.length>1&&isFinite(minP)?'dès '+esc(VarDB.euro(minP))+' · '+gp.length+' packs':esc(VarDB.euro(g.pvp))+(g.nb?' · '+esc(VarDB.seedsLabel?VarDB.seedsLabel(g):g.nb+' graines'):''))+'</small></div>';}
   // chiffres
-  var thc=fiche?rangeTxt(fiche.thc_min,fiche.thc_max,' %'):'';if(!thc)thc=cleanVal(s.thc);
+  var isAuto=(g&&g.type==='auto')||(fiche&&fiche.autofloraison===true)||/\bauto/i.test(s.name||'');
+  var thc=g?rangeTxt(g.thcMin,g.thcMax,' %'):'';if(!thc&&fiche)thc=rangeTxt(fiche.thc_min,fiche.thc_max,' %');if(!thc)thc=thcEstimate(s.thc);
   var cbd=fiche?rangeTxt(fiche.cbd_min,fiche.cbd_max,' %'):'';if(!cbd)cbd=cleanVal(s.cbd);
-  var fl=floraisonOf(s,fiche);
+  var fl=floraisonOf(s,fiche,g,isAuto);
   var flo=fl?(fl.min===fl.max?String(fl.min):fl.min+'–'+fl.max).replace(/\./g,','):'';
   var rend=fiche&&fiche.rendement?({faible:'Faible',moyen:'Moyen',eleve:'Élevé'})[fiche.rendement]:cleanVal(s.yield);
-  function spec(v,l){return '<div class="sc-spec">'+(v?'<b>'+esc(v)+'</b>':'<b class="na">—</b>')+'<small>'+l+'</small></div>';}
+  function spec(v,l){return '<div class="sc-spec">'+(v?'<b>'+esc(v)+'</b>':'<b class="na">non précisé</b>')+'<small>'+l+'</small></div>';}
   var specs='<div class="sc-specs">'+spec(thc,'THC')+spec(cbd,'CBD')+spec(flo,'semaines de floraison')+spec(rend,'rendement')+'</div>';
   // texte
   var rows='';
@@ -1161,7 +1176,7 @@ function buildCard(s){
   if(g){
     // tous les packs commandables de la variété : nombre de graines, prix public, stock limité
     var packs=VarDB.packsOf?VarDB.packsOf(g):[g];
-    var packHtml=packs.map(function(p){return (p.nb?esc(p.nb)+' graine'+(p.nb>1?'s':''):'paquet')+(p.pvp!=null?' <b>'+esc(VarDB.euro(p.pvp))+'</b>':'')+(p.dispo===2?' <span style="color:#a50d26">(stock limité)</span>':'');}).join(' · ');
+    var packHtml=packs.map(function(p){return esc(VarDB.seedsLabel?VarDB.seedsLabel(p):(p.nb?p.nb+' graines':'paquet'))+(p.pvp!=null?' <b>'+esc(VarDB.euro(p.pvp))+'</b>':'')+(p.dispo===2?' <span style="color:#a50d26">(stock limité)</span>':'');}).join(' · ');
     row('À commander',esc([g.breeder,g.type?({fem:'féminisée',auto:'autofloraison',regular:'régulière'})[g.type]:''].filter(Boolean).join(' · '))+(packHtml?(g.breeder||g.type?' — ':'')+packHtml:' — actuellement en rupture'));
   }
   var eff=(s.effects&&s.effects.length?s.effects:(fiche&&fiche.effets)||[]);row('Effets',eff.map(esc).join(', '));
@@ -1280,6 +1295,16 @@ async function removeFav(name){favorites=favorites.filter(f=>f.name!==name);awai
 async function saveConv(firstMsg){var title=firstMsg.length>50?firstMsg.slice(0,50)+'…':firstMsg;var ex=convHistory.findIndex(c=>c.id===currentId);var entry={id:currentId,title,date:new Date().toLocaleDateString('fr-FR'),messages:history.slice()};if(ex>=0)convHistory[ex]=entry;else convHistory.unshift(entry);if(convHistory.length>20)convHistory=convHistory.slice(0,20);await updateDoc(doc(db,'users',userId),{convHistory,totalConvs:increment(1)});renderHist();}
 function renderHist(){var list=document.getElementById('histList');list.innerHTML='';if(!convHistory.length){list.innerHTML='<div class="sb-empty">Aucune conversation.</div>';return;}convHistory.forEach(c=>{var item=document.createElement('div');item.className='hist-item';item.innerHTML='<div class="hist-title">'+esc(c.title)+'</div><div class="hist-date">'+c.date+'</div>';item.tabIndex=0;item.setAttribute('role','button');item.addEventListener('click',()=>loadConv(c));item.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();item.click();}});list.appendChild(item);});}
 function loadConv(conv){newChat(false);currentId=conv.id;history=conv.messages.slice();document.getElementById('topTitle').textContent=conv.title;history.forEach(m=>{if(m.role==='user')addMsg('user',esc(m.content));else addMsg('ai',renderReply(m.content));});}
+// variétés déjà présentées en carte dans la conversation, dans l'ordre (relues dans les réponses de l'historique)
+function rememberedStrains(){
+  var out=[],seen={};
+  history.forEach(function(m){
+    if(m.role!=='assistant')return;
+    var mm=String(m.content||'').match(/\[STRAINS_JSON\]([\s\S]*?)\[\/STRAINS_JSON\]/);if(!mm)return;
+    try{JSON.parse(mm[1].trim()).forEach(function(x){if(x&&x.name&&!seen[x.name.toLowerCase()]){seen[x.name.toLowerCase()]=1;out.push({name:x.name,gst:x.gst?String(x.gst):''});}});}catch(e){}
+  });
+  return out;
+}
 function newChat(resetId){if(resetId===undefined)resetId=true;history=[];if(resetId){currentId=Date.now();sessionMemory={liked:[],disliked:[],tried:[]};}if(mode==='stats'){setMode('chat');return;}renderWelcome();document.getElementById('topTitle').textContent='Nouvelle conversation';};
 
 /* ══ ACCUEIL : composeur de recherche ══ */
@@ -1444,9 +1469,10 @@ async function buildCtx(txt){
   var critText=refine?refine.text:txt,critDrop=refine?refine.drop:[];
   try{if(hasBase)crit=await VarDB.criteriaContext(critText,{exclude:sessionMemory.disliked,stockInfo:stockInfo,drop:critDrop});}catch(e){console.warn('[VarDB critères]',e);}
   if(crit.info.criteria.length||crit.info.similarTo)critState={text:critText,drop:critDrop};
-  // 1c. CATALOGUE GARDEN SEEDS : les seules variétés recommandables ; la base StrainSage sert à les décrire
+  // 1c. CATALOGUE GARDEN SEEDS : les seules variétés recommandables ; la base StrainSage sert à les décrire.
+  //     Les variétés déjà présentées en carte restent dans le contexte (pas de contradiction d'un message à l'autre).
   var gstRes={ctx:'',info:{available:0,count:0}};
-  try{if(window.VarDB&&VarDB.catalogueContext)gstRes=await VarDB.catalogueContext(critText,{profile:userProfile,drop:critDrop});}catch(e){console.warn('[GST]',e&&e.message);}
+  try{if(window.VarDB&&VarDB.catalogueContext)gstRes=await VarDB.catalogueContext(critText,{profile:userProfile,drop:critDrop,raw:txt,remember:rememberedStrains()});}catch(e){console.warn('[GST]',e&&e.message);}
   ctx+=gstRes.ctx||crit.ctx;
   var critCovers=crit.info.items.length>0||gstRes.info.count>0;
   lastCtxInfo={gst:gstRes.info,found:base.found,criteria:crit.info.criteria.map(c=>({k:c.k,l:c.l,fam:c.fam})),unsupported:(crit.info.unsupported||[]).map(c=>c.l),total:crit.info.total,similarTo:crit.info.similarTo};
@@ -1581,7 +1607,7 @@ window.send=async function(){
     }
 
     // ── FIN DU STREAM — rendu final avec cartes ──
-    try{var mR=reply.match(/\[STRAINS_JSON\]([\s\S]*?)\[\/STRAINS_JSON\]/);if(mR&&window.VarDB)await VarDB.prefetch(JSON.parse(mR[1].trim()).map(x=>x.name),1500);}catch(e){}
+    try{var mR=reply.match(/\[STRAINS_JSON\]([\s\S]*?)\[\/STRAINS_JSON\]/);if(mR&&window.VarDB){var lst=JSON.parse(mR[1].trim()),ids=lst.map(x=>{var g=VarDB.gstFor&&VarDB.gstFor(x.gst||x.name);return g&&g.varieteId;}).filter(Boolean);await VarDB.prefetch(lst.map(x=>x.name).concat(ids),1500);}}catch(e){}
     bubble.id='';
     bubble.innerHTML=strip+renderReply(reply);
     panel().scrollTop=panel().scrollHeight;
