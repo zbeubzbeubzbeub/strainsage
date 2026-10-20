@@ -2639,7 +2639,9 @@ window.gstAuditCopy=async function(){
 // inspecter une variété : tous les articles dont le nom brut, le nom stocké ou le nom de base contient la recherche
 window.gstInspect=async function(){
   var q=joinLetters(base0($('gstInspectQ').value||''));if(!q)return;
-  if(!G.audit){try{G.audit={list:await auditEntries(false)};}catch(e){toast(FSG.why(e),'error');return;}}
+  // toujours l'index actuel (après un recalcul, une synchro ou une réapplication), jamais une copie d'un audit précédent
+  var list;try{if(!G.loaded)await loadIndex();list=G.entries.map(e=>viewsOf(e.raw));}catch(e){toast(FSG.why(e),'error');return;}
+  G.audit=Object.assign({},G.audit||{},{list:list});
   var re=new RegExp('(^| )'+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'( |$)');
   var hits=G.audit.list.filter(a=>[a.raw,a.stored.variete,a.stored.base,a.current&&a.current.base].some(x=>re.test(joinLetters(base0(x||'')))));
   var pk=v=>v?(v.nb==null||isNaN(v.nb)?'<span class="td-badge red">inconnu</span>':(v.off?(v.nb-v.off)+' + '+v.off+' offerte(s) = '+v.nb:v.nb)):'—';
