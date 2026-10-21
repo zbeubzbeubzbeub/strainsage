@@ -16,12 +16,12 @@ Objectifs : recommandations fiables et sourcées, interface soignée, déploieme
 
 | Élément | Détail |
 |---|---|
-| Frontend | `index.html` + `admin.html` (toute la logique front est dans ces fichiers) + module `gd-reference.js` |
+| Frontend | `index.html` (chat) + `admin.html` + `varietes.js` (base et catalogue côté chat) + `gst-core.js` (fonctions pures partagées : découpage des noms, packs, rapprochement) + `gd-reference.js` |
 | Dépôt | GitHub `zbeubzbeubzbeub/strainsage`, branche `main` |
 | Hébergement | Vercel → strainsage.vercel.app (avant : GitHub Pages) |
 | Proxy / backend | Cloudflare Worker (`worker.js`), déployé avec Wrangler. Relaie l'API Anthropic et Jina. Auth par en-tête `X-Shop-Token` |
-| Routes du Worker | `PROXY + '/search'` (recherche Jina), `PROXY + '/fetch-page'` (lecture directe d'une URL) |
-| Base de données | Firebase Firestore : profils clients, stock, réglages admin, cache `reference` |
+| Routes du Worker | `/search` et `/fetch-page` (Jina), `/gst` (catalogue Garden Seeds, GET en liste blanche : articulos, familias, grupos), `/image`, et la route par défaut (Anthropic) |
+| Base de données | Firebase Firestore : `users`, `strains`, `knowledge`, `shops`, `adminData` (stock, réglages, `gstSettings`), `varietes` + `varietes_index`, `catalogue_gst` + `catalogue_gst_index`, `catalogue_gst_decisions`, cache `reference` |
 | IA | Anthropic API via le Worker : `claude-sonnet-5-5` pour les recommandations, `claude-haiku-5-5` pour l'extraction et les questions simples |
 
 ## 3. Ce qui fonctionne déjà
@@ -120,3 +120,12 @@ Le fichier livré ne respecte peut-être pas exactement ce format. **Ne présupp
 - Je déploie en poussant les fichiers sur GitHub, puis Vercel les sert. Après une modification, dis-moi clairement **quels fichiers ont changé** et lesquels je dois pousser.
 - Après un gros patch, vérifie avec `grep -n` que les modifications sont bien en place.
 - Quand c'est terminé, explique-moi concrètement ce qui a changé : ce que je voyais avant, et ce que je vois maintenant.
+
+## 9. État au 21/10/2026 (branche `feat/base-varietes`)
+
+- **Catalogue Garden Seeds** : le chat ne recommande que des articles de `catalogue_gst` ; la base StrainSage (`varietes`) sert à les décrire. Synchro différentielle et reprenable dans l'admin (l'index `catalogue_gst_index` sert de manifeste).
+- **Une seule implémentation** des fonctions pures dans `gst-core.js` (admin, chat et tests). Toute règle de découpage reste pilotée par les réglages (« Réglages du catalogue »), jamais par un cas particulier codé en dur.
+- **Tests** : `node test/run-tests.js` (sans dépendance, Firestore simulé, aucun appel réseau). À relancer après chaque modification.
+- **GrowDiaries** : appels réseau coupés (`NETWORK=false` dans `gd-reference.js`), le cache Firestore `reference` reste utilisé.
+- **Jina** : le Worker n'envoie pas encore de clé ; la recherche web se coupe pour la session après un refus.
+- Le stock du magasin se gère uniquement dans l'admin ; le chat le lit, il ne l'écrit jamais. Aucune clé ni mot de passe n'est stocké dans Firestore.

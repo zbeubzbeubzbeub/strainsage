@@ -101,7 +101,8 @@ function loadClient(){
   const docs={'varietes_index/meta':{parts:1,fparts:1},'varietes_index/part_0':{entries:VIDX},'varietes_index/f_0':{entries:FAC},
     'catalogue_gst_index/meta':{parts:1,alias:{}},'catalogue_gst_index/part_0':{entries:CAT},
     'varietes/sad-s1':{nom:'S.A.D. Sweet Afgani Delicious S1',type:'indica',thc_min:20,thc_max:24,effets:['relaxant'],gouts:['sucré'],floraison_sem_min:8,floraison_sem_max:9},
-    'varietes/critical-auto':{nom:'Critical Auto',type:'hybride',autofloraison:true,effets:['relaxant'],gouts:['fruité']}};
+    'varietes/critical-auto':{nom:'Critical Auto',type:'hybride',autofloraison:true,effets:['relaxant'],gouts:['fruité']},
+    'varietes/zkittlez':{nom:'Zkittlez',type:'indica',effets:['relaxant'],produits:[{breeder:'Banque Concurrente'}]}};
   const ctx={console:{info(){},warn(){},error(){},log(){}},setTimeout,Promise,URL};ctx.window=ctx;ctx.globalThis=ctx;ctx.db=fakeDb(docs);
   vm.createContext(ctx);
   vm.runInContext(fs.readFileSync(path.join(ROOT,'gst-core.js'),'utf8'),ctx);
@@ -140,6 +141,11 @@ function loadClient(){
   await ta('contexte : demande auto + budget 30 € → autos ≤ 30 €',async()=>{
     const r=await V.catalogueContext('une auto fruitée pour débutant, budget 30 €',{raw:'une auto fruitée pour débutant, budget 30 €'});
     ok(/Critical Auto/.test(r.ctx),'Critical Auto');ok(/budget ≤ 30 €/.test(r.ctx),'budget');ok(!/Gorilla Glue/.test(r.ctx),'pas de photopériode hors budget');});
+  await ta('nom purement numérique jamais détecté dans un message (budget, année)',async()=>{eq(V.detect('budget 2090 euros, en 1969',5).length,0);});
+  await ta('contexte : fiche de la base sans « Dispo chez » (seul le catalogue dit ce qui est en vente)',async()=>{
+    const r=await V.catalogueContext('parle-moi de la SAD',{raw:'parle-moi de la SAD'});ok(/FICHES BASE STRAINSAGE[\s\S]*S\.A\.D\. Sweet Afgani Delicious/.test(r.ctx),'fiche');ok(!/Dispo chez/.test(r.ctx),'pas de banques concurrentes');});
+  await ta('fiches citées avec catalogue : consigne « seul le catalogue fait foi »',async()=>{
+    const r=await V.buildContext('je cherche une Zkittlez',[],null,{catalogue:true});ok(/seul le catalogue du grossiste fait foi/.test(r.ctx)&&!/Dispo chez/.test(r.ctx));});
   await ta('contexte : aucune mention interne interdite dans les règles',async()=>{
     const r=await V.catalogueContext('parle-moi de la SAD',{raw:'parle-moi de la SAD'});ok(/Ne parle jamais de « liste »/.test(r.ctx));});
 
