@@ -16,6 +16,9 @@
   var FRESH_MS     = 60*24*3600*1000;  // fiche variété valable 60 jours
   var CAT_FRESH_MS =  7*24*3600*1000;  // listes par critère valables 7 jours
   var MISS_MS      = 14*24*3600*1000;  // variété introuvable : on ne réessaie pas avant 14 jours
+  // GrowDiaries bloque les lecteurs automatiques (403) : aucun appel réseau tant qu'un accès officiel n'existe pas.
+  // Les fiches déjà en cache Firestore (« reference ») restent utilisées. Passer à true pour réactiver.
+  var NETWORK      = false;
   var MODEL        = 'claude-haiku-5-5';  // modèle rapide et économique pour l'extraction
   var GD           = 'https://growdiaries.com';
   var cache = {}, pending = {};
@@ -117,6 +120,7 @@
     pending[k]=(async function(){
       var stored=await readDoc('reference',k);
       if(isFresh(stored)){cache[k]=stored;return stored.notFound?null:stored;}
+      if(!NETWORK){if(stored&&!stored.notFound){cache[k]=stored;return stored;}return null;}
       var page=await resolvePage(name);
       if(!page){
         var miss={notFound:true,query:name,fetchedAt:Date.now(),v:SCHEMA};
@@ -207,6 +211,7 @@
     if(cache[ck])return cache[ck];
     var stored=await readDoc('referenceCategories',k);
     if(stored&&stored.fetchedAt&&Date.now()-stored.fetchedAt<CAT_FRESH_MS&&stored.items){cache[ck]=stored.items;return stored.items;}
+    if(!NETWORK)return (stored&&stored.items)||[];
     var items=parseList(await fetchPage(GD+'/strains/category/'+path));
     if(items.length){cache[ck]=items;writeDoc('referenceCategories',k,{path:path,items:items,fetchedAt:Date.now()});return items;}
     return (stored&&stored.items)||[];
@@ -252,7 +257,8 @@
     return l;
   }
 
-  async function buildContext(txt,names,stockInfo){
+  // opts.catalogue : le catalogue du grossiste fait foi ; pas de liste de « candidats » GrowDiaries à privilégier
+  async function buildContext(txt,names,stockInfo,opts){
     var list=(names||[]).filter(function(n){return n&&n.length>2;}).slice(0,3);
     var results=await Promise.all(list.map(function(n){return getStrain(n).catch(function(){return null;});}));
     var found=results.filter(Boolean),out='';
@@ -260,7 +266,7 @@
       out+='\n\n[RÉFÉRENCE GROWDIARIES — source prioritaire pour lignée, breeders et caractéristiques]\n'+found.map(function(r){return formatRef(r,stockInfo);}).join('\n');
     }
     var cand={criteria:[],items:[]};
-    try{cand=await criteriaCandidates(txt);}catch(e){}
+    if(!(opts&&opts.catalogue)){try{cand=await criteriaCandidates(txt);}catch(e){}}
     if(cand.items.length){
       out+='\n\n[CANDIDATS GROWDIARIES pour les critères : '+cand.criteria.map(function(c){return c.label;}).join(', ')+'] (classés par nombre de critères remplis puis popularité)\n'+
         cand.items.map(function(i){

@@ -646,7 +646,8 @@ function doLogin(){
     document.getElementById('loginErr').style.display='block';
   }
 }
-document.addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+// Entrée valide uniquement l'écran de connexion (sinon chaque Entrée relisait clients, stock et statistiques)
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&!document.getElementById('adminApp').classList.contains('visible'))doLogin();});
 
 window.addEventListener('DOMContentLoaded',()=>{
   if(localStorage.getItem('ss_admin_auth')==='1'){
@@ -1069,10 +1070,12 @@ function parseAndAnalyse(manual){
   $('vdbEnc').value=S.enc;$('vdbSep').value=S.sep;show('vdbParseOpts',true);
   var bad=(text.match(/\uFFFD/g)||[]).length;
   var mojibake=(text.match(/Ã[©¨ª«´®¯§ ]/g)||[]).length;
+  // jusqu'à 5 extraits autour des caractères suspects, pour juger sans ouvrir le fichier
+  var badEx=[],reBad=/\uFFFD|Ã[©¨ª«´®¯§ ]/g,mb;while((mb=reBad.exec(text))&&badEx.length<5){var ln=text.slice(0,mb.index).split('\n').length;badEx.push('ligne '+ln+' : « '+text.slice(Math.max(0,mb.index-25),mb.index+25).replace(/\s+/g,' ')+' »');}
   $('vdbFileInfo').innerHTML='<b>'+esc(S.file.name)+'</b> · '+(S.file.size/1024).toFixed(0)+' Ko · '+S.rows.length+' lignes · '+S.headers.length+' colonnes<br>'+
     'Encodage '+(manual?'choisi':'détecté')+' : <b>'+esc(S.enc)+'</b> · séparateur : <b>'+(S.sep===';'?'point-virgule':S.sep===','?'virgule':'tabulation')+'</b>'+
     (S.parseErrors?' · <span style="color:var(--red)">'+S.parseErrors+' ligne(s) mal formée(s) (guillemets ou nombre de colonnes)</span>':'')+
-    ((bad||mojibake)?'<br><span style="color:var(--red)">⚠️ Des caractères semblent mal décodés ('+(bad+mojibake)+'). Essaie un autre encodage.</span>':'');
+    ((bad||mojibake)?'<br><span style="color:var(--red)">⚠️ Des caractères semblent mal décodés ('+(bad+mojibake)+'). Essaie un autre encodage.</span><br><span style="font-size:11px;color:var(--text3)">'+badEx.map(esc).join('<br>')+'</span>':'');
   loadSavedMapping().then(function(){autoMap();renderAnalysis();renderMapping();show('vdbStepAnalyse',true);show('vdbStepMap',true);show('vdbStepPreview',false);show('vdbStepReport',false);});
 }
 
@@ -1302,7 +1305,7 @@ function convertAll(){
     });
     if(!r.nom){out.rejected.push({line:line,nom:r.id||'',why:'nom manquant'});return;}
     if(/^https?:|^www\./i.test(r.nom)||r.nom.length>100){out.rejected.push({line:line,nom:r.nom.slice(0,60),why:'nom invalide (URL ou texte trop long)'});return;}
-    if(!/[a-z]/i.test(nrm(r.nom))){out.rejected.push({line:line,nom:r.nom,why:'nom invalide (aucune lettre)'});return;}
+    if(!nrm(r.nom)){out.rejected.push({line:line,nom:r.nom,why:'nom invalide (aucune lettre ni chiffre)'});return;}
     r.id=r.id||slug(r.nom);
     if(!r.id){out.rejected.push({line:line,nom:r.nom,why:'identifiant impossible à calculer'});return;}
     // sources
@@ -1319,11 +1322,13 @@ function convertAll(){
     if(cx.pb.length||cx.pn.length||cx.pu.length){
       var n=Math.max(cx.pb.length,cx.pn.length,cx.pu.length);
       var aligned=[cx.pb,cx.pn,cx.pu].every(function(l){return !l.length||l.length===n;});
-      if(!aligned){warn('produit_breeder',cx.pb.length+' banques / '+cx.pn.length+' noms / '+cx.pu.length+' URL','listes de longueurs différentes : seules les banques sont gardées');n=cx.pb.length;}
+      if(!aligned){warn('produit_breeder',cx.pb.length+' banques / '+cx.pn.length+' noms / '+cx.pu.length+' URL','listes de longueurs différentes : banques, noms et URL gardés séparément (non appariés)');n=cx.pb.length;}
       for(var pi=0;pi<n;pi++){
         var pr={breeder:cx.pb[pi]||null,nom_commercial:aligned?(cx.pn[pi]||null):null,url:aligned?(cx.pu[pi]||null):null};
         if(pr.breeder||pr.nom_commercial||pr.url)r.produits.push(pr);
       }
+      // rien n'est perdu : noms commerciaux et URL non appariables gardés sans banque (jamais associés au hasard)
+      if(!aligned){cx.pn.forEach(function(x){if(x)r.produits.push({breeder:null,nom_commercial:x,url:null});});cx.pu.forEach(function(x){if(x)r.produits.push({breeder:null,nom_commercial:null,url:x});});}
       r.produits=uniq(r.produits,function(p){return nrm((p.breeder||'')+' '+(p.nom_commercial||''))+'|'+(p.url||'');});
     }
     r._lines=[line];
@@ -1372,7 +1377,8 @@ function applyValue(r,f,v,cx,warn){
 // doublons et alias : même id, ou nom/alias déjà vu → une seule fiche
 function mergeRecords(recs){
   var byId={},owner={},order=[],merged=[],conflicts=[];
-  function keysOf(r){return [r.id].concat([r.nom].concat(r.alias).map(slug)).filter(function(k){return k&&k.length>=3;});}
+  // l'id compte toujours (même court, ex. « 23 ») ; les autres clés à partir de 3 caractères
+  function keysOf(r){return [r.id].concat([r.nom].concat(r.alias).map(slug).filter(function(k){return k&&k.length>=3;})).filter(Boolean);}
   function claim(r){keysOf(r).forEach(function(k){if(!owner[k])owner[k]=r.id;});}
   recs.forEach(function(r){
     var target=owner[r.id]||null;
@@ -1580,7 +1586,7 @@ function facetOf(r){
     fNum(r.thc_min),fNum(r.thc_max!=null?r.thc_max:r.thc_min),fNum(r.cbd_max!=null?r.cbd_max:r.cbd_min),
     fNum(r.floraison_sem_min),fNum(r.floraison_sem_max),fBool(r.autofloraison),
     ({facile:'f',moyenne:'m',difficile:'d'})[r.difficulte]||'',({compacte:'c',moyenne:'m',grande:'g'})[r.hauteur]||'',({faible:'f',moyen:'m',eleve:'e'})[r.rendement]||'',
-    (r.indoor?'i':'')+(r.outdoor?'o':'')+(r.serre?'s':''),fBool(r.resistance_moisissure),String((r.produits||[]).length||''),
+    (r.indoor?'i':'')+(r.outdoor?'o':'')+(r.serre?'s':''),fBool(r.resistance_moisissure),String((r.produits||[]).filter(function(p){return p&&p.breeder;}).length||''),
     fTok(r.effets,8),fTok(r.effets_indesirables,5),fTok(r.gouts,8),fTok(r.terpenes,5)].join('|');
 }
 // breeders d'une fiche (id|breeder1,breeder2) : lus par le rapprochement Garden Seeds
@@ -1788,10 +1794,10 @@ async function gstGet(path,params){
   var wait=lastCall+PAUSE-Date.now();if(wait>0)await sleep(wait);
   var qs=params?'?'+new URLSearchParams(params).toString():'';
   var res;
-  try{res=await fetch(PROXY_URL+'/gst/'+path+qs,{headers:{'X-Shop-Token':TOKEN}});}
-  catch(e){lastCall=Date.now();var ne=new Error('réseau : '+e.message);ne.status=0;throw ne;}
-  lastCall=Date.now();
-  var txt=await res.text();
+  var ac=new AbortController(),to=setTimeout(function(){ac.abort();},30000),txt;
+  try{res=await fetch(PROXY_URL+'/gst/'+path+qs,{headers:{'X-Shop-Token':TOKEN},signal:ac.signal});txt=await res.text();}
+  catch(e){clearTimeout(to);lastCall=Date.now();var ne=new Error(e&&e.name==='AbortError'?'aucune réponse du Worker après 30 s':'réseau : '+e.message);ne.status=0;throw ne;}
+  clearTimeout(to);lastCall=Date.now();
   if(!res.ok){var msg=txt;try{var pj=JSON.parse(txt);msg=pj.error||pj.message||txt;}catch(e){}var err=new Error('HTTP '+res.status+' : '+String(msg).slice(0,180));err.status=res.status;err.retryAfter=retryAfterSec(res);throw err;}
   try{return JSON.parse(txt);}catch(e){var pe=new Error('réponse illisible');pe.status=-1;throw pe;}
 }

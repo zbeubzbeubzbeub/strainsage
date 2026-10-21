@@ -46,7 +46,8 @@
             var k=nrm(n);if(!k)return;
             if(!byKey[k])byKey[k]=e;
             var c=k.replace(/ /g,'');if(!byCompact[c])byCompact[c]=e;
-            if(k.length>=3)keys.push({k:k,e:e,raw:n,isAlias:i>0});
+            // un nom purement numérique (« 1969 », « 2090 ») n'est pas cherché dans les messages : années, budgets, quantités
+            if(k.length>=3&&!/^[\d ]+$/.test(k))keys.push({k:k,e:e,raw:n,isAlias:i>0});
           });
         });
         keys.sort(function(a,b){return b.k.length-a.k.length;});
@@ -121,7 +122,7 @@
   function head(l,n){return (l||[]).slice(0,n).join(', ');}
   function banques(f){var seen={},out=[];(f.produits||[]).forEach(function(p){var b=p&&p.breeder;if(!b)return;var k=nrm(b);if(seen[k])return;seen[k]=1;out.push(b);});return out;}
   function domain(u){try{return new URL(u).hostname.replace(/^www\./,'');}catch(e){return u;}}
-  function compact(f,stockInfo){
+  function compact(f,stockInfo,noShops){
     var l='• '+f.nom;
     if(f.alias&&f.alias.length)l+=' (aka '+head(f.alias,4)+')';
     var t=f.type?f.type+(f.dominante&&f.type==='hybride'?' à dominante '+f.dominante:''):null;if(t)l+=' · '+t;
@@ -139,7 +140,7 @@
     if(f.effets_indesirables&&f.effets_indesirables.length)l+=' · Indésirables : '+head(f.effets_indesirables,3);
     if(f.gouts&&f.gouts.length)l+=' · Goûts : '+head(f.gouts,5);
     if(f.terpenes&&f.terpenes.length)l+=' · Terpènes : '+head(f.terpenes,4);
-    var b=banques(f);if(b.length)l+=' · Dispo chez (banques/breeders) : '+b.slice(0,8).join(', ')+(b.length>8?' (+'+(b.length-8)+')':'');
+    var b=noShops?[]:banques(f);if(b.length)l+=' · Dispo chez (banques/breeders) : '+b.slice(0,8).join(', ')+(b.length>8?' (+'+(b.length-8)+')':'');
     if(f.descendants&&f.descendants.length)l+=' · Descendants : '+f.descendants.slice(0,4).map(function(d){return d.nom;}).join(', ');
     if(f.sources&&f.sources.length)l+=' · Source : '+domain(f.sources[0].url);
     var st=stockInfo&&stockInfo(f.nom);if(st)l+=' · '+st;
@@ -147,7 +148,9 @@
   }
 
   /* ── contexte pour buildCtx ── */
-  async function buildContext(txt,extraNames,stockInfo){
+  // opts.catalogue : le catalogue du grossiste est chargé ; les fiches ne servent alors qu'à décrire la génétique
+  async function buildContext(txt,extraNames,stockInfo,opts){
+    var cat=!!(opts&&opts.catalogue);
     await load();
     var picked=detect(txt,MAX_FICHES);
     var missing=[];
@@ -160,8 +163,9 @@
     var ctx='';
     if(fiches.length){
       ctx='\n\n[BASE STRAINSAGE — base de variétés de la boutique, source PRIORITAIRE : ces faits priment sur tes connaissances et sur le web, ne les contredis pas]\n'+
-        fiches.map(function(f){return compact(f,stockInfo);}).join('\n')+
-        '\nUtilise ces valeurs dans le JSON des cartes (THC, CBD, floraison, lignée). Pour « où acheter » ou le champ seedbank, choisis parmi les banques/breeders listés après « Dispo chez ». Une info absente de la fiche est inconnue : dis-le plutôt que d\'inventer.';
+        fiches.map(function(f){return compact(f,stockInfo,cat);}).join('\n')+
+        (cat?'\nUtilise ces valeurs pour décrire la génétique (lignée, effets, goûts, THC, floraison). Ces fiches ne disent pas ce qui est en vente : seul le catalogue du grossiste fait foi pour les variétés, déclinaisons, packs et prix. Une info absente est inconnue : dis-le plutôt que d\'inventer.':
+        '\nUtilise ces valeurs dans le JSON des cartes (THC, CBD, floraison, lignée). Pour « où acheter » ou le champ seedbank, choisis parmi les banques/breeders listés après « Dispo chez ». Une info absente de la fiche est inconnue : dis-le plutôt que d\'inventer.');
     }
     return {ctx:ctx,found:fiches.map(function(f){return f.nom;}),detected:picked.map(function(e){return e.nom;}),missing:missing,size:entries.length};
   }
@@ -572,8 +576,9 @@
     if(!hasCrit&&!detected.length){
       var seenB={};picked=picked.filter(function(i){return i.varieteId;}).concat(picked.filter(function(i){return !i.varieteId;})).filter(function(i){var k=(i.breeder||'')+'|'+(i.type||'');if((seenB[k]=(seenB[k]||0)+1)>2)return false;return true;});
     }
-    if(r.criteria&&r.criteria.length&&!Object.keys(facetsById).length){try{await loadFacets();}catch(e){}}
-    var fct=function(it){return it.varieteId?facetsById[it.varieteId]:null;},seenG={},blocks=[];
+    // faits de la base StrainSage (effets, goûts…) pour chaque article rapproché, même sans critère dans la demande
+    var allFacets={};try{(await loadFacets()).forEach(function(f){allFacets[f.id]=f;});}catch(e){}
+    var fct=function(it){return it.varieteId?(facetsById[it.varieteId]||allFacets[it.varieteId]||null):null;},seenG={},blocks=[];
     // 1. déjà présentées
     var remembered=[];
     (opts.remember||[]).forEach(function(x){var it=(x.gst&&gstByCode[x.gst])||gstFor(x.name);if(!it||seenG[it.gk])return;seenG[it.gk]=1;remembered.push(repOf(it));});
@@ -590,6 +595,10 @@
       return '« '+nm.query+' »'+(nm.via==='initiales'||nm.via==='acronyme'||nm.via==='alias'||nm.via==='fiche'?' = '+label+' ('+(nm.via==='fiche'?'même variété':nm.via==='alias'?'autre nom':'acronyme / nom complet')+')':'')+' : '+groups.length+' déclinaison'+(groups.length>1?'s':'')+'\n'+
         groups.map(function(it){return gstLine(it,fct(it))+' · statut : '+statusOf(it);}).join('\n');
     }).join('\n'));
+    // fiches complètes de la base pour les variétés citées et déjà présentées (génétique uniquement, 4 au plus)
+    var ficheIds=[];remembered.concat([].concat.apply([],named.map(function(nm){return gstByBase[nm.base]||[];}))).forEach(function(it){if(it.varieteId&&ficheIds.indexOf(it.varieteId)<0)ficheIds.push(it.varieteId);});
+    var fiches=ficheIds.length?(await Promise.all(ficheIds.slice(0,4).map(fetchDoc))).filter(Boolean):[];
+    if(fiches.length)blocks.push('[FICHES BASE STRAINSAGE DE CES VARIÉTÉS — génétique et profil ; elles ne disent pas ce qui est en vente]\n'+fiches.map(function(f){return compact(f,null,true);}).join('\n'));
     // absentes : nom visé par la question sans aucun article, ou fiche StrainSage sans article
     var asked=named.length?'':askedName(raw),absent=(asked?[asked]:[]).concat(fn.ficheAbsent.filter(function(n){return !asked||nrm(n)!==nrm(asked);}));
     if(absent.length)blocks.push('[ABSENTES DU CATALOGUE DU GROSSISTE] '+absent.map(function(a){return '« '+a+' »';}).join(', ')+' : aucun article correspondant chez le grossiste (ni en stock, ni en rupture). Dis-le clairement et sans hésiter, puis propose la variété disponible la plus proche parmi celles ci-dessous.');

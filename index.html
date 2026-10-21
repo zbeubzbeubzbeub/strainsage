@@ -672,9 +672,9 @@ html{-webkit-tap-highlight-color:rgba(0,112,60,.12)}
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-<script src="gd-reference.js"></script>
+<script src="gd-reference.js?v=20261021"></script>
 <script src="gst-core.js?v=20261021"></script>
-<script src="varietes.js?v=20261021d"></script>
+<script src="varietes.js?v=20261021e"></script>
 <script>
 /* ══ THÈME ══ */
 function updateThemeLabel(t){
@@ -1106,7 +1106,7 @@ function typeKey(t){var n=String(t||'').toLowerCase();var i=/indica/.test(n),s=/
 function capFirst(t){t=String(t||'');return t.charAt(0).toUpperCase()+t.slice(1);}
 function cleanVal(v){v=String(v==null?'':v).trim();if(!v||/^(null|undefined|n\/?a|inconnu\w*|non renseign\w*|—|-)$/i.test(v))return '';
   if(/non pr[ée]cis|non communiqu|non indiqu|inconnu|non disponible|variable|selon|d[ée]pend/i.test(v))return '';
-  v=v.replace(/\s*\(.*$/,'');return v.length>22?v.slice(0,22).replace(/\s+\S*$/,'')+'…':v;}
+  return v.replace(/\s*\(.*$/,'').trim();}
 function rangeTxt(a,b,u){if(a==null&&b==null)return '';u=u||'';var f=x=>String(x).replace('.',',');if(a===b||b==null)return f(a)+u;if(a==null)return '≤ '+f(b)+u;return f(a)+'–'+f(b)+u;}
 function nums(v){return (String(v||'').replace(/(\d),(\d)/g,'$1.$2').match(/\d+(?:\.\d+)?/g)||[]).map(Number);}
 // floraison : catalogue du grossiste (propre à la déclinaison : SAD ≠ Auto SAD), puis base StrainSage, puis estimation IA vérifiée
@@ -1139,8 +1139,8 @@ function buildCard(s){
   var faved=favorites.some(f=>f.name===s.name);
   var tk=fiche&&fiche.type?fiche.type:typeKey(s.type);if(['indica','sativa','hybride'].indexOf(tk)<0)tk='unknown';
   var kind=fiche&&fiche.type?capFirst(fiche.type)+(fiche.type==='hybride'&&fiche.dominante&&fiche.dominante!=='equilibree'?' à dominante '+fiche.dominante:''):(cleanVal(s.type)||'Type non renseigné');
-  if(!(fiche&&fiche.autofloraison===true)&&gEarly&&gEarly.type==='auto'&&!/auto/i.test(kind))kind+=', autofloraison';
-  if(fiche&&fiche.autofloraison===true)kind+=', autofloraison';
+  var autoKnown=gEarly&&gEarly.type?gEarly.type==='auto':(fiche&&fiche.autofloraison===true);
+  if(autoKnown&&!/auto/i.test(kind))kind+=', autofloraison';
   // lignée : base, puis GrowDiaries, puis estimation de l'IA (signalée)
   var parents=[],linSrc='';
   if(fiche&&fiche.parents&&fiche.parents.length)parents=fiche.parents;
@@ -1155,14 +1155,16 @@ function buildCard(s){
   else if(g&&g.pvp!=null){var gp=VarDB.packsOf?VarDB.packsOf(g):[g],minP=Math.min.apply(null,gp.map(function(p){return p.pvp==null?Infinity:p.pvp;}));
     stamp='<div class="sc-stamp">'+(g.dispo===2?'Stock limité':'À commander')+'<small>'+(gp.length>1&&isFinite(minP)?'dès '+esc(VarDB.euro(minP))+' · '+gp.length+' packs':esc(VarDB.euro(g.pvp))+(g.nb?' · '+esc(VarDB.seedsLabel?VarDB.seedsLabel(g):g.nb+' graines'):''))+'</small></div>';}
   // chiffres
-  var isAuto=(g&&g.type==='auto')||(fiche&&fiche.autofloraison===true)||/\bauto/i.test(s.name||'');
-  var thc=g?rangeTxt(g.thcMin,g.thcMax,' %'):'';if(!thc&&fiche)thc=rangeTxt(fiche.thc_min,fiche.thc_max,' %');if(!thc)thc=thcEstimate(s.thc);
-  var cbd=fiche?rangeTxt(fiche.cbd_min,fiche.cbd_max,' %'):'';if(!cbd)cbd=cleanVal(s.cbd);
+  var isAuto=g&&g.type?g.type==='auto':((fiche&&fiche.autofloraison===true)||/\bauto/i.test(s.name||''));
+  var est={};
+  var thc=g?rangeTxt(g.thcMin,g.thcMax,' %'):'';if(!thc&&fiche)thc=rangeTxt(fiche.thc_min,fiche.thc_max,' %');if(!thc){thc=thcEstimate(s.thc);est.thc=!!thc;}
+  var cbd=fiche?rangeTxt(fiche.cbd_min,fiche.cbd_max,' %'):'';if(!cbd){cbd=cleanVal(s.cbd);est.cbd=!!cbd;}
   var fl=floraisonOf(s,fiche,g,isAuto);
   var flo=fl?(fl.min===fl.max?String(fl.min):fl.min+'–'+fl.max).replace(/\./g,','):'';
-  var rend=fiche&&fiche.rendement?({faible:'Faible',moyen:'Moyen',eleve:'Élevé'})[fiche.rendement]:cleanVal(s.yield);
-  function spec(v,l){return '<div class="sc-spec">'+(v?'<b>'+esc(v)+'</b>':'<b class="na">non précisé</b>')+'<small>'+l+'</small></div>';}
-  var specs='<div class="sc-specs">'+spec(thc,'THC')+spec(cbd,'CBD')+spec(flo,'semaines de floraison')+spec(rend,'rendement')+'</div>';
+  var rend=fiche&&fiche.rendement?({faible:'Faible',moyen:'Moyen',eleve:'Élevé'})[fiche.rendement]:'';if(!rend){rend=cleanVal(s.yield);est.rend=!!rend;}
+  // une valeur venant de l'IA (ni catalogue ni base) est signalée « estim. IA »
+  function spec(v,l,isEst){return '<div class="sc-spec">'+(v?'<b>'+esc(v)+'</b>':'<b class="na">non précisé</b>')+'<small>'+l+(v&&isEst?' · estim. IA':'')+'</small></div>';}
+  var specs='<div class="sc-specs">'+spec(thc,'THC',est.thc)+spec(cbd,'CBD',est.cbd)+spec(flo,'semaines de floraison',fl&&fl.src)+spec(rend,'rendement',est.rend)+'</div>';
   // texte
   var rows='';
   function row(l,v,cls){if(v)rows+='<div class="sc-row'+(cls?' '+cls:'')+'"><span class="sc-label">'+l+'</span><span class="sc-val">'+v+'</span></div>';}
@@ -1173,12 +1175,12 @@ function buildCard(s){
     var packHtml=packs.map(function(p){return esc(VarDB.seedsLabel?VarDB.seedsLabel(p):(p.nb?p.nb+' graines':'paquet'))+(p.pvp!=null?' <b>'+esc(VarDB.euro(p.pvp))+'</b>':'')+(p.dispo===2?' <span style="color:#a50d26">(stock limité)</span>':'');}).join(' · ');
     row('À commander',esc([g.breeder,g.type?({fem:'féminisée',auto:'autofloraison',regular:'régulière'})[g.type]:''].filter(Boolean).join(' · '))+(packHtml?(g.breeder||g.type?' — ':'')+packHtml:' — en rupture chez le fournisseur'));
   }
-  var eff=(s.effects&&s.effects.length?s.effects:(fiche&&fiche.effets)||[]);row('Effets',eff.map(esc).join(', '));
-  row('Arômes',s.flavor&&cleanVal(s.flavor)?esc(s.flavor):(fiche&&fiche.gouts&&fiche.gouts.length?esc(fiche.gouts.join(', ')):''));
+  var eff=(fiche&&fiche.effets&&fiche.effets.length?fiche.effets:(s.effects||[]));row('Effets',eff.map(esc).join(', '));
+  row('Arômes',fiche&&fiche.gouts&&fiche.gouts.length?esc(fiche.gouts.join(', ')):(s.flavor&&cleanVal(s.flavor)?esc(s.flavor):''));
   row('Culture',s.culture_tips?esc(s.culture_tips):'');
-  var dispo=fiche&&window.VarDB?VarDB.banques(fiche):[];
+  var dispo=fiche&&window.VarDB&&!g?VarDB.banques(fiche):[];
   if(dispo.length)row('Dispo chez',dispo.slice(0,8).map(esc).join(', ')+(dispo.length>8?' <span style="color:var(--ink3)">et '+(dispo.length-8)+' autres</span>':''));
-  else if(ref&&ref.breeders&&ref.breeders.length)row('Breeders',ref.breeders.slice(0,6).map(b=>esc(b.name)).filter(Boolean).join(', '));
+  else if(!g&&ref&&ref.breeders&&ref.breeders.length)row('Breeders',ref.breeders.slice(0,6).map(b=>esc(b.name)).filter(Boolean).join(', '));
   var desc=fiche&&fiche.descendants&&fiche.descendants.length?fiche.descendants.map(d=>d.nom):(ref&&ref.descendants&&ref.descendants.length?ref.descendants.map(d=>d.name):[]);
   if(desc.length)row('Descendants',desc.slice(0,5).map(esc).join(', '));
   // actions
@@ -1370,26 +1372,31 @@ function jinaError(txt){
   try{var j=JSON.parse(t);if(j&&(j.code>=400||/Error$/.test(j.name||'')))return {code:j.code||j.status,name:j.name,message:j.message||j.readableMessage};}catch(e){}
   return null;
 }
+// après un refus d'authentification (jeton boutique ou clé Jina absente), la recherche web est coupée pour la session :
+// la réponse n'attend plus un appel voué à l'échec
+let webBlocked='';
 async function callProxy(route,payload){
   var t0=performance.now();
+  if(webBlocked){webStatus[route]='coupé ('+webBlocked+')';return '';}
+  var ac=new AbortController(),to=setTimeout(function(){ac.abort();},12000);
   try{
-    var res=await fetch(PROXY+route,{method:'POST',headers:{'Content-Type':'application/json','X-Shop-Token':SHOP_TOKEN},body:JSON.stringify(payload)});
+    var res=await fetch(PROXY+route,{method:'POST',signal:ac.signal,headers:{'Content-Type':'application/json','X-Shop-Token':SHOP_TOKEN},body:JSON.stringify(payload)});clearTimeout(to);
     var data=await res.json().catch(()=>({}));
     if(!res.ok){
       // 401 ici = jeton boutique refusé par le Worker (X-Shop-Token)
       console.warn('[web] '+route+' HTTP '+res.status+(res.status===401?' : jeton boutique refusé par le Worker':''),data&&data.error);
-      webStatus[route]='HTTP '+res.status;return '';
+      webStatus[route]='HTTP '+res.status;if(res.status===401||res.status===403)webBlocked='jeton boutique refusé';return '';
     }
     var err=jinaError(data.result);
     if(err){
       // 401 ici = Jina exige une clé API (à configurer dans le Worker) ; 429 = quota Jina dépassé
       console.warn('[web] '+route+' Jina '+err.code+' '+err.name+' : '+err.message);
-      webStatus[route]='Jina '+err.code;return '';
+      webStatus[route]='Jina '+err.code;if(err.code===401||err.code===403)webBlocked='clé Jina absente ou refusée';return '';
     }
     var out=data.result||'';
     console.info('[web] '+route+' OK, '+out.length+' caractères en '+Math.round(performance.now()-t0)+' ms');
     webStatus[route]='ok';return out;
-  }catch(e){console.warn('[web] '+route+' injoignable :',e&&e.message);webStatus[route]='injoignable';return '';}
+  }catch(e){clearTimeout(to);console.warn('[web] '+route+(e&&e.name==='AbortError'?' sans réponse après 12 s':' injoignable : '+(e&&e.message)));webStatus[route]=e&&e.name==='AbortError'?'délai dépassé':'injoignable';return '';}
 }
 async function searchWeb(query){return callProxy('/search',{query:query});}
 async function fetchPage(url){return callProxy('/fetch-page',{url:url});}
@@ -1451,7 +1458,9 @@ async function buildCtx(txt){
   // 1. BASE STRAINSAGE — consultée avant toute recherche
   var strainNames=mentioned.filter(n=>!breederNames.includes(n));
   var base={ctx:'',found:[],detected:[],missing:strainNames.slice(),size:0};
-  try{if(hasBase)base=await VarDB.buildContext(txt,strainNames,stockInfo);}catch(e){console.warn('[VarDB]',e);}
+  // catalogue du grossiste chargé : lui seul dit ce qui est en vente ; la base ne sert qu'à décrire
+  var hasCat=false;try{if(window.VarDB&&VarDB.loadCatalogue){await VarDB.loadCatalogue();hasCat=VarDB.gstSize()>0;}}catch(e){}
+  try{if(hasBase)base=await VarDB.buildContext(txt,strainNames,stockInfo,{catalogue:hasCat});}catch(e){console.warn('[VarDB]',e);}
   ctx+=base.ctx;
   var inBase=n=>{var e=hasBase&&VarDB.resolve(n);return !!e&&base.found.indexOf(e.nom)>-1;};
   var unresolved=strainNames.filter(n=>!inBase(n));
@@ -1473,7 +1482,7 @@ async function buildCtx(txt){
 
   // 2. RÉFÉRENCE GROWDIARIES — seulement pour ce que la base ne couvre pas
   var gd={ctx:'',coveredStrains:0,requestedStrains:0,candidates:0};
-  if(unresolved.length||(!base.found.length&&!critCovers)){try{if(window.GDRef)gd=await window.GDRef.buildContext(txt,unresolved,stockInfo);}catch(e){console.warn('[GDRef]',e);}}
+  if(unresolved.length||(!base.found.length&&!critCovers)){try{if(window.GDRef)gd=await window.GDRef.buildContext(txt,unresolved,stockInfo,{catalogue:hasCat});}catch(e){console.warn('[GDRef]',e);}}
   ctx+=gd.ctx;
   var knowNames=mentioned.filter(n=>!inBase(n));
   if(knowNames.length)ctx+=buildKnowledgeCtx(knowNames);
@@ -1507,12 +1516,14 @@ async function buildCtx(txt){
   if(!hasBase)ctx+='\n\n(La base de la boutique n\'a pas pu être consultée pour ce message. Réponds avec tes connaissances et n\'évoque pas de problème technique au client.)';
   console.info('[buildCtx] base : '+(hasBase?VarDB.size()+' noms':'indisponible')+' · fiches citées : '+base.found.length+(base.found.length?' ('+base.found.join(', ')+')':'')+' · critères : '+crit.info.criteria.length+' → '+crit.info.total+' variétés · web : '+(Object.keys(webStatus).length?JSON.stringify(webStatus):'non sollicité'));
 
-  if(stockData.length){
+  // stock physique de la boutique : avec le catalogue du grossiste, seules les variétés qui y figurent sont citées
+  var stockList=hasCat?stockData.filter(s=>!!VarDB.gstFor(s.nom)):stockData;
+  if(stockList.length){
     // Le stock est relié aux fiches de la base par une correspondance de noms tolérante
     var facts={};
-    try{if(hasBase)facts=await VarDB.stockFacts(stockData);}catch(e){}
-    ctx+='\n\n[STOCK '+SHOP_NAME.toUpperCase()+'] Priorise ces variétés :\n'+
-    stockData.map((s,i)=>{
+    try{if(hasBase)facts=await VarDB.stockFacts(stockList);}catch(e){}
+    ctx+='\n\n[STOCK '+SHOP_NAME.toUpperCase()+'] '+(hasCat?'Déjà en boutique (disponibles tout de suite, mêmes variétés que le catalogue ci-dessus) :':'Priorise ces variétés :')+'\n'+
+    stockList.map((s,i)=>{
       var l='- '+s.nom;
       if(s.seedbank)l+=' ('+s.seedbank+')';
       if(s.type)l+=' · '+s.type;
@@ -1526,6 +1537,14 @@ async function buildCtx(txt){
   return ctx;
 }
 
+function friendlyError(err){
+  var st=err&&err.status,k=String(err&&err.kind||''),m=String(err&&err.message||'');
+  if(err&&err.name==='AbortError')return 'La réponse met trop de temps à arriver. Ta question est restée dans la zone de saisie : renvoie-la dans un instant.';
+  if(st===429||st===529||/overload|rate.?limit/i.test(k+' '+m))return 'Beaucoup de demandes en ce moment. Ta question est restée dans la zone de saisie : renvoie-la dans quelques secondes.';
+  if(st===401||st===403)return 'Le conseiller est momentanément indisponible. Réessaie un peu plus tard ou demande au comptoir.';
+  if(/failed to fetch|network|load failed/i.test(m))return 'Connexion interrompue. Vérifie ta connexion puis renvoie ta question (elle est restée dans la zone de saisie).';
+  return 'Je n\'ai pas pu répondre cette fois-ci. Ta question est restée dans la zone de saisie : renvoie-la dans un instant.';
+}
 window.send=async function(){
   var inp=document.getElementById('inp'),sbtn=document.getElementById('sbtn');
   var txt=inp.value.trim();
@@ -1537,16 +1556,22 @@ window.send=async function(){
   inp.value='';inp.style.height='auto';
   busy=true;sbtn.disabled=true;showTyping();
 
-  var trimmedHistory=history.length>8?history.slice(-8):history;
+  // 8 derniers messages, en commençant toujours par un message du client
+  var trimmedHistory=history.length>8?history.slice(-8):history.slice();
+  while(trimmedHistory.length>1&&trimmedHistory[0].role!=='user')trimmedHistory.shift();
   var maxTok=(mode==='compare'||mode==='culture')?4000:3000;
-  var ctx=await buildCtx(txt);
-  var strip=renderCtxStrip(lastCtxInfo);
-  var tt=document.getElementById('typTxt');
-  if(tt){var ci=lastCtxInfo||{};tt.textContent=ci.total?ci.total+' variétés de la base cochent tes critères. Je choisis les meilleures…':(ci.found&&ci.found.length?'Fiche de '+ci.found[0]+' trouvée. Je rédige…':'Je rédige ma réponse…');}
-
+  // délai max : 60 s pour la première réponse, puis 45 s sans rien recevoir
+  var ac=new AbortController(),wd=null;function arm(ms){clearTimeout(wd);wd=setTimeout(function(){ac.abort();},ms);}
   try{
+    var ctx='';
+    // une lecture qui échoue ne bloque jamais le chat : l'IA répond avec ce qu'elle a
+    try{ctx=await buildCtx(txt);}catch(e){console.warn('[buildCtx] échec, réponse sans contexte',e);ctx='\n\n(La base de la boutique n\'a pas pu être consultée pour ce message. Réponds avec tes connaissances et n\'évoque pas de problème technique au client.)';}
+    var strip=renderCtxStrip(lastCtxInfo);
+    var tt=document.getElementById('typTxt');
+    if(tt){var ci=lastCtxInfo||{};tt.textContent=ci.total?ci.total+' variétés de la base cochent tes critères. Je choisis les meilleures…':(ci.found&&ci.found.length?'Fiche de '+ci.found[0]+' trouvée. Je rédige…':'Je rédige ma réponse…');}
+    arm(60000);
     var res=await fetch(PROXY,{
-      method:'POST',
+      method:'POST',signal:ac.signal,
       headers:{'Content-Type':'application/json','X-Shop-Token':SHOP_TOKEN},
       body:JSON.stringify({
         model:'claude-sonnet-5-5',
@@ -1556,7 +1581,7 @@ window.send=async function(){
         messages:trimmedHistory
       })
     });
-    if(!res.ok){var e=await res.json().catch(()=>({}));throw new Error((e&&e.error&&e.error.message)||('HTTP '+res.status));}
+    if(!res.ok){var e=await res.json().catch(()=>({}));var he=new Error((e&&e.error&&(e.error.message||e.error))||('HTTP '+res.status));he.status=res.status;throw he;}
 
     // ── STREAMING ──
     removeTyping();
@@ -1573,7 +1598,9 @@ window.send=async function(){
     var decoder=new TextDecoder();
     var buffer='';
 
-    while(true){
+    var streamDone=false;
+    while(!streamDone){
+      arm(45000);
       var chunk=await reader.read();
       if(chunk.done)break;
       buffer+=decoder.decode(chunk.value,{stream:true});
@@ -1584,9 +1611,9 @@ window.send=async function(){
         line=line.trim();
         if(!line||!line.startsWith('data:'))continue;
         var data=line.slice(5).trim();
-        if(data==='[DONE]')break;
-        try{
-          var evt=JSON.parse(data);
+        if(data==='[DONE]'){streamDone=true;break;}
+        var evt=null;try{evt=JSON.parse(data);}catch(parseErr){continue;} // ligne non-JSON : ignorée
+        {
           if(evt.type==='content_block_delta'&&evt.delta&&evt.delta.type==='text_delta'){
             reply+=evt.delta.text;
             // Mise à jour en temps réel — afficher le texte brut pendant le stream
@@ -1595,10 +1622,14 @@ window.send=async function(){
             bubble.innerHTML=strip+(vis.trim()?mdLite(vis):'<div class="typing"><div class="typing-bub"><span></span><span></span><span></span></div><span>Je prépare les fiches…</span></div>');
             panel().scrollTop=panel().scrollHeight;
           }
-          if(evt.type==='error'){throw new Error(evt.error&&evt.error.message||'Erreur stream');}
-        }catch(parseErr){/* ignorer les lignes non-JSON */}
+          // erreur envoyée pendant le flux (surcharge…) : remontée, jamais avalée
+          if(evt.type==='error'){var se=new Error(evt.error&&evt.error.message||'Erreur stream');se.kind=evt.error&&evt.error.type;throw se;}
+        }
       }
     }
+    clearTimeout(wd);
+    // réponse vide : jamais gardée dans l'historique (elle ferait échouer tous les messages suivants)
+    if(!reply.trim()){var ee=new Error('réponse vide');ee.kind='empty';throw ee;}
 
     // ── FIN DU STREAM — rendu final avec cartes ──
     try{var mR=reply.match(/\[STRAINS_JSON\]([\s\S]*?)\[\/STRAINS_JSON\]/);if(mR&&window.VarDB){var lst=JSON.parse(mR[1].trim()),ids=lst.map(x=>{var g=VarDB.gstFor&&VarDB.gstFor(x.gst||x.name);return g&&g.varieteId;}).filter(Boolean);await VarDB.prefetch(lst.map(x=>x.name).concat(ids),1500);}}catch(e){}
@@ -1622,10 +1653,15 @@ window.send=async function(){
     }));
 
   }catch(err){
+    clearTimeout(wd);
     removeTyping();
+    // détail technique en console uniquement ; le client reçoit un message clair et retrouve sa question
+    console.warn('[chat] échec de la réponse :',err&&err.status||'',err&&err.kind||'',err&&err.message);
+    var msg=friendlyError(err);
+    if(history.length&&history[history.length-1].role==='user'&&history[history.length-1].content===txt){history.pop();if(!inp.value.trim())inp.value=txt;}
     var eb=document.getElementById('stream-bubble');
-    if(eb){eb.innerHTML='<span style="color:#dc2626;font-size:13px">⚠️ '+esc(err.message)+'</span>';}
-    else addMsg('ai','<span style="color:#dc2626;font-size:13px">⚠️ '+esc(err.message)+'</span>');
+    if(eb){eb.id='';eb.innerHTML='<span style="color:#dc2626;font-size:13px">⚠️ '+esc(msg)+'</span>';}
+    else addMsg('ai','<span style="color:#dc2626;font-size:13px">⚠️ '+esc(msg)+'</span>');
   }
   busy=false;sbtn.disabled=false;inp.focus();
 };
