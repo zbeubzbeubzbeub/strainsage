@@ -99,7 +99,7 @@
     '"summary_fr" : 2 phrases maximum, entièrement reformulées avec tes propres mots, jamais copiées du texte.';
 
   async function extract(txt){
-    var res=await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},
+    var res=await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json','X-Shop-Token':SHOP_TOKEN},
       body:JSON.stringify({model:MODEL,max_tokens:1500,system:EXTRACT_SYS,messages:[{role:'user',content:txt}]})});
     if(!res.ok)return null;
     var data=await res.json();

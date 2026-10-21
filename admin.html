@@ -589,16 +589,9 @@ td{font-size:13.5px}
               <input class="field-input" id="settingShopCode" value="cultureindooranglet" style="margin:0"/>
               <div style="font-size:10px;color:var(--text3);margin-top:4px">Code que vos clients utilisent comme mot de passe</div>
             </div>
-            <div>
-              <div class="field-label" style="margin-bottom:6px">Nouveau mot de passe admin</div>
-              <input class="field-input" type="password" id="settingNewPass" placeholder="Laisser vide pour ne pas changer" style="margin:0"/>
-            </div>
             <button class="btn btn-primary" style="width:fit-content" onclick="saveSettings()">💾 Enregistrer</button>
-            <div style="margin-top:16px;padding-top:18px;border-top:1px solid var(--border)">
-              <div class="field-label" style="margin-bottom:6px;color:var(--gold2)">🔑 Clé API Anthropic</div>
-              <input class="field-input" type="password" id="settingApiKey" placeholder="sk-ant-api03-…" style="margin-bottom:8px"/>
-              <div style="font-size:10px;color:var(--text3);margin-bottom:12px">La clé est stockée de façon sécurisée et chargée automatiquement pour tous les clients.</div>
-              <button class="btn btn-gold" onclick="saveApiKey()">🔑 Enregistrer la clé API</button>
+            <div style="margin-top:16px;padding-top:18px;border-top:1px solid var(--border);font-size:11px;color:var(--text3)">
+              🔑 La clé API Anthropic n'est jamais enregistrée ici : elle vit uniquement dans les secrets du Worker Cloudflare (ANTHROPIC_API_KEY).
             </div>
           </div>
         </div>
@@ -896,28 +889,15 @@ async function deleteUser(id){
 async function saveSettings(){
   const shopName=document.getElementById('settingShopName').value.trim();
   const shopCode=document.getElementById('settingShopCode').value.trim().toLowerCase();
-  const newPass=document.getElementById('settingNewPass').value.trim();
   if(!shopName||!shopCode){toast('⚠️ Nom et code obligatoires','error');return;}
   try{
     const data={shopName,shopCode,updatedAt:Date.now()};
-    if(newPass)data.adminPass=newPass;
     await db.collection('adminData').doc('config').set(data,{merge:true});
     document.getElementById('shopName').textContent=shopName;
     toast('✅ Paramètres enregistrés');
-    document.getElementById('settingNewPass').value='';
   }catch(e){toast('Erreur: '+e.message,'error');}
 }
 
-async function saveApiKey(){
-  const key=document.getElementById('settingApiKey').value.trim();
-  if(!key.startsWith('sk-')){toast('⚠️ Clé invalide — doit commencer par sk-ant-','error');return;}
-  try{
-    await db.collection('adminData').doc('config').set({apiKey:key,updatedAt:Date.now()},{merge:true});
-    localStorage.setItem('ss_apikey',key);
-    toast('🔑 Clé API enregistrée ✅');
-    document.getElementById('settingApiKey').value='';
-  }catch(e){toast('Erreur: '+e.message,'error');}
-}
 </script>
 <script>
 /* ══ GARDE-FOUS FIRESTORE (toutes les opérations de l'admin) ══

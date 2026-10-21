@@ -654,7 +654,6 @@ html{-webkit-tap-highlight-color:rgba(0,112,60,.12)}
     </div>
     <div id="stockStatusBar" style="display:none" class="stock-status-bar">
       <span id="stockStatusText">📦 Stock chargé</span>
-      <button class="stock-clear" onclick="clearStock()">✕ Effacer</button>
     </div>
     <div class="chat-panel" id="chatPanel" aria-label="Conversation"></div>
     <div class="input-area" id="inputArea">
@@ -668,12 +667,9 @@ html{-webkit-tap-highlight-color:rgba(0,112,60,.12)}
       </div>
       <div class="input-hint">Entrée pour envoyer · Maj+Entrée pour nouvelle ligne</div>
     </div>
-    <input type="file" id="stockFileInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="importStock(this)">
   </main>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="gd-reference.js"></script>
@@ -984,9 +980,9 @@ async function loginUser(){
 
 async function loadShopStock(){
   try{
-    var results=await Promise.all([getDoc(doc(db,'adminData','config')),getDoc(doc(db,'shops',SHOP_CODE))]);
-    var cfgSnap=results[0],stockSnap=results[1];
-    if(cfgSnap.exists()&&cfgSnap.data().apiKey)localStorage.setItem('ss_apikey',cfgSnap.data().apiKey);
+    // la configuration de l'admin (adminData) n'est jamais lue par les clients ; ancienne copie locale d'une clé effacée
+    try{localStorage.removeItem('ss_apikey');}catch(e){}
+    var stockSnap=await getDoc(doc(db,'shops',SHOP_CODE));
     if(stockSnap.exists()&&stockSnap.data().stock){stockData=stockSnap.data().stock;updateStockBar();}
   }catch(e){}
 }
@@ -1101,11 +1097,7 @@ function findInStock(name){
 function stockInfo(name){var s=findInStock(name);if(!s)return '';var ok=!s.dispo||/^(o|oui)$/i.test(s.dispo);return ok?'EN STOCK':'en rupture';}
 function buildStockSection(name){var s=findInStock(name);if(!s)return '';var ok=!s.dispo||(s.dispo.toUpperCase()==='O'||s.dispo.toUpperCase()==='OUI');var cls=s.dispo?(ok?'instock':'outstock'):'unknown';var txt=s.dispo?(ok?'✓ En stock':'✗ Rupture'):'? Stock inconnu';return '<div class="stock-bar"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="stock-badge '+cls+'">'+txt+'</span>'+(s.prix?'<span class="stock-price">'+s.prix+' €</span>':'')+(s.graines?'<span style="font-size:10.5px;color:var(--text2)">'+s.graines+' gr.</span>':'')+'</div><div style="text-align:right">'+(s.seedbank?'<div style="font-size:10px;color:var(--gold2)">'+esc(s.seedbank)+'</div>':'')+(s.ref?'<div style="font-size:9.5px;color:var(--text3)">Réf: '+esc(s.ref)+'</div>':'')+'</div></div>';}
 function updateStockBar(){var bar=document.getElementById('stockStatusBar');if(!bar)return;if(stockData.length){bar.style.display='flex';var ok=stockData.filter(s=>s.dispo&&(s.dispo.toUpperCase()==='O'||s.dispo.toUpperCase()==='OUI')).length;document.getElementById('stockStatusText').textContent='📦 '+stockData.length+' variétés'+(ok?' · '+ok+' en stock':'');}else bar.style.display='none';}
-async function clearStock(){stockData=[];updateStockBar();try{await setDoc(doc(db,'shops',SHOP_CODE),{stock:[],updatedAt:Date.now()},{merge:true});}catch(e){}toast('Stock effacé');};
-function normKey(k){return String(k||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');}
-function mapRow(row){var keys=Object.keys(row);function find(){for(var c of arguments){var k=keys.find(k=>normKey(k).includes(c));if(k&&row[k]!==undefined&&row[k]!=='')return String(row[k]).trim();}return '';}return{nom:find('nom','name','variete','strain','produit'),seedbank:find('seedbank','marque','brand'),type:find('type','categorie'),graines:find('graine','seed'),prix:find('prix','price','tarif'),ref:find('ref','reference','code','sku'),dispo:find('dispo','stock','disponible')};}
-function importStock(input){var file=input.files[0];if(!file)return;var ext=file.name.split('.').pop().toLowerCase();if(ext==='csv'){var r=new FileReader();r.onload=e=>{var res=Papa.parse(e.target.result,{header:true,skipEmptyLines:true});processStock(res.data,file.name);};r.readAsText(file,'UTF-8');}else{var r2=new FileReader();r2.onload=e=>{var wb=XLSX.read(e.target.result,{type:'binary'});var ws=wb.Sheets[wb.SheetNames[0]];processStock(XLSX.utils.sheet_to_json(ws,{defval:''}),file.name);};r2.readAsBinaryString(file);}input.value='';};
-async function processStock(rows,fname){var mapped=rows.map(mapRow).filter(r=>r.nom);if(!mapped.length){toast('⚠️ Aucune variété trouvée','error');return;}stockData=mapped;updateStockBar();try{await setDoc(doc(db,'shops',SHOP_CODE),{stock:mapped,updatedAt:Date.now()},{merge:true});}catch(e){}toast('📦 '+mapped.length+' variétés importées');}
+// le stock du magasin se gère uniquement dans l'admin : le chat le lit, il ne l'écrit jamais
 
 /* ══ CARTE VARIÉTÉ « sachet » ══
    Les chiffres viennent d'abord de la base de variétés ; l'estimation de l'IA ne sert que si la base n'a rien. */
@@ -1555,7 +1547,7 @@ window.send=async function(){
   try{
     var res=await fetch(PROXY,{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','X-Shop-Token':SHOP_TOKEN},
       body:JSON.stringify({
         model:'claude-sonnet-5-5',
         max_tokens:maxTok,
@@ -1639,7 +1631,7 @@ window.send=async function(){
 };
 
 // Fonctions appelées depuis les onclick du HTML : elles doivent être globales
-Object.assign(window,{loginUser,logout,toggleSidebar,setMode,newChat,clearStock,toggleFav,removeFav,rateStar,quickSend,importStock});
+Object.assign(window,{loginUser,logout,toggleSidebar,setMode,newChat,toggleFav,removeFav,rateStar,quickSend});
 
 }); // fin DOMContentLoaded
 </script>
