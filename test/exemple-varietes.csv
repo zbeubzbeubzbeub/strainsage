@@ -1,0 +1,6 @@
+Nom;Alias;Type;THC;CBD;Floraison;Autofloraison;Génétique;Effets;Goûts;Terpènes;Difficulté;Rendement;Culture;Description;Photo;Source
+EXEMPLE Citron Lunaire;EX Lune|Citron Lune;Hybride à dominante sativa;18-22 %;<1%;9-10 semaines;non;EXEMPLE Parent Alpha × EXEMPLE Parent Beta;Énergisant|Créatif;Citron|Pin;Limonène|Pinène;Facile;Élevé;indoor|outdoor;"Texte d'exemple fictif, long, qui doit être ignoré à l'import : il décrit la variété avec beaucoup de mots pour dépasser la limite de longueur et vérifier que l'option « ignorer les textes longs » fonctionne bien comme prévu.";https://exemple.test/photos/citron.jpg;https://www.leafly.com/strains/exemple-citron-lunaire
+EXEMPLE Nuit Violette;;60% indica / 40% sativa;24%;0,5%;56-63 jours;non;EXEMPLE Parent Gamma|EXEMPLE Parent Delta;Relaxant|Sommeil;Raisin|Baie;Myrcène|Caryophyllène;moyenne;moyen;indoor;;;
+EXEMPLE Auto Rapide;EX Rapide;Auto indica;15;1;8 sem;oui;EXEMPLE Nuit Violette x EXEMPLE Ruderalis;Calme;Terreux;;débutant;faible;outdoor|serre;;;https://exemple-breeder.test/auto-rapide
+EX Lune;;Sativa;20 %;;10;non;;Euphorique;Citron;;;;;;;https://seedfinder.eu/strain-info/exemple
+;EXEMPLE Sans Nom;Indica;99 %;;inconnu;;;;;;;;;;;
