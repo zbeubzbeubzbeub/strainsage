@@ -744,21 +744,15 @@ COMPORTEMENT :
 - Expert : va droit au but, données précises, génétique détaillée
 - Si la demande est floue → pose UNE seule question de clarification avant de recommander
 
-SOURCES PAR ORDRE DE FIABILITÉ :
-00. [BASE STRAINSAGE] fournie dans le contexte — base de variétés de la boutique, prioritaire sur tout le reste (THC, floraison, lignée, banques/breeders qui la vendent)
-0. [RÉFÉRENCE GROWDIARIES] et [CANDIDATS GROWDIARIES] fournis dans le contexte — données structurées, prioritaires pour lignée, breeders, THC, floraison
-1. Seedbanks officielles (barneysfarm.com, seedjunky.com, compoundgenetics.com, royalqueenseeds.com, dutch-passion.com)
-2. Bases spécialisées (leafly.com, seedfinder.eu, allbud.com)
-3. Growdiaries.com — retours terrain réels (à croiser avec sources officielles)
-4. Forums (cannaweed.com, rollitup.org) — indicatif seulement
+SOURCES : les données fournies avec ce message (catalogue du grossiste, fiches de la base StrainSage) priment sur tes connaissances. N'invente aucune valeur. Certaines valeurs de la base sont en anglais (effets, goûts) : traduis-les toujours en français.
 
-FORMAT — RÈGLE ABSOLUE : commence DIRECTEMENT par [STRAINS_JSON], ZÉRO texte avant. Même pour une question de clarification, commence par [STRAINS_JSON][] puis pose ta question.
-
+FORMAT :
+1. Réponds d'abord en texte : chaleureux, expert, tutoiement, concis. 2-3 variétés max, packs et prix exacts.
+2. Si tu présentes des variétés, termine par le bloc des cartes, sans rien après :
 [STRAINS_JSON]
-[{"name":"Nom exact officiel","type":"Indica/Sativa/Hybride Indica-dominante/etc","thc":"XX-XX%","cbd":"X%","flowering":"XX-XX semaines","yield":"XXX g/m²","genetics":"Parent A × Parent B","seedbank":"Seedbank officielle","photo_url":null,"terpenes":[{"name":"Myrcène","pct":38,"note":"Terreux, mangue, sédatif"},{"name":"Caryophyllène","pct":26,"note":"Épicé, poivré, anti-inflammatoire"},{"name":"Limonène","pct":18,"note":"Citrus, euphorie"}],"flavor":"Description précise des arômes et saveurs","effects":["effet1","effet2","effet3"],"why":"Pourquoi cette variété répond exactement à la demande — cite les éléments du profil client","culture_tips":"Conseils pratiques adaptés au niveau du client : substrat, technique, nutrition, difficultés, récolte","match_tags":["tag1","tag2","tag3"]}]
+[{"name":"Nom exact du catalogue","gst":"code","why":"1 à 2 phrases : pourquoi elle convient à CE client","match_tags":["tag1","tag2"]}]
 [/STRAINS_JSON]
-
-Texte chaleureux et expert APRÈS le JSON. Tutoie. 2-3 variétés max.`,
+Les cartes affichent déjà type, THC, CBD, floraison, rendement, lignée, effets, arômes, terpènes et packs à partir des données. Ajoute l'une de ces clés ("type","thc","cbd","flowering","yield","genetics","effects","flavor") UNIQUEMENT si la valeur manque dans les données, en version courte. Aucune carte pour une variété absente du catalogue ou en rupture. Pas de bloc si tu poses seulement une question.`,
 
 culture:`Tu es StrainSage Pro MODE CULTURE pour ${SHOP_NAME}.
 
@@ -1181,6 +1175,7 @@ function buildCard(s){
   var dispo=fiche&&window.VarDB&&!g?VarDB.banques(fiche):[];
   if(dispo.length)row('Dispo chez',dispo.slice(0,8).map(esc).join(', ')+(dispo.length>8?' <span style="color:var(--ink3)">et '+(dispo.length-8)+' autres</span>':''));
   else if(!g&&ref&&ref.breeders&&ref.breeders.length)row('Breeders',ref.breeders.slice(0,6).map(b=>esc(b.name)).filter(Boolean).join(', '));
+  if(fiche&&fiche.terpenes&&fiche.terpenes.length&&!(s.terpenes&&s.terpenes.length))row('Terpènes',fiche.terpenes.slice(0,5).map(esc).join(', '));
   var desc=fiche&&fiche.descendants&&fiche.descendants.length?fiche.descendants.map(d=>d.nom):(ref&&ref.descendants&&ref.descendants.length?ref.descendants.map(d=>d.name):[]);
   if(desc.length)row('Descendants',desc.slice(0,5).map(esc).join(', '));
   // actions
@@ -1281,6 +1276,9 @@ function renderReply(text){
   var cmp=null;
   if(mC){try{cmp=JSON.parse(mC[1].trim());}catch(e){}rest=rest.replace(/\[COMPARE_JSON\][\s\S]*?\[\/COMPARE_JSON\]/,'');if(strains.length>=2){cmpBlock=buildCompare(strains,cmp);cards='';}}
   rest=rest.replace(/```json[\s\S]*?```/gi,'').replace(/```[\s\S]*?```/g,'');
+  // texte écrit avant les cartes (format actuel) : il reste au-dessus, la bulle ne saute pas à la fin du flux
+  var textFirst=mS&&text.slice(0,text.indexOf('[STRAINS_JSON]')).trim().length>0;
+  if(!mC&&textFirst)return mdLite(rest)+cards;
   return (mC?cmpBlock:cards)+mdLite(rest);
 }
 
@@ -1544,6 +1542,13 @@ async function buildCtx(txt){
   return ctx;
 }
 
+// message de l'historique tel qu'envoyé à l'IA : un ancien bloc de cartes devient « [cartes affichées : A, B] »
+// (les variétés déjà présentées sont de toute façon réinjectées avec leurs données à jour)
+function apiMessage(m){
+  if(m.role!=='assistant')return m;
+  var c=String(m.content||'').replace(/\[STRAINS_JSON\]([\s\S]*?)\[\/STRAINS_JSON\]/,function(all,j){var n=[];try{n=JSON.parse(j.trim()).map(function(x){return x&&x.name;}).filter(Boolean);}catch(e){}return n.length?'[cartes affichées : '+n.join(', ')+']':'';}).trim();
+  return {role:'assistant',content:c||'…'};
+}
 function friendlyError(err){
   var st=err&&err.status,k=String(err&&err.kind||''),m=String(err&&err.message||'');
   if(err&&err.name==='AbortError')return 'La réponse met trop de temps à arriver. Ta question est restée dans la zone de saisie : renvoie-la dans un instant.';
@@ -1564,7 +1569,7 @@ window.send=async function(){
   busy=true;sbtn.disabled=true;showTyping();
 
   // 8 derniers messages, en commençant toujours par un message du client
-  var trimmedHistory=history.length>8?history.slice(-8):history.slice();
+  var trimmedHistory=(history.length>8?history.slice(-8):history.slice()).map(apiMessage);
   while(trimmedHistory.length>1&&trimmedHistory[0].role!=='user')trimmedHistory.shift();
   // Sonnet 5.5 réfléchit par défaut et cette réflexion compte dans max_tokens (réponses coupées à 3000) :
   // effort « low » (adapté au chat) et marge large, sans risque de délai puisque la réponse est en streaming
@@ -1585,6 +1590,9 @@ window.send=async function(){
       body:JSON.stringify({
         model:'claude-sonnet-5-5',
         max_tokens:maxTok,
+        // réflexion coupée (« between_tools » : seule façon de la désactiver sur Sonnet 5.5) : sinon 600 à 900 tokens
+        // de réflexion retardent certaines réponses de plusieurs secondes, sans gain de qualité mesuré sur le scénario
+        thinking:{type:'between_tools'},
         output_config:{effort:'low'},
         stream:true,
         system:(SYS[mode]||SYS.chat)+ctx,
@@ -1628,8 +1636,9 @@ window.send=async function(){
             reply+=evt.delta.text;
             // Mise à jour en temps réel — afficher le texte brut pendant le stream
             // On ne rend les cartes qu'à la fin pour éviter les rendus partiels
-            var vis=reply.replace(/\[STRAINS_JSON\][\s\S]*?(\[\/STRAINS_JSON\]|$)/,'').replace(/\[COMPARE_JSON\][\s\S]*?(\[\/COMPARE_JSON\]|$)/,'').replace(/```json[\s\S]*?```/gi,'');
-            bubble.innerHTML=strip+(vis.trim()?mdLite(vis):'<div class="typing"><div class="typing-bub"><span></span><span></span><span></span></div><span>Je prépare les fiches…</span></div>');
+            var vis=reply.replace(/\[STRAINS_JSON\][\s\S]*?(\[\/STRAINS_JSON\]|$)/,'').replace(/\[COMPARE_JSON\][\s\S]*?(\[\/COMPARE_JSON\]|$)/,'').replace(/```json[\s\S]*?```/gi,'').replace(/\[[A-Z_\/]*$/,'');
+            var cardsComing=/\[STRAINS_JSON\](?![\s\S]*\[\/STRAINS_JSON\])/.test(reply);
+            bubble.innerHTML=strip+(vis.trim()?mdLite(vis)+(cardsComing?'<div class="typing"><div class="typing-bub"><span></span><span></span><span></span></div><span>Je prépare les fiches…</span></div>':''):'<div class="typing"><div class="typing-bub"><span></span><span></span><span></span></div><span>Je prépare les fiches…</span></div>');
             panel().scrollTop=panel().scrollHeight;
           }
           // erreur envoyée pendant le flux (surcharge…) : remontée, jamais avalée
