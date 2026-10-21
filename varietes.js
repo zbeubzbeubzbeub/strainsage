@@ -406,10 +406,11 @@
   var GIDX='catalogue_gst_index';
   var gst=null,gstLoading=null,gstByCode={},gstByName={},gstByVar={},gstByBase={},gstShort={},gstIni={},gstAlias={},gstMeta={};
   function numOrNull(v){return v===''||v==null?null:parseFloat(v);}
-  // même normalisation que le rapprochement de l'admin (lettres isolées recollées : « S.A.D. » → « sad »)
-  function key0(s){return String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[’'`´]/g,'').replace(/[™®©]/g,'').replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim().replace(/\b(?:[a-z] )+[a-z]\b/g,function(m){return m.replace(/ /g,'');});}
+  // même normalisation que le rapprochement de l'admin (gst-core.js : lettres isolées recollées, « S.A.D. » → « sad »)
+  var GC=window.GSTCore;
+  function key0(s){return GC.key0(s);}
   function keyMsg(s){return key0(String(s||'').replace(/[’'`´]/g,' '));}
-  function alphaToks(k){return k.split(' ').filter(function(t){return /^[a-z]+$/.test(t);});}
+  var alphaToks=GC.alphaToks;
   function loadCatalogue(){
     if(gst)return Promise.resolve(gst);
     if(gstLoading)return gstLoading;
@@ -437,7 +438,7 @@
         // acronymes : noms courts du catalogue (sad, gg) et initiales des noms longs (sweet afghani delicious → sad)
         Object.keys(gstByBase).forEach(function(b){
           if(/^[a-z]{2,4}$/.test(b))gstShort[b]=1;
-          var a=alphaToks(b);if(a.length>=2){var ini=a.map(function(t){return t[0];}).join('');if(ini.length<=5)(gstIni[ini]=gstIni[ini]||[]).push(b);}
+          var ini=GC.initials2(b);if(ini&&ini.length<=5)(gstIni[ini]=gstIni[ini]||[]).push(b);
         });
         // tous les packs d'une même déclinaison (même nom, breeder et type), du plus petit au plus grand
         var byG={};list.forEach(function(it){(byG[it.gk]=byG[it.gk]||[]).push(it);});
