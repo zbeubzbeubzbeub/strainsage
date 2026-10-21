@@ -1490,7 +1490,8 @@ async function buildCtx(txt){
   if(unresolved.length||(!base.found.length&&!critCovers)){try{if(window.GDRef)gd=await window.GDRef.buildContext(txt,unresolved,stockInfo,{catalogue:hasCat});}catch(e){console.warn('[GDRef]',e);}}
   ctx+=gd.ctx;
   var knowNames=mentioned.filter(n=>!inBase(n));
-  if(knowNames.length)ctx+=buildKnowledgeCtx(knowNames);
+  // fiches « knowledge » = estimations d'anciennes réponses de l'IA : inutiles (et contradictoires) quand le catalogue fait foi
+  if(knowNames.length&&!hasCat)ctx+=buildKnowledgeCtx(knowNames);
 
   // 3. RECHERCHE WEB (seedfinder/leafly) — secours uniquement, si ni la base ni GrowDiaries ne couvrent la demande
   var baseCovers=base.found.length>0&&!unresolved.length;
@@ -1549,6 +1550,13 @@ function apiMessage(m){
   var c=String(m.content||'').replace(/\[STRAINS_JSON\]([\s\S]*?)\[\/STRAINS_JSON\]/,function(all,j){var n=[];try{n=JSON.parse(j.trim()).map(function(x){return x&&x.name;}).filter(Boolean);}catch(e){}return n.length?'[cartes affichées : '+n.join(', ')+']':'';}).trim();
   return {role:'assistant',content:c||'…'};
 }
+// dernière question marquée pour le cache, puis les données de la boutique en message « system » à la fin
+function withShopData(msgs,ctx){
+  var out=msgs.slice(),last=out[out.length-1];
+  if(last&&last.role==='user')out[out.length-1]={role:'user',content:[{type:'text',text:String(last.content),cache_control:{type:'ephemeral'}}]};
+  if(String(ctx||'').trim())out.push({role:'system',content:'[DONNÉES DE LA BOUTIQUE POUR CE MESSAGE]'+ctx});
+  return out;
+}
 function friendlyError(err){
   var st=err&&err.status,k=String(err&&err.kind||''),m=String(err&&err.message||'');
   if(err&&err.name==='AbortError')return 'La réponse met trop de temps à arriver. Ta question est restée dans la zone de saisie : renvoie-la dans un instant.';
@@ -1569,7 +1577,10 @@ window.send=async function(){
   busy=true;sbtn.disabled=true;showTyping();
 
   // 8 derniers messages, en commençant toujours par un message du client
-  var trimmedHistory=(history.length>8?history.slice(-8):history.slice()).map(apiMessage);
+  // historique envoyé : fenêtre qui avance par paliers de 8 messages (et non à chaque tour), pour que le début
+  // de la conversation reste identique d'un message à l'autre et soit relu depuis le cache (10 fois moins cher)
+  var hStart=history.length>12?Math.floor((history.length-12)/8)*8+8:0;
+  var trimmedHistory=history.slice(hStart).map(apiMessage);
   while(trimmedHistory.length>1&&trimmedHistory[0].role!=='user')trimmedHistory.shift();
   // Sonnet 5.5 réfléchit par défaut et cette réflexion compte dans max_tokens (réponses coupées à 3000) :
   // effort « low » (adapté au chat) et marge large, sans risque de délai puisque la réponse est en streaming
@@ -1595,8 +1606,10 @@ window.send=async function(){
         thinking:{type:'between_tools'},
         output_config:{effort:'low'},
         stream:true,
-        system:(SYS[mode]||SYS.chat)+ctx,
-        messages:trimmedHistory
+        // cache : consignes fixes + conversation jusqu'à la question (2 points de cache) ; les données de la boutique,
+        // qui changent à chaque message, arrivent après la question dans un message « system » (jamais mises en cache)
+        system:[{type:'text',text:SYS[mode]||SYS.chat,cache_control:{type:'ephemeral'}}],
+        messages:withShopData(trimmedHistory,ctx)
       })
     });
     if(!res.ok){var e=await res.json().catch(()=>({}));var he=new Error((e&&e.error&&(e.error.message||e.error))||('HTTP '+res.status));he.status=res.status;throw he;}

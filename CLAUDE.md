@@ -129,3 +129,4 @@ Le fichier livré ne respecte peut-être pas exactement ce format. **Ne présupp
 - **GrowDiaries** : appels réseau coupés (`NETWORK=false` dans `gd-reference.js`), le cache Firestore `reference` reste utilisé.
 - **Jina** : le Worker n'envoie pas encore de clé ; la recherche web se coupe pour la session après un refus.
 - Le stock du magasin se gère uniquement dans l'admin ; le chat le lit, il ne l'écrit jamais. Aucune clé ni mot de passe n'est stocké dans Firestore.
+- **Coût et rapidité du chat** : texte puis cartes allégées, réflexion coupée (thinking between_tools, effort low), consignes fixes et conversation en cache, données de la boutique en message system après la question. Mesurer avec test/bench-chat.js avant et après chaque changement de prompt.
