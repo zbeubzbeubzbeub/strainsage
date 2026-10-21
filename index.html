@@ -674,7 +674,7 @@ html{-webkit-tap-highlight-color:rgba(0,112,60,.12)}
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="gd-reference.js?v=20261021"></script>
 <script src="gst-core.js?v=20261021"></script>
-<script src="varietes.js?v=20261021g"></script>
+<script src="varietes.js?v=20261021h"></script>
 <script>
 /* ══ THÈME ══ */
 function updateThemeLabel(t){
@@ -732,7 +732,8 @@ CONTEXTE BOUTIQUE :
 - Budget moyen : 30-80€ pour 5-10 graines, clientèle premium jusqu'à 150€
 - Saison : demande outdoor forte avril-juin, indoor toute l'année
 - Priorité absolue : proposer des variétés EN STOCK si elles correspondent
-- Ne parle jamais au client de liste, de candidates, de classement, de contexte ni du fonctionnement interne de l'application.
+- Ne parle jamais au client de liste, de candidates, de classement, de contexte ni du fonctionnement interne de l'application. Ne cite jamais tes sources internes (catalogue du grossiste, fiche, base, données) : dis simplement ce que tu sais. Parle toujours au client directement (tu), jamais de lui à la troisième personne.
+- Ne donne jamais de numéro de téléphone, d'adresse ou de lien absent des données : pour orienter quelqu'un, cite seulement le nom d'une association ou d'un professionnel.
 - Une variété que tu as déjà proposée dans la conversation reste valable : ne la désavoue pas et ne te contredis pas sur sa disponibilité.
 - Prix et conditionnements : uniquement ceux fournis par le catalogue, à l'identique (les cartes font foi).
 
@@ -751,6 +752,7 @@ FORMAT :
 2. Si tu présentes des variétés, termine par le bloc des cartes, sans rien après :
 [STRAINS_JSON]
 [{"name":"Nom exact du catalogue","gst":"code","why":"1 à 2 phrases : pourquoi elle convient à CE client","match_tags":["tag1","tag2"]}]
+Une carte par variété ou déclinaison que tu présentes avec ses packs.
 [/STRAINS_JSON]
 Les cartes affichent déjà type, THC, CBD, floraison, rendement, lignée, effets, arômes, terpènes et packs à partir des données. Ajoute l'une de ces clés ("type","thc","cbd","flowering","yield","genetics","effects","flavor") UNIQUEMENT si la valeur manque dans les données, en version courte. Aucune carte pour une variété absente du catalogue ou en rupture. Pas de bloc si tu poses seulement une question.`,
 
@@ -1543,12 +1545,30 @@ async function buildCtx(txt){
   return ctx;
 }
 
-// message de l'historique tel qu'envoyé à l'IA : un ancien bloc de cartes devient « [cartes affichées : A, B] »
-// (les variétés déjà présentées sont de toute façon réinjectées avec leurs données à jour)
+// message de l'historique tel qu'envoyé à l'IA : sans les anciens blocs de cartes (les variétés déjà présentées
+// sont redonnées, numérotées, avec les données de la boutique ; un marqueur à la place était recopié par Haiku)
 function apiMessage(m){
   if(m.role!=='assistant')return m;
-  var c=String(m.content||'').replace(/\[STRAINS_JSON\]([\s\S]*?)\[\/STRAINS_JSON\]/,function(all,j){var n=[];try{n=JSON.parse(j.trim()).map(function(x){return x&&x.name;}).filter(Boolean);}catch(e){}return n.length?'[cartes affichées : '+n.join(', ')+']':'';}).trim();
+  var c=String(m.content||'').replace(/\[STRAINS_JSON\][\s\S]*?\[\/STRAINS_JSON\]/g,'').trim();
   return {role:'assistant',content:c||'…'};
+}
+// modèle du message : Sonnet 5.5 par défaut ; window.__ssModel force un modèle pour les mesures (test/bench-chat.js)
+function chooseModel(txt){return window.__ssModel||'claude-sonnet-5-5';}
+// requête selon le modèle. Réflexion coupée dans les deux cas (sinon 600 à 900 tokens de réflexion retardent
+// certaines réponses de plusieurs secondes, sans gain de qualité mesuré sur le scénario).
+// Sonnet : consignes et conversation en cache, données de la boutique après la question (message « system »).
+// Haiku : il lit mal un message « system » placé après la question (mesuré) ; les données vont dans la question, avant le texte.
+function chatRequest(model,maxTok,sys,msgs,ctx){
+  var isHaiku=/haiku/.test(model);
+  return {model:model,max_tokens:maxTok,stream:true,
+    thinking:{type:isHaiku?'disabled':'between_tools'},output_config:{effort:'low'},
+    system:[{type:'text',text:sys,cache_control:{type:'ephemeral'}}],
+    messages:isHaiku?withShopDataInline(msgs,ctx):withShopData(msgs,ctx)};
+}
+function withShopDataInline(msgs,ctx){
+  var out=msgs.slice(),last=out[out.length-1];
+  if(last&&last.role==='user'&&String(ctx||'').trim())out[out.length-1]={role:'user',content:[{type:'text',text:'<donnees_boutique>'+ctx+'\n</donnees_boutique>'},{type:'text',text:String(last.content)}]};
+  return out;
 }
 // dernière question marquée pour le cache, puis les données de la boutique en message « system » à la fin
 function withShopData(msgs,ctx){
@@ -1576,7 +1596,6 @@ window.send=async function(){
   inp.value='';inp.style.height='auto';
   busy=true;sbtn.disabled=true;showTyping();
 
-  // 8 derniers messages, en commençant toujours par un message du client
   // historique envoyé : fenêtre qui avance par paliers de 8 messages (et non à chaque tour), pour que le début
   // de la conversation reste identique d'un message à l'autre et soit relu depuis le cache (10 fois moins cher)
   var hStart=history.length>12?Math.floor((history.length-12)/8)*8+8:0;
@@ -1598,19 +1617,7 @@ window.send=async function(){
     var res=await fetch(PROXY,{
       method:'POST',signal:ac.signal,
       headers:{'Content-Type':'application/json','X-Shop-Token':SHOP_TOKEN},
-      body:JSON.stringify({
-        model:'claude-sonnet-5-5',
-        max_tokens:maxTok,
-        // réflexion coupée (« between_tools » : seule façon de la désactiver sur Sonnet 5.5) : sinon 600 à 900 tokens
-        // de réflexion retardent certaines réponses de plusieurs secondes, sans gain de qualité mesuré sur le scénario
-        thinking:{type:'between_tools'},
-        output_config:{effort:'low'},
-        stream:true,
-        // cache : consignes fixes + conversation jusqu'à la question (2 points de cache) ; les données de la boutique,
-        // qui changent à chaque message, arrivent après la question dans un message « system » (jamais mises en cache)
-        system:[{type:'text',text:SYS[mode]||SYS.chat,cache_control:{type:'ephemeral'}}],
-        messages:withShopData(trimmedHistory,ctx)
-      })
+      body:JSON.stringify(chatRequest(chooseModel(txt),maxTok,SYS[mode]||SYS.chat,trimmedHistory,ctx))
     });
     if(!res.ok){var e=await res.json().catch(()=>({}));var he=new Error((e&&e.error&&(e.error.message||e.error))||('HTTP '+res.status));he.status=res.status;throw he;}
 

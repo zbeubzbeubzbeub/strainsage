@@ -2,8 +2,11 @@
    Rejoue le scénario de 7 messages dans une nouvelle conversation, avec les VRAIS appels à l'IA
    (≈ 0,30 € par passage) mais AUCUNE écriture Firestore (set/update/delete/batch bloqués).
    Mesure pour chaque message : tokens envoyés / relus du cache / reçus, délai avant le premier mot visible,
-   durée totale, coût estimé (Sonnet 5.5 : 2 $/M envoyés, 0,20 $/M relus du cache, 2,50 $/M écrits en cache, 10 $/M reçus). */
+   durée totale, coût estimé au tarif du modèle utilisé.
+   Pour mesurer un autre modèle : await __bench(null,'claude-haiku-5-5'). */
 (function(){
+  // $ par million de tokens : envoyés, relus du cache, écrits en cache, reçus
+  var PRICES={'claude-sonnet-5-5':[2,0.2,2.5,10],'claude-haiku-5-5':[0.1,0.01,0.125,0.5]};
   var SCENARIO=[
     'une auto fruitée pour débutant, budget 30 €',
     'parle-moi de la SAD',
@@ -26,7 +29,7 @@
     window.fetch=async function(u,o){
       var t0=performance.now(),r=await of.apply(this,arguments);
       try{if(o&&o.body&&String(o.body).indexOf('"stream":true')>-1){
-        var run={t0:t0,first:null,end:null,txt:'',stop:'',usage:null,start:null};window.__benchRuns.push(run);
+        var run={t0:t0,first:null,end:null,txt:'',stop:'',usage:null,start:null,model:JSON.parse(o.body).model};window.__benchRuns.push(run);
         var rd=r.clone().body.getReader(),dec=new TextDecoder(),buf='';
         (async function(){for(;;){var c=await rd.read();if(c.done)break;buf+=dec.decode(c.value,{stream:true});var ls=buf.split('\n');buf=ls.pop();
           ls.forEach(function(l){if(l.indexOf('data:')!==0)return;try{var e=JSON.parse(l.slice(5));
@@ -45,14 +48,14 @@
     while((b.disabled||window.__benchRuns.length===n||!window.__benchRuns[n].end)&&performance.now()-t0<180000)await new Promise(function(r){setTimeout(r,300);});
     var run=window.__benchRuns[n]||{},u=run.usage||{},st=run.start||{};
     var inTok=(st.input_tokens||u.input_tokens||0),cr=(st.cache_read_input_tokens||0),cw=(st.cache_creation_input_tokens||0),out=u.output_tokens||0;
-    var cost=(inTok*2+cr*0.2+cw*2.5+out*10)/1e6;
+    var pr=PRICES[run.model]||PRICES['claude-sonnet-5-5'],cost=(inTok*pr[0]+cr*pr[1]+cw*pr[2]+out*pr[3])/1e6;
     var cards=(run.txt.match(/\[STRAINS_JSON\]([\s\S]*?)\[\/STRAINS_JSON\]/)||[])[1];var names=[];try{names=JSON.parse(cards).map(function(x){return x.name;});}catch(e){}
-    return {question:q,envoyes:inTok,cache_lus:cr,cache_ecrits:cw,recus:out,reflexion:(u.output_tokens_details||{}).thinking_tokens||0,
+    return {modele:run.model,question:q,envoyes:inTok,cache_lus:cr,cache_ecrits:cw,recus:out,reflexion:(u.output_tokens_details||{}).thinking_tokens||0,
       premier_mot_s:run.first?Math.round((run.first-t0)/100)/10:null,total_s:Math.round(((run.end||performance.now())-t0)/100)/10,arret:run.stop,cout_usd:Math.round(cost*10000)/10000,
       cartes:names,reponse:run.txt.replace(/\[STRAINS_JSON\][\s\S]*?\[\/STRAINS_JSON\]/,'').trim()};
   }
-  window.__bench=async function(scenario){
-    blockWrites();watchFetch();newChat();await new Promise(function(r){setTimeout(r,300);});
+  window.__bench=async function(scenario,model){
+    window.__ssModel=model||null;blockWrites();watchFetch();newChat();await new Promise(function(r){setTimeout(r,300);});
     var res=[];for(var i=0;i<(scenario||SCENARIO).length;i++)res.push(await ask((scenario||SCENARIO)[i]));
     var tot=res.reduce(function(a,r){a.envoyes+=r.envoyes;a.recus+=r.recus;a.cout+=r.cout_usd;a.premier+=r.premier_mot_s||r.total_s;a.total+=r.total_s;return a;},{envoyes:0,recus:0,cout:0,premier:0,total:0});
     var resume={messages:res.length,envoyes_moy:Math.round(tot.envoyes/res.length),recus_moy:Math.round(tot.recus/res.length),premier_mot_moy_s:Math.round(tot.premier/res.length*10)/10,total_moy_s:Math.round(tot.total/res.length*10)/10,cout_total_usd:Math.round(tot.cout*1000)/1000,cout_moy_usd:Math.round(tot.cout/res.length*10000)/10000,ecritures_bloquees:window.__benchBlocked.length};

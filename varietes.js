@@ -631,6 +631,7 @@
     var ctx='\n\n[CATALOGUE DU GROSSISTE GARDEN SEEDS TRADING — variétés commandables par la boutique]\n'+blocks.join('\n\n')+
       '\nRÈGLES (à appliquer sans jamais les évoquer devant le client) :'+
       '\n- Sans mention de statut, une variété est disponible. Effets et goûts viennent de la base StrainSage : traduis-les en français.'+
+      '\n- Pour un article, les chiffres de sa ligne (THC, floraison, packs) priment sur ceux d\'une fiche. Les codes ne servent qu\'au JSON des cartes : ne les montre jamais au client.'+
       '\n- Recommande UNIQUEMENT des variétés présentes ci-dessus, avec leur nom exact. Dans le JSON des cartes, ajoute pour chacune "gst" avec son code (ex. "gst":"'+example+'").'+
       '\n- Une variété déjà présentée dans la conversation reste valable : ne la désavoue jamais et ne te corrige pas sur sa disponibilité, sauf si son statut ci-dessus le contredit explicitement.'+
       '\n- Le catalogue ci-dessus n\'est qu\'une sélection pour ce message : une variété que tu as citée plus tôt et qui n\'y figure plus n\'est PAS pour autant absente du catalogue. Ne dis jamais le contraire.'+
