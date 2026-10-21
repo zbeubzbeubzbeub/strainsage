@@ -674,7 +674,7 @@ html{-webkit-tap-highlight-color:rgba(0,112,60,.12)}
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="gd-reference.js?v=20261021"></script>
 <script src="gst-core.js?v=20261021"></script>
-<script src="varietes.js?v=20261021e"></script>
+<script src="varietes.js?v=20261021g"></script>
 <script>
 /* ══ THÈME ══ */
 function updateThemeLabel(t){
@@ -1112,7 +1112,7 @@ function nums(v){return (String(v||'').replace(/(\d),(\d)/g,'$1.$2').match(/\d+(
 // floraison : catalogue du grossiste (propre à la déclinaison : SAD ≠ Auto SAD), puis base StrainSage, puis estimation IA vérifiée
 function floraisonOf(s,fiche,g,isAuto){
   if(g&&(g.floMin!=null||g.floMax!=null)){var c=g.floMin,d=g.floMax;return {min:c!=null?c:d,max:d!=null?d:c,src:''};}
-  if(fiche&&(fiche.floraison_sem_min!=null||fiche.floraison_sem_max!=null)){var a=fiche.floraison_sem_min,b=fiche.floraison_sem_max;return {min:a!=null?a:b,max:b!=null?b:a,src:''};}
+  if(fiche&&!(isAuto&&fiche.autofloraison!==true)&&(fiche.floraison_sem_min!=null||fiche.floraison_sem_max!=null)){var a=fiche.floraison_sem_min,b=fiche.floraison_sem_max;return {min:a!=null?a:b,max:b!=null?b:a,src:''};}
   var n=nums(s.flowering);if(!n.length)return null;
   if(/jour|day/i.test(s.flowering))n=n.map(x=>Math.round(x/7*2)/2);
   var a=n[0],b=n[1]!=null?n[1]:n[0];if(a>30||b>30)return null;
@@ -1298,6 +1298,13 @@ function rememberedStrains(){
     if(m.role!=='assistant')return;
     var mm=String(m.content||'').match(/\[STRAINS_JSON\]([\s\S]*?)\[\/STRAINS_JSON\]/);if(!mm)return;
     try{JSON.parse(mm[1].trim()).forEach(function(x){if(x&&x.name&&!seen[x.name.toLowerCase()]){seen[x.name.toLowerCase()]=1;out.push({name:x.name,gst:x.gst?String(x.gst):''});}});}catch(e){}
+  });
+  // variétés citées en gras dans le texte des réponses (sans carte) : elles restent aussi valables au tour suivant
+  history.forEach(function(m){
+    if(m.role!=='assistant')return;
+    (String(m.content||'').replace(/\[STRAINS_JSON\][\s\S]*?\[\/STRAINS_JSON\]/g,'').match(/\*\*([^*\n]{2,40})\*\*/g)||[]).forEach(function(b){
+      var n=b.slice(2,-2).trim();if(!seen[n.toLowerCase()]&&window.VarDB&&VarDB.gstFor&&VarDB.gstFor(n)){seen[n.toLowerCase()]=1;out.push({name:n,gst:''});}
+    });
   });
   return out;
 }
@@ -1559,7 +1566,9 @@ window.send=async function(){
   // 8 derniers messages, en commençant toujours par un message du client
   var trimmedHistory=history.length>8?history.slice(-8):history.slice();
   while(trimmedHistory.length>1&&trimmedHistory[0].role!=='user')trimmedHistory.shift();
-  var maxTok=(mode==='compare'||mode==='culture')?4000:3000;
+  // Sonnet 5.5 réfléchit par défaut et cette réflexion compte dans max_tokens (réponses coupées à 3000) :
+  // effort « low » (adapté au chat) et marge large, sans risque de délai puisque la réponse est en streaming
+  var maxTok=(mode==='compare'||mode==='culture')?12000:8000;
   // délai max : 60 s pour la première réponse, puis 45 s sans rien recevoir
   var ac=new AbortController(),wd=null;function arm(ms){clearTimeout(wd);wd=setTimeout(function(){ac.abort();},ms);}
   try{
@@ -1576,6 +1585,7 @@ window.send=async function(){
       body:JSON.stringify({
         model:'claude-sonnet-5-5',
         max_tokens:maxTok,
+        output_config:{effort:'low'},
         stream:true,
         system:(SYS[mode]||SYS.chat)+ctx,
         messages:trimmedHistory

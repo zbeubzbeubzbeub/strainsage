@@ -141,6 +141,9 @@ function loadClient(){
   await ta('contexte : demande auto + budget 30 € → autos ≤ 30 €',async()=>{
     const r=await V.catalogueContext('une auto fruitée pour débutant, budget 30 €',{raw:'une auto fruitée pour débutant, budget 30 €'});
     ok(/Critical Auto/.test(r.ctx),'Critical Auto');ok(/budget ≤ 30 €/.test(r.ctx),'budget');ok(!/Gorilla Glue/.test(r.ctx),'pas de photopériode hors budget');});
+  await ta('nom exact du catalogue : pas d\'acronyme parasite',async()=>{eq(V.findNamed('parle-moi de la SAD').named.length,1);});
+  await ta('auto : pas de floraison prise sur une fiche photopériode',async()=>{const r=await V.catalogueContext('parle-moi de la SAD',{raw:'parle-moi de la SAD'});ok(/Auto SAD \[code 5\][^\n]*flo 9 sem\./.test(r.ctx));});
+  await ta('variété déjà présentée : même nom chez un autre breeder aussi réinjecté',async()=>{const r=await V.catalogueContext('et sinon ?',{raw:'et sinon ?',remember:[{name:'SAD',gst:'1'}]});ok(/DÉJÀ PRÉSENTÉES[\s\S]*1\. SAD /.test(r.ctx)&&/n\'est PAS pour autant absente/.test(r.ctx));});
   await ta('nom purement numérique jamais détecté dans un message (budget, année)',async()=>{eq(V.detect('budget 2090 euros, en 1969',5).length,0);});
   await ta('contexte : fiche de la base sans « Dispo chez » (seul le catalogue dit ce qui est en vente)',async()=>{
     const r=await V.catalogueContext('parle-moi de la SAD',{raw:'parle-moi de la SAD'});ok(/FICHES BASE STRAINSAGE[\s\S]*S\.A\.D\. Sweet Afgani Delicious/.test(r.ctx),'fiche');ok(!/Dispo chez/.test(r.ctx),'pas de banques concurrentes');});

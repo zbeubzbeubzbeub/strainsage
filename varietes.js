@@ -484,7 +484,8 @@
     if(it.breeder)p.push(it.breeder);
     if(it.type)p.push(TYPE_FR[it.type]);
     var thc=it.thcMax!=null?(it.thcMin!=null&&it.thcMin!==it.thcMax?it.thcMin+'–'+it.thcMax:it.thcMax)+'% THC':(f&&f.thcMax!=null?f.thcMax+'% THC (base)':null);if(thc)p.push(thc);
-    var flo=it.floMax!=null?(it.floMin!=null&&it.floMin!==it.floMax?it.floMin+'–'+it.floMax:it.floMax)+' sem.':(f&&f.floMax!=null?f.floMax+' sem. (base)':null);if(flo)p.push('flo '+flo);
+    var fOk=f&&!(it.type==='auto'&&f.auto!==true); // une fiche photopériode ne donne pas la durée d'une auto
+    var flo=it.floMax!=null?(it.floMin!=null&&it.floMin!==it.floMax?it.floMin+'–'+it.floMax:it.floMax)+' sem.':(fOk&&f.floMax!=null?f.floMax+' sem. (base)':null);if(flo)p.push('flo '+flo);
     var pk=packsText(it);p.push(pk?'packs disponibles : '+pk:statusOf(it)+' (aucun pack commandable : ne propose ni vrac ni autre format)');
     var l='- '+it.variete+' [code '+it.codigo+'] · '+p.join(' · ');
     if(f){var x=[];if(f.eff.length)x.push('effets : '+f.eff.slice(0,4).join(', '));if(f.gouts.length)x.push('goûts : '+f.gouts.slice(0,4).join(', '));if(x.length)l+=' · [base StrainSage : '+x.join(' ; ')+']';}
@@ -521,7 +522,7 @@
         if(gstByBase[q])hit(q,'nom',q);
         if(gstAlias[q])hit(gstAlias[q],'alias',q);
         if(n>=2&&alphaToks(q).length===n&&!g.some(isStop)){var ini=g.map(function(t){return t[0];}).join('');if(gstShort[ini])hit(ini,'initiales',q);}
-        if(n===1&&q.length<=4&&gstIni[q])gstIni[q].forEach(function(b){hit(b,'acronyme',q);});
+        if(n===1&&q.length<=4&&gstIni[q]&&!gstByBase[q])gstIni[q].forEach(function(b){hit(b,'acronyme',q);});
       }
     }
     // fiches de la base StrainSage citées : leurs articles rapprochés, sinon « absente du catalogue »
@@ -581,11 +582,16 @@
     var fct=function(it){return it.varieteId?(facetsById[it.varieteId]||allFacets[it.varieteId]||null):null;},seenG={},blocks=[];
     // 1. déjà présentées
     var remembered=[];
-    (opts.remember||[]).forEach(function(x){var it=(x.gst&&gstByCode[x.gst])||gstFor(x.name);if(!it||seenG[it.gk])return;seenG[it.gk]=1;remembered.push(repOf(it));});
+    // le même nom chez d'autres breeders (« Auto Purple » d'Original Sensible et de Pyramid) reste aussi valable
+    (opts.remember||[]).forEach(function(x){var it=(x.gst&&gstByCode[x.gst])||gstFor(x.name);if(!it)return;
+      [it].concat(oneByVariety(gstByBase[it.base]||[]).filter(function(g){return nrm(g.variete)===nrm(it.variete);})).forEach(function(g){
+        if(seenG[g.gk]||remembered.length>=14)return;seenG[g.gk]=1;remembered.push(repOf(g));});});
     if(remembered.length)blocks.push('[VARIÉTÉS DÉJÀ PRÉSENTÉES AU CLIENT DANS CETTE CONVERSATION — toujours valables ; « la première » = n°1, « la deuxième » = n°2…]\n'+
       remembered.map(function(it,i){return (i+1)+'. '+gstLine(it,fct(it)).slice(2)+' · statut : '+statusOf(it);}).join('\n'));
     // 2. citées par le client
-    var fn=findNamed(raw),named=fn.named,namedCount=0;
+    var fn=findNamed(raw),namedCount=0;
+    // une variété citée dont aucune déclinaison n'est proposable (vrac seul) n'apparaît pas
+    var named=fn.named.filter(function(nm){return (gstByBase[nm.base]||[]).some(function(it){return gstMeta.showGranel||(it.packs||[it]).some(function(p){return !p.granel;});});});
     if(named.length)blocks.push('[VARIÉTÉS CITÉES PAR LE CLIENT — trouvées au catalogue du grossiste ; présente toutes les déclinaisons commandables]\n'+named.map(function(nm){
       // une ligne par déclinaison ; une déclinaison vendue seulement en vrac pro (Granel) n'est pas proposée, sauf option
       var groups=oneByVariety(gstByBase[nm.base]||[]).filter(function(it){return gstMeta.showGranel||(it.packs||[it]).some(function(p){return !p.granel;});}).map(repOf)
@@ -596,7 +602,7 @@
         groups.map(function(it){return gstLine(it,fct(it))+' · statut : '+statusOf(it);}).join('\n');
     }).join('\n'));
     // fiches complètes de la base pour les variétés citées et déjà présentées (génétique uniquement, 4 au plus)
-    var ficheIds=[];remembered.concat([].concat.apply([],named.map(function(nm){return gstByBase[nm.base]||[];}))).forEach(function(it){if(it.varieteId&&ficheIds.indexOf(it.varieteId)<0)ficheIds.push(it.varieteId);});
+    var ficheIds=[];[].concat.apply([],named.map(function(nm){return gstByBase[nm.base]||[];})).concat(remembered).forEach(function(it){if(it.varieteId&&ficheIds.indexOf(it.varieteId)<0)ficheIds.push(it.varieteId);});
     var fiches=ficheIds.length?(await Promise.all(ficheIds.slice(0,4).map(fetchDoc))).filter(Boolean):[];
     if(fiches.length)blocks.push('[FICHES BASE STRAINSAGE DE CES VARIÉTÉS — génétique et profil ; elles ne disent pas ce qui est en vente]\n'+fiches.map(function(f){return compact(f,null,true);}).join('\n'));
     // absentes : nom visé par la question sans aucun article, ou fiche StrainSage sans article
@@ -622,6 +628,7 @@
       '\nRÈGLES (à appliquer sans jamais les évoquer devant le client) :'+
       '\n- Recommande UNIQUEMENT des variétés présentes ci-dessus, avec leur nom exact. Dans le JSON des cartes, ajoute pour chacune "gst" avec son code (ex. "gst":"'+example+'").'+
       '\n- Une variété déjà présentée dans la conversation reste valable : ne la désavoue jamais et ne te corrige pas sur sa disponibilité, sauf si son statut ci-dessus le contredit explicitement.'+
+      '\n- Le catalogue ci-dessus n\'est qu\'une sélection pour ce message : une variété que tu as citée plus tôt et qui n\'y figure plus n\'est PAS pour autant absente du catalogue. Ne dis jamais le contraire.'+
       '\n- Quand le client cite une variété trouvée (même par un acronyme ou son nom complet), présente toutes ses déclinaisons commandables avec leurs packs et prix.'+
       '\n- Prix, conditionnements et déclinaisons : cite uniquement ceux indiqués ci-dessus, à l\'identique. N\'invente jamais de format « habituel » ni de taille de pack ; si une déclinaison n\'a aucun pack commandable, dis qu\'elle est en rupture chez le fournisseur, sans proposer de vrac à la place. Les cartes font foi.'+
       '\n- Ne parle jamais de « liste », « candidates », « classement », « contexte », « données », « base » ni du fonctionnement de l\'application : parle comme un vendeur qui connaît son catalogue.'+
