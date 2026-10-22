@@ -674,6 +674,7 @@ html{-webkit-tap-highlight-color:rgba(0,112,60,.12)}
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="gd-reference.js?v=20261021"></script>
 <script src="gst-core.js?v=20261021"></script>
+<script src="lightbox.js?v=20261022"></script>
 <script src="varietes.js?v=20261021h"></script>
 <script>
 /* ══ THÈME ══ */
@@ -1191,7 +1192,8 @@ function buildCard(s){
   var tags=(s.match_tags||[]).map(t=>'<span class="mtag">'+esc(t)+'</span>').join('');
   // photo : celle de la fiche (importée depuis le CSV) ; si elle ne charge pas, la carte reste propre
   var photo=(g&&g.photo)||(fiche&&fiche.photos&&fiche.photos.length?fiche.photos[0]:'');
-  var photoHtml=photo?'<div class="sc-photo-win"><img src="'+escA(photo)+'" alt="Photo de '+escA(s.name)+'" width="132" height="132" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="var b=this.closest(\'.sc-band\');if(b)b.classList.remove(\'has-photo\');this.parentElement.remove()"></div>':'';
+  var zoomAttr=g&&g.photo&&photo===g.photo?' data-zoom="" data-gst="'+escA(g.codigo)+'"':' data-zoom="'+escA(photo)+'"';
+  var photoHtml=photo?'<div class="sc-photo-win"><img src="'+escA(photo)+'"'+zoomAttr+' alt="Photo de '+escA(s.name)+'" width="132" height="132" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="var b=this.closest(\'.sc-band\');if(b)b.classList.remove(\'has-photo\');this.parentElement.remove()"></div>':'';
   return '<article class="sc t-'+tk+'">'+
     '<header class="sc-band'+(photo?' has-photo':'')+'"><div class="sc-band-txt"><div class="sc-kind">'+esc(kind)+'</div><h3 class="sc-name">'+esc(s.name)+'</h3>'+lineage+'</div>'+photoHtml+stamp+'</header>'+
     specs+buildFrieze(fl)+(rows?'<div class="sc-body">'+rows+'</div>':'')+buildTerps(s.terpenes)+
@@ -1202,7 +1204,7 @@ function buildCard(s){
 /* ══ ARBRE GÉNÉALOGIQUE : ouvert à la demande depuis une carte ══ */
 function treeNodeHtml(n,isRoot){
   var tk=['indica','sativa','hybride'].indexOf(n.type)>-1?n.type:'unknown';
-  var media=n.photo?'<img class="lt-ph" src="'+escA(n.photo)+'" alt="" width="34" height="34" loading="lazy" referrerpolicy="no-referrer" onerror="this.outerHTML=\'<span class=lt-dot></span>\'">':'<span class="lt-dot"></span>';
+  var media=n.photo?'<img class="lt-ph" src="'+escA(n.photo)+'" data-zoom="'+escA(n.photo)+'" alt="Photo de '+escA(n.nom)+'" width="34" height="34" loading="lazy" referrerpolicy="no-referrer" onerror="this.outerHTML=\'<span class=lt-dot></span>\'">':'<span class="lt-dot"></span>';
   var cls='lt-pill t-'+tk+(isRoot?' root':'')+(!n.known&&!isRoot?' unknown':'');
   var pill=(isRoot||!n.known)?'<span class="'+cls+'"'+(!n.known&&!isRoot?' title="Variété absente de la base"':'')+'>'+media+esc(n.nom)+'</span>'
     :'<button type="button" class="'+cls+'" data-q="'+escA('Parle-moi de '+n.nom+' : génétique, effets et culture.')+'" onclick="quickSend(this.dataset.q)" title="Voir '+escA(n.nom)+'">'+media+esc(n.nom)+'</button>';
@@ -1355,7 +1357,7 @@ async function loadShelf(){
     box.innerHTML='<div class="shelf-head"><h3 id="shelfTitle">Les plus demandées en boutique</h3><span>D\'après les recherches des clients</span></div><div class="shelf-row">'+
       items.map(f=>{var t=TY[f.type]||['unknown','Type non renseigné'];var flo=f.floMax!=null?(f.floMin!=null&&f.floMin!==f.floMax?f.floMin+'–'+f.floMax:f.floMax):(f.floMin!=null?f.floMin:null);
         return '<button type="button" class="pk t-'+t[0]+'" data-q="'+escA('Parle-moi de '+f.nom+' : effets, culture et où la trouver.')+'" onclick="quickSend(this.dataset.q)">'+
-          '<span class="pk-top">'+(f.photo?'<img class="pk-img" src="'+escA(f.photo)+'" alt="" width="46" height="46" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.remove()">':'')+'<span class="pk-kind">'+t[1]+'</span><span class="pk-name">'+esc(f.nom)+'</span></span>'+
+          '<span class="pk-top">'+(f.photo?'<img class="pk-img" src="'+escA(f.photo)+'" data-zoom="'+escA(f.photo)+'" alt="Photo de '+escA(f.nom)+'" width="46" height="46" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.remove()">':'')+'<span class="pk-kind">'+t[1]+'</span><span class="pk-name">'+esc(f.nom)+'</span></span>'+
           '<span class="pk-facts"><span>THC <b>'+(f.thcMax!=null?String(f.thcMax).replace('.',',')+' %':'—')+'</b></span><span><b>'+(flo!=null?String(flo).replace(/\./g,','):'—')+'</b> sem.</span></span></button>';}).join('')+'</div>';
     box.hidden=false;
   }catch(e){console.warn('[étagère]',e&&e.message);var b1=document.getElementById('shelf');if(b1)b1.remove();}
