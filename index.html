@@ -675,7 +675,7 @@ html{-webkit-tap-highlight-color:rgba(0,112,60,.12)}
 <script src="gd-reference.js?v=20261021"></script>
 <script src="gst-core.js?v=20261021"></script>
 <script src="lightbox.js?v=20261022"></script>
-<script src="varietes.js?v=20261021h"></script>
+<script src="varietes.js?v=20261024b"></script>
 <script>
 /* ══ THÈME ══ */
 function updateThemeLabel(t){
@@ -1418,6 +1418,10 @@ let lastCtxInfo=null;
 function renderCtxStrip(info){
   if(!info)return '';
   var html='';
+  var gi=info.gst||{},xb=(k,l)=>'<button type="button" class="crit-x" aria-label="Retirer le filtre '+escA(l)+'" data-k="'+k+'" data-l="'+escA(l)+'" onclick="refineDrop(this.dataset.k,this.dataset.l)"><span aria-hidden="true">×</span></button>';
+  if((gi.brands&&gi.brands.length)||gi.budget)html+='<div class="crit-line"><span class="crit-lead">Filtres de cette question</span>'+
+    (gi.brands&&gi.brands.length?'<span class="crit-chip type">'+esc(gi.brands.join(', '))+(gi.brandCount?' · '+gi.brandCount+' variétés':'')+xb('brand',gi.brands.join(', '))+'</span>':'')+
+    (gi.budget?'<span class="crit-chip chimie">budget ≤ '+gi.budget.max+' €'+(gi.budget.src==='profil'?' (profil)':'')+xb('budget','budget ≤ '+gi.budget.max+' €')+'</span>':'')+'</div>';
   if(info.gst&&info.gst.count)html+='<div class="crit-line"><span class="crit-lead">Disponibles en boutique</span><span class="crit-chip base">'+info.gst.count+' variété'+(info.gst.count>1?'s':'')+' proposée'+(info.gst.count>1?'s':'')+' à l\'IA</span><span class="crit-count">sur '+info.gst.available+' variétés commandables</span></div>';
   if(info.found&&info.found.length)html+='<div class="crit-line"><span class="crit-lead">Fiches de la base</span>'+info.found.map(n=>'<span class="crit-chip base">'+esc(n)+'</span>').join('')+'</div>';
   if(info.similarTo||(info.criteria&&info.criteria.length)||(info.unsupported&&info.unsupported.length)){
@@ -1479,14 +1483,17 @@ async function buildCtx(txt){
   // « Affiner » : on reprend la demande d'origine sans les critères retirés
   var refine=pendingRefine;pendingRefine=null;
   var critText=refine?refine.text:txt,critDrop=refine?refine.drop:[];
-  try{if(hasBase)crit=await VarDB.criteriaContext(critText,{exclude:sessionMemory.disliked,stockInfo:stockInfo,drop:critDrop});}catch(e){console.warn('[VarDB critères]',e);}
-  if(crit.info.criteria.length||crit.info.similarTo)critState={text:critText,drop:critDrop};
+  var critOnly=critText;try{if(hasCat&&critDrop.indexOf('brand')<0)critOnly=VarDB.detectBrands(critText).text;}catch(e){}
+  try{if(hasBase)crit=await VarDB.criteriaContext(critOnly,{exclude:sessionMemory.disliked,stockInfo:stockInfo,drop:critDrop});}catch(e){console.warn('[VarDB critères]',e);}
   // 1c. CATALOGUE GARDEN SEEDS : les seules variétés recommandables ; la base StrainSage sert à les décrire.
   //     Les variétés déjà présentées en carte restent dans le contexte (pas de contradiction d'un message à l'autre).
   var gstRes={ctx:'',info:{available:0,count:0}};
   try{if(window.VarDB&&VarDB.catalogueContext)gstRes=await VarDB.catalogueContext(critText,{profile:userProfile,drop:critDrop,raw:txt,remember:rememberedStrains()});}catch(e){console.warn('[GST]',e&&e.message);}
   ctx+=gstRes.ctx||crit.ctx;
   var critCovers=crit.info.items.length>0||gstRes.info.count>0;
+  // filtres de CETTE question (recalculés à chaque message) : critères, marque, budget ; chacun retirable dans le bandeau
+  var gi=gstRes.info||{};
+  if(crit.info.criteria.length||crit.info.similarTo||(gi.brands&&gi.brands.length)||gi.budget)critState={text:critText,drop:critDrop};else critState={text:null,drop:[]};
   lastCtxInfo={gst:gstRes.info,found:base.found,criteria:crit.info.criteria.map(c=>({k:c.k,l:c.l,fam:c.fam})),unsupported:(crit.info.unsupported||[]).map(c=>c.l),total:crit.info.total,similarTo:crit.info.similarTo};
 
   // 2. RÉFÉRENCE GROWDIARIES — seulement pour ce que la base ne couvre pas

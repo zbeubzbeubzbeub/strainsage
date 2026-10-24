@@ -91,7 +91,11 @@ const CAT=[
   art({code:'6',v:'Critical Auto',b:'Royal Queen Seeds',t:'a',nb:3,pvp:22,vid:'critical-auto',base:'critical',g:'critical auto~royal queen seeds~a'}),
   art({code:'7',v:'Gorilla Glue #4',b:'GG Strains',nb:3,pvp:35,dispo:'0',vid:'gg4',base:'gorilla glue 4'}),
   art({code:'8',v:'Granel Only',b:'X',nb:100,pvp:300,granel:true,base:'granel only'}),
-  art({code:'9',v:'2090',b:'Y',nb:3,pvp:30,base:'2090'})
+  art({code:'9',v:'2090',b:'Y',nb:3,pvp:30,base:'2090'}),
+  // même breeder sous deux écritures, autos de 9 à 10 semaines (graine → récolte)
+  art({code:'F1',v:'Gorilla Cookies Auto',b:'FAST BUDS',t:'a',nb:3,pvp:36,flo:'9',base:'gorilla cookies'}),
+  art({code:'F2',v:'Blackberry Auto',b:'FastBuds Seeds',t:'a',nb:3,pvp:36,flo:'10',base:'blackberry'}),
+  art({code:'F3',v:'Original Auto Amnesia',b:'FastBuds Seeds',t:'a',nb:1,pvp:13,flo:'9',base:'original amnesia'})
 ];
 const VIDX=['sad-s1|S.A.D. Sweet Afgani Delicious S1','critical-auto|Critical Auto','gg4|Gorilla Glue #4|GG4','purple-haze|Purple Haze','zkittlez|Zkittlez'];
 // facettes : id|type|dom|thcMin|thcMax|cbdMax|floMin|floMax|auto|diff|haut|rend|env|mold|nProd|eff|neg|gouts|terps
@@ -144,6 +148,17 @@ function loadClient(){
   await ta('nom exact du catalogue : pas d\'acronyme parasite',async()=>{eq(V.findNamed('parle-moi de la SAD').named.length,1);});
   await ta('auto : pas de floraison prise sur une fiche photopériode',async()=>{const r=await V.catalogueContext('parle-moi de la SAD',{raw:'parle-moi de la SAD'});ok(/Auto SAD \[code 5\][^\n]*flo 9 sem\./.test(r.ctx));});
   await ta('variété déjà présentée : même nom chez un autre breeder aussi réinjecté',async()=>{const r=await V.catalogueContext('et sinon ?',{raw:'et sinon ?',remember:[{name:'SAD',gst:'1'}]});ok(/DÉJÀ PRÉSENTÉES[\s\S]*1\. SAD /.test(r.ctx)&&/n\'est PAS pour autant absente/.test(r.ctx));});
+  await ta('marque : « Fast Buds » reconnue sous ses deux écritures',async()=>{const b=V.detectBrands('quelle est la meilleure variété Fast Buds');eq(b.brands.map(x=>x.key),['fastbuds']);eq(b.brands[0].names.sort(),['FAST BUDS','FastBuds Seeds']);});
+  await ta('marque : « 420 Fastbuds » reconnue, nom retiré du texte analysé',async()=>{const b=V.detectBrands('variétés 420 Fastbuds autofloraison');eq(b.brands.length,1);ok(!/fastbuds/.test(b.text)&&/autofloraison/.test(b.text),b.text);});
+  await ta('marque : « Fast » de Fast Buds n\'est pas un critère de floraison',async()=>{const r=await V.catalogueContext('quelle est la meilleure variété Fast Buds',{raw:'quelle est la meilleure variété Fast Buds'});eq(r.info.brands,['FastBuds Seeds']);ok(!V.parseCriteria(V.detectBrands('la meilleure Fast Buds').text,[]).length);});
+  await ta('marque : ses variétés passent en tête de la sélection',async()=>{const r=await V.catalogueContext('variétés 420 Fastbuds autofloraison',{raw:'variétés 420 Fastbuds autofloraison'});ok(/variétés de FastBuds Seeds \(3 commandables/.test(r.ctx),'en-tête marque');ok(/Gorilla Cookies Auto/.test(r.ctx)&&/Blackberry Auto/.test(r.ctx)&&/Original Auto Amnesia/.test(r.ctx),'3 variétés');});
+  await ta('marque absente du catalogue signalée (Dinafem Seeds)',async()=>{const r=await V.catalogueContext('tu as quoi de Dinafem Seeds ?',{raw:'tu as quoi de Dinafem Seeds ?'});eq(r.info.missingBrands,['dinafem seeds']);ok(/MARQUE ABSENTE[^\n]*dinafem seeds/.test(r.ctx));});
+  await ta('marque : mot courant (« sweet ») reconnu seulement avec son nom complet',async()=>{eq(V.detectBrands('un goût sweet et fruité').brands.length,0);});
+  await ta('marque retirée par le client (×) : plus de filtre',async()=>{const r=await V.catalogueContext('la meilleure Fast Buds',{raw:'la meilleure Fast Buds',drop:['brand']});eq(r.info.brands,[]);});
+  await ta('floraison ≤ 8 sem. : une auto de 9–10 sem. (graine → récolte) n\'est pas exclue',async()=>{const c=V.parseCriteria('une auto en moins de 8 semaines',[]).filter(x=>x.k==='flo')[0];eq(c.test({auto:true,floMax:10}),1);eq(c.test({auto:false,floMax:10}),0);});
+  await ta('floraison : « de la graine à la récolte » compare la durée réelle des autos',async()=>{const c=V.parseCriteria('auto en moins de 8 semaines de la graine à la récolte',[]).filter(x=>x.k==='flo')[0];eq(c.test({auto:true,floMax:10}),0);});
+  await ta('« fleurit » ne déclenche pas le goût floral',async()=>{const k=V.parseCriteria('une auto qui fleurit en moins de 8 semaines',[]).map(c=>c.k);ok(k.indexOf('floral')<0&&k.indexOf('flo')>-1,JSON.stringify(k));eq(V.parseCriteria('un goût fleuri',[]).map(c=>c.k),['floral']);});
+  await ta('budget du profil signalé (et retirable)',async()=>{const r=await V.catalogueContext('une indica',{raw:'une indica',profile:{budget:'moins de 30€'}});eq(r.info.budget,{max:30,src:'profil'});const r2=await V.catalogueContext('une indica',{raw:'une indica',profile:{budget:'moins de 30€'},drop:['budget']});eq(r2.info.budget,null);});
   await ta('nom purement numérique jamais détecté dans un message (budget, année)',async()=>{eq(V.detect('budget 2090 euros, en 1969',5).length,0);});
   await ta('contexte : fiche de la base sans « Dispo chez » (seul le catalogue dit ce qui est en vente)',async()=>{
     const r=await V.catalogueContext('parle-moi de la SAD',{raw:'parle-moi de la SAD'});ok(/FICHES BASE STRAINSAGE[\s\S]*S\.A\.D\. Sweet Afgani Delicious/.test(r.ctx),'fiche');ok(!/Dispo chez/.test(r.ctx),'pas de banques concurrentes');});

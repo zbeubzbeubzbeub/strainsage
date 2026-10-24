@@ -248,7 +248,8 @@
     {k:'cheese',l:'fromage',q:/\b(fromage\w*|cheese\w*)\b/,d:/\b(chees\w*|fromag\w*)\b/},
     {k:'garlic',l:'ail',q:/\b(ail|garlic|oignon\w*|onion\w*)\b/,d:/\b(garlic|ail|onion\w*|oignon\w*)\b/},
     {k:'mint',l:'menthe',q:/\b(menthe\w*|mint\w*|menthol\w*)\b/,d:/\b(mint\w*|menth\w*)\b/},
-    {k:'floral',l:'floral',q:/\b(floral\w*|lavand\w*|fleuri\w*)\b/,d:/\b(floral\w*|flower\w*|fleur\w*|lavend\w*|lavand\w*|rose|violet\w*)\b/},
+    // « fleuri(e) » oui, mais pas le verbe « fleurit / fleurir » (durée de floraison)
+    {k:'floral',l:'floral',q:/\b(floral\w*|lavand\w*|fleurie?s?)\b/,d:/\b(floral\w*|flower\w*|fleur\w*|lavend\w*|lavand\w*|rose|violet\w*)\b/},
     {k:'coffee',l:'café / chocolat',q:/\b(cafe|coffee|chocolat\w*|cacao|cocoa)\b/,d:/\b(coffee|cafe|chocolat\w*|cacao|cocoa)\b/},
     {k:'herbal',l:'herbacé',q:/\b(herbac\w*|herbal)\b/,d:/\b(herb\w*|tea|the)\b/}
   ];
@@ -257,6 +258,7 @@
     {k:'nodizzy',l:'sans vertiges',q:/\b(vertige\w*|tourni\w*|dizz\w*)\b/,d:/\b(dizz\w*|vertig\w*)\b/},
     {k:'nohead',l:'sans maux de tête',q:/\b(mal de tete|maux de tete|migraine\w*|headache\w*)\b/,d:/\b(headache\w*|mal de tete|migrain\w*)\b/}
   ];
+  var AUTO_EXTRA=3; // semaines de croissance comprises dans la durée annoncée d'une auto
   var NEG=/\b(pas|sans|evite\w*|eviter|non|aucun\w*|deteste\w*|horreur|plus jamais|n aime pas|naime pas|j aime pas|jaime pas|hors de question)\s+(\w+\s+){0,3}$/;
   function negated(msg,idx){return NEG.test(msg.slice(Math.max(0,idx-40),idx));}
 
@@ -280,8 +282,11 @@
     else if(/\b(photoperiod\w*|photo period\w*|non auto)\b/.test(msg))add({k:'photo',l:'photopériode',fam:'culture',w:1.2,test:function(f){return f.auto===false||(f.auto===null&&f.e&&!/\bauto\b/.test(nrm(f.nom)))?1:0;}});
     // floraison
     var mw=msg.match(/\b(?:moins de|max\w*|en|sous|pas plus de)\s*(\d{1,2})\s*(?:sem\w*|weeks?)\b/),md=msg.match(/\b(?:moins de|max\w*|en|sous)\s*(\d{2,3})\s*(?:jours|j)\b/);
-    var floMax=mw?parseInt(mw[1],10):md?Math.round(parseInt(md[1],10)/7):(/\b(floraison|flo|fleurit|fleurir|recolte)\s+(\w+\s+)?(courte|rapide|vite|express)\b|\b(courte|rapide)\s+floraison\b|\b(fast|express)\b|\brapide a (fleurir|recolter)\b/.test(msg)?8:null);
-    if(floMax)add({k:'flo',l:'floraison ≤ '+floMax+' sem.',fam:'culture',w:1.3,test:function(f){var v=f.floMax!=null?f.floMax:f.floMin;return v==null?0:v<=floMax?1:v<=floMax+1?0.4:0;}});
+    var floMax=mw?parseInt(mw[1],10):md?Math.round(parseInt(md[1],10)/7):(/\b(floraison|flo|fleurit|fleurir|recolte)\s+(\w+\s+)?(courte|rapide|vite|express)\b|\b(courte|rapide)\s+floraison\b|\bexpress\b|\bfast\b(?!\s?(buds?|version))|\brapide a (fleurir|recolter)\b/.test(msg)?8:null);
+    // autofloraison : la durée annoncée va de la graine à la récolte (médiane 9,5 sem. dans la base), pas du passage en 12/12 ;
+    // elle est comparée à la floraison demandée + 3 semaines, sauf si le client parle lui-même de cycle complet
+    var cycle=/\b(de la graine|graine a (la )?recolte|seed to harvest|cycle (complet|total)|au total)\b/.test(msg);
+    if(floMax)add({k:'flo',l:'floraison ≤ '+floMax+' sem.',fam:'culture',w:1.3,max:floMax,cycle:cycle,test:function(f){var v=f.floMax!=null?f.floMax:f.floMin,lim=floMax+(f.auto===true&&!cycle?AUTO_EXTRA:0);return v==null?0:v<=lim?1:v<=lim+1?0.4:0;}});
     else if(/\bfloraison\s+(\w+\s+)?longue\b/.test(msg))add({k:'flolong',l:'floraison longue',fam:'culture',w:1,test:function(f){var v=f.floMin!=null?f.floMin:f.floMax;return v!=null&&v>=10?1:0;}});
     // THC
     var lt=msg.match(/\b(?:moins de|max\w*|pas plus de|sous)\s*(\d{1,2})\s*(?:%|pourcent|pc)?\s*(?:de\s+)?thc\b/)||msg.match(/\bthc\s*(?:<|inferieur a|sous|max\w*)\s*(\d{1,2})/);
@@ -408,7 +413,7 @@
      - les variétés déjà présentées dans la conversation sont réinjectées à chaque message ;
      - une « déclinaison » (SAD, SAD Fast Version, Auto SAD) regroupe ses packs ; la « variété de base » (sad) les réunit. */
   var GIDX='catalogue_gst_index';
-  var gst=null,gstLoading=null,gstByCode={},gstByName={},gstByVar={},gstByBase={},gstShort={},gstIni={},gstAlias={},gstMeta={};
+  var gst=null,gstLoading=null,gstByCode={},gstByName={},gstByVar={},gstByBase={},gstShort={},gstIni={},gstAlias={},gstMeta={},gstBrands={};
   function numOrNull(v){return v===''||v==null?null:parseFloat(v);}
   // même normalisation que le rapprochement de l'admin (gst-core.js : lettres isolées recollées, « S.A.D. » → « sad »)
   var GC=window.GSTCore;
@@ -444,6 +449,11 @@
           if(/^[a-z]{2,4}$/.test(b))gstShort[b]=1;
           var ini=GC.initials2(b);if(ini&&ini.length<=5)(gstIni[ini]=gstIni[ini]||[]).push(b);
         });
+        // breeders : « FAST BUDS » et « FastBuds Seeds » ont la même clé (gst-core.js breederKey) et forment une seule marque
+        gstBrands={};list.forEach(function(it){var k=GC.breederKey(it.breeder||'');if(!k||k.length<3)return;var b=gstBrands[k]||(gstBrands[k]={key:k,names:{},n:0});b.names[it.breeder]=(b.names[it.breeder]||0)+1;b.n++;});
+        Object.keys(gstBrands).forEach(function(k){var b=gstBrands[k],ns=Object.keys(b.names);
+          var nice=ns.sort(function(x,y){return b.names[y]-b.names[x];})[0].replace(/´/g,"'").replace(/[\s.,;:]+$/,'');
+          b.label=nice===nice.toUpperCase()?nice.toLowerCase().replace(/(^|[\s'-])[a-z]/g,function(c){return c.toUpperCase();}):nice;b.names=ns;});
         // tous les packs d'une même déclinaison (même nom, breeder et type), du plus petit au plus grand
         var byG={};list.forEach(function(it){(byG[it.gk]=byG[it.gk]||[]).push(it);});
         Object.keys(byG).forEach(function(k){var g=byG[k].sort(function(a,b){return (a.nb||0)-(b.nb||0)||(a.pvp||0)-(b.pvp||0);});g.forEach(function(it){it.packs=g;});});
@@ -496,8 +506,8 @@
   }
   // toutes les déclinaisons d'une variété (même nom de base, même breeder), hors déclinaisons vendues seulement en vrac
   function declinaisonsOf(it){
-    var b=key0(it.breeder);
-    return oneByVariety((gstByBase[it.base]||[]).filter(function(x){return key0(x.breeder)===b;}))
+    var b=GC.breederKey(it.breeder||'');
+    return oneByVariety((gstByBase[it.base]||[]).filter(function(x){return GC.breederKey(x.breeder||'')===b;}))
       .filter(function(x){return gstMeta.showGranel||(x.packs||[x]).some(function(p){return !p.granel;});}).map(repOf)
       .sort(function(a,b){return (packsOf(b).length?1:0)-(packsOf(a).length?1:0);});
   }
@@ -535,6 +545,36 @@
     });}catch(err){}
     return {named:order.map(function(b){return found[b];}),ficheAbsent:ficheAbsent};
   }
+  /* marque citée dans la question : fenêtres de 1 à 4 mots comparées aux clés de breeder du catalogue
+     (« Fast Buds », « fastbuds », « 420 Fastbuds » → fastbuds). Un breeder dont la clé est un mot courant
+     (« Sweet » pour Sweet Seeds) n'est reconnu qu'avec son nom complet (« Sweet Seeds »).
+     Renvoie les marques et le texte sans leur nom (pour que « Fast » ne devienne pas un critère de floraison). */
+  var BRAND_SUFFIX=/^(seeds?|seedbank|genetics?|semillas|graines?)$/;
+  function detectBrands(txt){
+    var toks=keyMsg(txt).split(' ').filter(Boolean),used={},hits=[],out={brands:[],text:txt};
+    if(!gst||!toks.length)return out;
+    for(var n=Math.min(4,toks.length);n>=1;n--){
+      for(var i=0;i+n<=toks.length;i++){
+        var w=toks.slice(i,i+n);if(w.some(function(t,j){return used[i+j];}))continue;
+        if(BRAND_SUFFIX.test(w[0])||/^\d+$/.test(w.join('')))continue;
+        var k=GC.breederKey(w.join(' ')),b=gstBrands[k];if(!b||k.length<4)continue;
+        var next=toks[i+n]||'',full=BRAND_SUFFIX.test(next);
+        if(n===1&&!full&&(GENERIC.indexOf(k)>-1||isStop(k)||gstByBase[k]))continue;
+        var end=i+n+(full?1:0);for(var j=i;j<end;j++)used[j]=1;
+        if(hits.indexOf(b)<0)hits.push(b);
+      }
+    }
+    // « Royal Queen Seeds » sans aucun article : signalé comme marque absente (1 à 3 mots avant seeds/genetics)
+    out.missing=[];
+    toks.forEach(function(t,j){
+      if(!BRAND_SUFFIX.test(t)||used[j]||j===0)return;
+      for(var n=Math.min(3,j);n>=1;n--){var w=toks.slice(j-n,j);if(w.some(function(x,q){return used[j-n+q]||isFrStop(x);}))continue;
+        if(!gstBrands[GC.breederKey(w.join(' '))]){out.missing.push(w.concat([t]).join(' '));for(var q=j-n;q<=j;q++)used[q]=1;}break;}
+    });
+    if(!hits.length&&!out.missing.length)return out;
+    out.brands=hits;out.text=toks.filter(function(t,j){return !used[j];}).join(' ');
+    return out;
+  }
   // nom de variété visé par une question (« parle-moi de… », « tu as… ») : sert à dire « absente » avec certitude
   var ASK=/(?:parle[sz]? ?moi|parlez ?moi|infos? sur|que penses tu|tu (?:as|aurais|connais|vends)|vous (?:avez|auriez|vendez)|avez vous|as tu|dispo(?:nible)?s?)\s+(?:(?:de|du|des|d|la|le|les|l|une|un|en|sur)\s+)*([a-z0-9][a-z0-9 ]{1,40})/;
   function askedName(txt){
@@ -552,35 +592,48 @@
   async function catalogueContext(txt,opts){
     opts=opts||{};
     var cat=await loadCatalogue();if(!cat.length)return {ctx:'',info:{available:0,count:0}};
-    var raw=opts.raw||txt,msg=' '+nrm(txt)+' ',prof=opts.profile||{};
+    var raw=opts.raw||txt,prof=opts.profile||{},drop=opts.drop||[];
+    // marque citée : son nom est retiré du texte analysé (critères, type) et le catalogue est d'abord filtré sur elle
+    var br=drop.indexOf('brand')>-1?{brands:[],text:txt}:detectBrands(txt);
+    var brandKeys=br.brands.map(function(b){return b.key;});
+    if(brandKeys.length)txt=br.text;
+    var msg=' '+nrm(txt)+' ';
     var avail=cat.filter(function(i){return i.dispo!==0&&(!i.granel||gstMeta.showGranel);});
+    var inBrand=function(i){var k=GC.breederKey(i.breeder||'');return brandKeys.some(function(b){return k===b||k.indexOf(b+'x')===0;});};
+    var brandAvail=brandKeys.length?avail.filter(inBrand):null;
     var wantType=/\b(auto|autos|autofloraison\w*|autoflo\w*)\b/.test(msg)?'auto':(/\b(feminis\w*|feminiz\w*|fem)\b/.test(msg)?'fem':(/\b(reguliere\w*|regular\w*)\b/.test(msg)?'regular':null));
     if(!wantType&&/\bphotoperiod\w*/.test(msg))wantType='notauto';
-    var pool=avail.filter(function(i){if(wantType==='notauto')return i.type!=='auto';return !wantType||!i.type||i.type===wantType;});
-    var maxBudget=BUDGET[prof.budget]||null;
-    var mb=msg.match(/\b(?:moins de|max\w*|budget|sous)\s*(\d{2,3})\s*(?:e|eur|euros?)?\b/);if(mb)maxBudget=parseInt(mb[1],10);
+    var startPool=brandAvail&&brandAvail.length?brandAvail:avail;
+    var pool=startPool.filter(function(i){if(wantType==='notauto')return i.type!=='auto';return !wantType||!i.type||i.type===wantType;});
+    if(!pool.length)pool=startPool;
+    // budget : celui du message, sinon celui du profil client (signalé dans le bandeau et retirable)
+    var maxBudget=drop.indexOf('budget')>-1?null:(BUDGET[prof.budget]||null),budgetSrc=maxBudget?'profil':'';
+    var mb=msg.match(/\b(?:moins de|max\w*|budget|sous)\s*(\d{2,3})\s*(?:e|eur|euros?)?\b/);if(mb){maxBudget=parseInt(mb[1],10);budgetSrc='message';}
     if(maxBudget){var inB=pool.filter(function(i){return i.pvp==null||i.pvp<=maxBudget;});if(inB.length)pool=inB;}
     var scores={},facetsById={},r={criteria:[],items:[]};
-    try{r=await search(txt,{drop:opts.drop,limit:6000,stockInfo:null});(r.items||[]).forEach(function(x){scores[x.f.id]=x.score;facetsById[x.f.id]=x.f;});}catch(e){}
+    try{r=await search(txt,{drop:drop,limit:6000,stockInfo:null});(r.items||[]).forEach(function(x){scores[x.f.id]=x.score;facetsById[x.f.id]=x.f;});}catch(e){}
     var detected=detect(txt,5).map(function(e){return e.id;});
     var floCrit=(r.criteria||[]).filter(function(c){return c.k==='flo';})[0];
-    var floMaxWanted=floCrit?parseFloat((floCrit.l.match(/\d+/)||[])[0]):null;
+    var floMaxWanted=floCrit?floCrit.max:null;
     var hasCrit=(r.criteria||[]).length>0;
+    var allFacets={};try{(await loadFacets()).forEach(function(f){allFacets[f.id]=f;});}catch(e){}
     pool.forEach(function(it){
       var s=0;
       if(it.varieteId&&detected.indexOf(it.varieteId)>-1)s+=10;
       if(it.varieteId&&scores[it.varieteId]!=null)s+=scores[it.varieteId]*5;
-      if(floMaxWanted&&it.floMax!=null)s+=it.floMax<=floMaxWanted?1.5:-1;
+      // autos : durée graine → récolte comparée à la floraison demandée + 3 semaines
+      if(floMaxWanted&&it.floMax!=null)s+=it.floMax<=floMaxWanted+(it.type==='auto'&&!floCrit.cycle?AUTO_EXTRA:0)?1.5:-1;
+      // marque sans autre critère (« la meilleure Fast Buds ») : d'abord les variétés documentées et les plus répandues
+      if(brandKeys.length&&!hasCrit){var fa=it.varieteId&&allFacets[it.varieteId];s+=(it.varieteId?0.5:0.1)+(fa?Math.min(fa.nProd,30)/30:0);}
       if(it.dispo===2)s-=0.2;
       it._s=s;
     });
     var picked=oneByVariety(pool.slice().sort(function(a,b){return b._s-a._s||(a.pvp||999)-(b.pvp||999);}));
     var matching=picked.filter(function(i){return i._s>0;}),availV=oneByVariety(avail).length;
-    if(!hasCrit&&!detected.length){
+    if(!hasCrit&&!detected.length&&!brandKeys.length){
       var seenB={};picked=picked.filter(function(i){return i.varieteId;}).concat(picked.filter(function(i){return !i.varieteId;})).filter(function(i){var k=(i.breeder||'')+'|'+(i.type||'');if((seenB[k]=(seenB[k]||0)+1)>2)return false;return true;});
     }
     // faits de la base StrainSage (effets, goûts…) pour chaque article rapproché, même sans critère dans la demande
-    var allFacets={};try{(await loadFacets()).forEach(function(f){allFacets[f.id]=f;});}catch(e){}
     var fct=function(it){return it.varieteId?(facetsById[it.varieteId]||allFacets[it.varieteId]||null):null;},seenG={},blocks=[];
     // 1. déjà présentées
     var remembered=[];
@@ -609,23 +662,26 @@
     if(fiches.length)blocks.push('[FICHES BASE STRAINSAGE DE CES VARIÉTÉS — génétique et profil ; elles ne disent pas ce qui est en vente]\n'+fiches.map(function(f){return compact(f,null,true);}).join('\n'));
     // absentes : nom visé par la question sans aucun article, ou fiche StrainSage sans article
     var asked=named.length?'':askedName(raw),absent=(asked?[asked]:[]).concat(fn.ficheAbsent.filter(function(n){return !asked||nrm(n)!==nrm(asked);}));
+    if(br.missing&&br.missing.length)blocks.push('[MARQUE ABSENTE DU CATALOGUE DU GROSSISTE] '+br.missing.map(function(a){return '« '+a+' »';}).join(', ')+' : aucun article de ce breeder chez le grossiste. Dis-le clairement, puis propose des variétés disponibles proches de la demande parmi celles ci-dessous.');
     if(absent.length)blocks.push('[ABSENTES DU CATALOGUE DU GROSSISTE] '+absent.map(function(a){return '« '+a+' »';}).join(', ')+' : aucun article correspondant chez le grossiste (ni en stock, ni en rupture). Dis-le clairement et sans hésiter, puis propose la variété disponible la plus proche parmi celles ci-dessous.');
     // 3. autres variétés disponibles, chacune avec toutes ses déclinaisons : 4 quand le client cite une variété précise,
     //    8 sinon (au lieu de 15 : contexte divisé par deux, sans perte mesurée sur le banc)
-    var maxOthers=named.length?4:8;
+    var maxOthers=named.length?4:(brandKeys.length?10:8);
     var top=[],varieties=[],seenV={};
     (matching.length?matching:picked).forEach(function(it){
       if(varieties.length>=maxOthers||seenG[it.gk])return;
-      var vk=it.base+'|'+key0(it.breeder);if(seenV[vk])return;seenV[vk]=1;
+      var vk=it.base+'|'+GC.breederKey(it.breeder||'');if(seenV[vk])return;seenV[vk]=1;
       var decl=declinaisonsOf(it);if(!decl.length)decl=[it];
       decl.forEach(function(d){seenG[d.gk]=1;top.push(d);});varieties.push(decl);
     });
+    var brandLabel=br.brands.map(function(b){return b.label;}).join(', '),brandV=brandAvail?oneByVariety(brandAvail).length:0;
     var head=matching.length?'les mieux adaptées à la demande':((hasCrit||detected.length)?'les plus proches de la demande':'sélection variée');
+    if(brandKeys.length)head=(brandV?'variétés de '+brandLabel+' ('+brandV+' commandables chez ce breeder), '+(hasCrit?'les mieux adaptées à la demande':'les plus répandues et documentées'):'aucune variété de '+brandLabel+' commandable en ce moment, voici des alternatives');
     if(varieties.length)blocks.push('[AUTRES VARIÉTÉS DISPONIBLES CHEZ LE GROSSISTE — '+head+' ; '+availV+' variétés commandables au total'+(maxBudget?', budget ≤ '+maxBudget+' € par pack':'')+(wantType&&wantType!=='notauto'?', type '+TYPE_FR[wantType]:'')+'] Une variété peut exister en plusieurs déclinaisons (auto, fast, XL, CBD…) : ce sont des options distinctes.\n'+
       varieties.map(function(decl){
         if(decl.length===1)return gstLine(decl[0],fct(decl[0]))+stTxt(decl[0]);
         return '• '+decl[0].variete+(decl[0].breeder?' ('+decl[0].breeder+')':'')+' — '+decl.length+' déclinaisons :\n'+decl.map(function(d){return '  '+gstLine(d,fct(d))+stTxt(d);}).join('\n');
-      }).join('\n'));
+      }).join('\n')+(floCrit&&!floCrit.cycle?'\nPour une autofloraison, la durée indiquée va de la graine à la récolte : compare-la à la floraison demandée + 3 semaines environ.':''));
     if(!blocks.length)return {ctx:'',info:{available:availV,articles:avail.length,count:0}};
     var example=(remembered[0]||top[0]||(named.length&&gstByBase[named[0].base][0])||{}).codigo||'12345';
     var ctx='\n\n[CATALOGUE DU GROSSISTE GARDEN SEEDS TRADING — variétés commandables par la boutique]\n'+blocks.join('\n\n')+
@@ -640,10 +696,11 @@
       '\n- Ne parle jamais de « liste », « candidates », « classement », « contexte », « données », « base » ni du fonctionnement de l\'application : parle comme un vendeur qui connaît son catalogue.'+
       '\n- Si rien ne correspond vraiment, dis-le franchement et propose la variété disponible la plus proche.';
     console.info('[GST] '+remembered.length+' déjà présentées, '+named.length+' citée(s) ('+namedCount+' déclinaisons), '+absent.length+' absente(s), '+varieties.length+' autres variétés ('+top.length+' déclinaisons) ; '+availV+' variétés disponibles');
-    return {ctx:ctx,info:{available:availV,articles:avail.length,count:top.length+namedCount+remembered.length,matching:matching.length,named:named.map(function(n){return n.query;}),absent:absent,remembered:remembered.length}};
+    return {ctx:ctx,info:{available:availV,articles:avail.length,count:top.length+namedCount+remembered.length,matching:matching.length,named:named.map(function(n){return n.query;}),absent:absent,remembered:remembered.length,
+      brands:br.brands.map(function(b){return b.label;}),brandCount:brandV,missingBrands:br.missing||[],budget:maxBudget?{max:maxBudget,src:budgetSrc}:null}};
   }
 
-  window.VarDB={euro:euro,packsOf:packsOf,packsText:packsText,seedsLabel:seedsLabel,statusOf:statusOf,findNamed:findNamed,askedName:askedName,loadCatalogue:loadCatalogue,gstFor:gstFor,catalogueContext:catalogueContext,gstSize:function(){return gst?gst.length:0;},lineage:lineage,load:load,detect:detect,resolve:resolve,idOf:idOf,get:get,cached:cached,prefetch:prefetch,
+  window.VarDB={detectBrands:detectBrands,euro:euro,packsOf:packsOf,packsText:packsText,seedsLabel:seedsLabel,statusOf:statusOf,findNamed:findNamed,askedName:askedName,loadCatalogue:loadCatalogue,gstFor:gstFor,catalogueContext:catalogueContext,gstSize:function(){return gst?gst.length:0;},lineage:lineage,load:load,detect:detect,resolve:resolve,idOf:idOf,get:get,cached:cached,prefetch:prefetch,
     compact:compact,buildContext:buildContext,stockFacts:stockFacts,banques:banques,domain:domain,norm:nrm,
     search:search,criteriaContext:criteriaContext,parseCriteria:parseCriteria,loadFacets:loadFacets,
     size:function(){return entries.length;}};
