@@ -1,285 +1,229 @@
 <!DOCTYPE html>
-<html lang="fr" data-theme="light">
+<html lang="fr" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>StrainSage Pro — Admin</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2048%2048%22%3E%3Crect%20x%3D%222%22%20y%3D%222%22%20width%3D%2244%22%20height%3D%2244%22%20rx%3D%2212%22%20fill%3D%22%2317201b%22/%3E%3Cg%20transform%3D%22translate%289%209%29%20scale%281%29%22%3E%3Cpath%20d%3D%22M15%2030V17.6%22%20stroke%3D%22%234cc38a%22%20stroke-width%3D%223%22%20stroke-linecap%3D%22round%22/%3E%3Cpath%20d%3D%22M14.6%2018.8C9.6%2019.8%202.6%2016.8.8%207.6%208.4%206.2%2013.8%2010.8%2014.6%2018.8Z%22%20fill%3D%22%234cc38a%22/%3E%3Cpath%20d%3D%22M15.4%2018.8C16.2%2010.8%2021.6%206.2%2029.2%207.6%2027.4%2016.8%2020.4%2019.8%2015.4%2018.8Z%22%20fill%3D%22%234cc38a%22/%3E%3Cpath%20d%3D%22M15%2017.8C12.4%2013.8%2012.6%205.8%2015%201%2017.4%205.8%2017.6%2013.8%2015%2017.8Z%22%20fill%3D%22%23a8e6c4%22/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..600;1,6..96,400..600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="theme.css?v=20261027">
+<meta name="theme-color" content="#171614">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
-/* ══════════════════════════════════
-   THÈMES
-══════════════════════════════════ */
-:root,[data-theme="light"]{
-  --font-ui:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;
-  --font-display:'Bricolage Grotesque','Figtree',system-ui,sans-serif;
-  --bg:#f6f5f1;--bg2:#f6f5f1;--bg3:#ffffff;--bg4:#eeede7;--panel:#ffffff;
-  --accent:#00703c;--accent2:#005c31;--accent-fg:#e2f0e7;
-  --ink:#17201b;--red-brand:#c8102e;
-  --gold:#8a5a00;--gold2:#8a5a00;--gold3:#b07a14;--goldfog:#f6ecd8;--goldfog2:#f6ecd8;
-  --text1:#17201b;--text2:#424b45;--text3:#5c655f;
-  --border:#e2e0d8;--border2:#cbc8bd;--bordergold:#e4cf9f;
-  --shadow:0 1px 2px rgba(23,32,27,.06),0 4px 14px rgba(23,32,27,.05);
-  --shadow2:0 2px 6px rgba(23,32,27,.08),0 12px 32px rgba(23,32,27,.10);
-  --fog:rgba(23,32,27,.025);--fog2:rgba(23,32,27,.05);
-  --red:#a50d26;--redfog:#fbe8eb;
-  --badge-green-bg:#e2f0e7;--badge-green-color:#00703c;--badge-green-border:#b7dcc5;
-  --badge-red-bg:#fbe8eb;--badge-red-color:#a50d26;--badge-red-border:#f2c2ca;
-  --badge-gold-bg:#f6ecd8;--badge-gold-color:#8a5a00;--badge-gold-border:#e4cf9f;
-  --margin-pos:#00703c;--margin-neg:#a50d26;
-  --bar-fill:#0b5f73;
-  --focus:0 0 0 3px rgba(0,112,60,.35);
-  --r:10px;--rl:16px;
-}
-[data-theme="dark"]{
-  --bg:#111513;--bg2:#111513;--bg3:#1a1f1c;--bg4:#232925;--panel:#1a1f1c;
-  --accent:#4cc38a;--accent2:#38a974;--accent-fg:rgba(76,195,138,.13);
-  --ink:#eef1ec;--red-brand:#cc2741;
-  --gold:#e2ac4a;--gold2:#e2ac4a;--gold3:#e2ac4a;--goldfog:rgba(226,172,74,.13);--goldfog2:rgba(226,172,74,.13);
-  --text1:#eef1ec;--text2:#c3cbc5;--text3:#9aa59d;
-  --border:#2b322e;--border2:#3c4540;--bordergold:rgba(226,172,74,.3);
-  --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25);
-  --shadow2:0 2px 6px rgba(0,0,0,.35),0 12px 32px rgba(0,0,0,.4);
-  --fog:rgba(255,255,255,.025);--fog2:rgba(255,255,255,.05);
-  --red:#ff8a9b;--redfog:rgba(224,50,75,.15);
-  --badge-green-bg:rgba(76,195,138,.13);--badge-green-color:#4cc38a;--badge-green-border:rgba(76,195,138,.3);
-  --badge-red-bg:rgba(224,50,75,.15);--badge-red-color:#ff8a9b;--badge-red-border:rgba(224,50,75,.35);
-  --badge-gold-bg:rgba(226,172,74,.13);--badge-gold-color:#e2ac4a;--badge-gold-border:rgba(226,172,74,.3);
-  --margin-pos:#4cc38a;--margin-neg:#ff8a9b;
-  --bar-fill:#5fb7cc;
-  --focus:0 0 0 3px rgba(76,195,138,.4);
-}
+/* ══════════════════════════════════════════════════════════════
+   STRAINSAGE — ADMIN · même maison que le chat et qu'OG's Farm
+   Couleurs, polices et surfaces du navigateur : theme.css. Ici : la mise en page de l'outil.
+   Un registre de travail : filets or fins, chiffres tabulaires, petites capitales pour les en-têtes,
+   coins quasi carrés ; le prix en cuivre est la seule note chaude (geste « ligne de catalogue »).
+══════════════════════════════════════════════════════════════ */
+html,body{min-height:100vh;font-family:var(--font-ui);font-size:15px;line-height:1.55;background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3{font-family:var(--font-display);font-weight:500;letter-spacing:-.01em;text-wrap:balance}
+a{color:var(--gold-text);text-decoration-color:var(--line2);text-underline-offset:4px}
+a:hover{text-decoration-color:var(--gold)}
+.sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:var(--line2);border:3px solid var(--paper)}
+::-webkit-scrollbar-track{background:transparent}
 
+/* ══ LOGO : « strainsage » en Bodoni, le point du i est une jeune pousse ══ */
+.logo-wm{font-family:var(--font-display);font-weight:500;letter-spacing:-.01em;line-height:1;color:var(--ink);display:inline-block;white-space:nowrap}
+.logo-i{position:relative;display:inline-block}
+.logo-sprout{position:absolute;left:50%;top:-.16em;width:.46em;height:.42em;transform:translateX(-50%);background-color:var(--gold);
+  -webkit-mask:url(assets/illustrations/pousse.svg) center/contain no-repeat;mask:url(assets/illustrations/pousse.svg) center/contain no-repeat}
+[data-theme="light"] .logo-sprout{background-color:var(--rule)}
+.logo-home{background:none;border:none;padding:6px 4px 2px;margin:-6px -4px -2px;cursor:pointer;color:inherit;border-radius:var(--r)}
+.logo-home .logo-wm{transition:color .15s}
+.logo-home:hover .logo-wm{color:var(--gold-text)}
 
-html,body{min-height:100vh;font-family:var(--font-ui);background:var(--bg);color:var(--text1);transition:background-color .25s,color .15s}
-*{transition:background-color .2s,border-color .2s,color .15s}
-img,button,input,textarea,select{transition:none!important}
+/* ══ ILLUSTRATIONS (masques teintés par le thème) ══ */
+.illu{display:block;background-color:var(--ink3);-webkit-mask-position:center;mask-position:center;-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
+.illu-semis{-webkit-mask-image:url(assets/illustrations/graines-semis.svg);mask-image:url(assets/illustrations/graines-semis.svg)}
+.illu-feuille{-webkit-mask-image:url(assets/illustrations/feuille.svg);mask-image:url(assets/illustrations/feuille.svg)}
 
-/* ══ THEME TOGGLE ══ */
-.theme-toggle{width:38px;height:22px;border-radius:11px;background:var(--bg4);border:1px solid var(--border2);cursor:pointer;position:relative;flex-shrink:0}
-.theme-toggle::after{content:'';position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:var(--accent);transition:transform .22s cubic-bezier(.4,0,.2,1)}
-[data-theme="dark"] .theme-toggle::after{transform:translateX(16px)}
+/* ══ INTERRUPTEUR DE THÈME ══ */
+.theme-toggle-wrap{display:flex;align-items:center;gap:10px}
+.theme-label{font-size:12px;color:var(--ink3);white-space:nowrap;font-variant-caps:all-small-caps;letter-spacing:.05em}
+.theme-toggle{width:40px;height:22px;border-radius:var(--r);background:var(--sunken);border:1px solid var(--line2);cursor:pointer;position:relative;flex-shrink:0}
+.theme-toggle::after{content:'';position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:1px;background:var(--gold);transition:transform .22s cubic-bezier(.16,1,.3,1)}
+[data-theme="dark"] .theme-toggle::after,:root:not([data-theme="light"]) .theme-toggle::after{transform:translateX(18px)}
+[data-theme="light"] .theme-toggle::after{transform:none;background:var(--rule)}
 
-/* ══ LOGIN ══ */
-.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg)}
-.login-box{background:var(--panel);border:1px solid var(--border2);border-radius:20px;padding:34px;max-width:420px;width:100%;box-shadow:var(--shadow2)}
-.login-logo{display:flex;align-items:center;gap:13px;margin-bottom:24px}
-.login-mark{width:46px;height:46px;border-radius:13px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 16px rgba(45,107,38,.2)}
+/* ══ CONNEXION : panneau photo étalonné + registre ══ */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--paper)}
+.login-box{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);max-width:860px;width:100%;background:var(--surface);border:1px solid var(--line2);box-shadow:var(--shadow2)}
+.login-photo{position:relative;min-height:440px}
+.login-photo figcaption{position:absolute;left:14px;bottom:10px;z-index:1;font-size:12px;color:rgba(242,238,227,.78)}
+.login-form{padding:40px 38px 34px;display:flex;flex-direction:column}
+.login-logo{margin-bottom:6px}
+.login-mark,.topbar-mark{display:none}
+.login-box h1{font-size:44px;line-height:1}
+.login-sub{display:block;margin-top:8px;font-size:13px;color:var(--ink3);font-variant-caps:all-small-caps;letter-spacing:.05em}
+.login-form .double-filet{margin:18px 0 20px}
+.login-box p{font-size:14px;color:var(--ink2);margin-bottom:20px;line-height:1.6}
+.field-label{display:block;font-size:13px;font-weight:600;color:var(--ink);margin-bottom:6px}
+.field-input{width:100%;padding:11px 13px;border:1px solid var(--line2);border-radius:var(--r);background:var(--sunken);color:var(--ink);font-size:14px;margin-bottom:14px;outline:none}
+.field-input::placeholder{color:var(--ink3)}
+.field-input:hover{border-color:var(--rule)}
+.field-input:focus{border-color:var(--gold);box-shadow:var(--focus)}
+.login-btn{margin-top:6px;width:100%;min-height:46px;padding:12px;border:none;border-radius:var(--r);background:var(--action);color:var(--action-ink);font-weight:600;font-size:15px;letter-spacing:.01em;cursor:pointer;transition:background-color .15s}
+.login-btn:hover{background:var(--action-hover)}
+.login-err{display:none;font-size:13px;color:var(--red);margin-bottom:12px;padding:9px 12px;background:var(--red-tint);border:1px solid var(--outstock-border);border-radius:var(--r)}
+@media(max-width:720px){.login-box{grid-template-columns:1fr}.login-photo{min-height:160px}.login-form{padding:28px 22px}.login-box h1{font-size:38px}}
 
-.login-box h1{font-family:var(--font-display);letter-spacing:-.02em;font-size:21px;color:var(--text1);font-weight:600}
-.login-sub{font-size:10px;color:var(--text3);opacity:.8;display:block;margin-top:1px}
-.login-box p{font-size:13px;color:var(--text2);margin-bottom:18px;line-height:1.65}
-.field-label{font-size:10px;color:var(--text3);margin-bottom:5px;display:block}
-.field-input{width:100%;padding:11px 14px;border:1px solid var(--border2);border-radius:10px;font-family:var(--font-ui);font-size:13px;color:var(--text1);background:var(--bg4);outline:none;margin-bottom:12px}
-[data-theme="light"] .field-input{background:#f8f5f0}
-.field-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(45,107,38,.08)}
-[data-theme="dark"] .field-input:focus{box-shadow:0 0 0 3px rgba(74,222,128,.07)}
-.field-input::placeholder{color:var(--text3)}
-.login-btn{width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-family:var(--font-ui);font-size:13.5px;font-weight:500;cursor:pointer;box-shadow:0 4px 14px rgba(45,107,38,.2)}
-
-.login-btn:hover{opacity:.88}
-.login-err{font-size:12px;color:var(--red);margin-bottom:10px;display:none;padding:8px 12px;background:var(--redfog);border-radius:8px;border:1px solid rgba(220,38,38,.15)}
-
-/* ══ APP ══ */
+/* ══ COQUILLE DE L'APP ══ */
 .app{display:none;min-height:100vh;flex-direction:column}
 .app.visible{display:flex}
+.topbar{height:64px;background:var(--surface);border-bottom:1px solid var(--line2);display:flex;align-items:center;padding:0 24px;gap:18px;flex-shrink:0;position:sticky;top:0;z-index:20}
+.topbar-logo{display:flex;align-items:baseline;gap:12px}
+.topbar-name{font-size:28px;line-height:1}
+.topbar-badge{font-size:12px;font-weight:600;color:var(--gold-text);font-variant-caps:all-small-caps;letter-spacing:.08em;border:1px solid var(--line2);padding:1px 8px;border-radius:var(--r)}
+.topbar-shop{font-family:var(--font-display);font-style:italic;font-size:16px;color:var(--ink2)}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:16px}
+#adminDate{font-size:12px!important;color:var(--ink3)!important}
+.topbar-logout{min-height:36px;padding:0 14px;font-size:13px;color:var(--ink2);background:none;border:1px solid var(--line2);border-radius:var(--r);cursor:pointer}
+.topbar-logout:hover{color:var(--red);border-color:var(--outstock-border)}
+.layout{display:flex;flex:1;min-height:0}
+.sidenav{width:240px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--line);padding:22px 14px 18px;display:flex;flex-direction:column;gap:2px;position:sticky;top:64px;height:calc(100vh - 64px)}
+.nav-item{position:relative;display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:8px 12px 8px 22px;border:none;border-radius:var(--r);background:none;color:var(--ink2);font-size:14.5px;text-align:left;cursor:pointer;transition:color .15s,background-color .15s}
+.nav-item-icon{display:none}
+.nav-item:hover{color:var(--ink);background:var(--fog2)}
+.nav-item.active{color:var(--ink);font-weight:600;background:var(--gold-tint)}
+.nav-item.active::before{content:'';position:absolute;left:9px;top:50%;width:6px;height:6px;margin-top:-3px;background:var(--gold);transform:rotate(45deg)}
+.nav-sep{height:5px;margin:12px 8px;border-top:1px solid var(--line2);border-bottom:1px solid var(--line)}
+.nav-foot{margin-top:auto;padding:14px 8px 0}
+.nav-foot .illu{width:100%;height:34px;opacity:.55}
+.content{flex:1;min-width:0;overflow-y:auto;padding:34px 40px 60px;background:var(--paper)}
+.page{display:none;max-width:1320px}
+.page.active{display:block}
+.page-title{font-family:var(--font-display);font-weight:500;letter-spacing:-.01em;font-size:40px;line-height:1.05;color:var(--ink);margin-bottom:8px}
+.page-sub{font-size:15px;color:var(--ink2);margin-bottom:28px;line-height:1.6;max-width:72ch}
+.page-sub code,.vdb-note code,.vdb-info code{font-family:ui-monospace,Consolas,monospace;font-size:12px;background:var(--sunken);border:1px solid var(--line);padding:1px 5px;border-radius:var(--r)}
+.section-title{font-family:var(--font-display);font-style:italic;font-size:22px;color:var(--gold-text);margin:6px 0 12px}
 
-/* ══ TOPBAR ══ */
-.topbar{height:56px;background:var(--panel);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:14px;flex-shrink:0;box-shadow:var(--shadow)}
-.topbar-logo{display:flex;align-items:center;gap:9px}
-.topbar-mark{width:30px;height:30px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:14px}
+/* ══ CHIFFRES DU TABLEAU DE BORD : un registre, pas des tuiles ══ */
+.stat-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:34px;border-top:2px solid var(--rule);border-bottom:1px solid var(--rule)}
+.stat-card{padding:18px 20px 16px;border-left:1px solid var(--line)}
+.stat-card:first-child{border-left:none;padding-left:0}
+.stat-val{font-family:var(--font-display);font-size:40px;line-height:1;color:var(--ink);font-variant-numeric:tabular-nums lining-nums}
+.stat-label{margin-top:8px;font-size:13px;color:var(--ink3);font-variant-caps:all-small-caps;letter-spacing:.05em}
+.vdb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:0;border-top:2px solid var(--rule);border-bottom:1px solid var(--rule)}
+.vdb-grid .stat-card{padding:14px 16px;border-left:1px solid var(--line)}
+.vdb-grid .stat-val{font-size:30px}
 
-.topbar-name{font-family:var(--font-display);letter-spacing:-.02em;font-size:16px;color:var(--text1);font-weight:600}
-.topbar-badge{font-size:8.5px;padding:2px 8px;border-radius:5px;background:var(--goldfog2);color:var(--gold2);border:1px solid var(--bordergold);margin-left:4px;}
-.topbar-shop{font-size:11px;color:var(--accent);background:var(--accent-fg);padding:3px 11px;border-radius:6px;border:1px solid;border-color:rgba(45,107,38,0.15)}
-[data-theme="dark"] .topbar-shop{border-color:rgba(74,222,128,0.15);color:#4ade80}
-.topbar-right{margin-left:auto;display:flex;align-items:center;gap:12px}
-.topbar-logout{font-size:12px;color:var(--text3);background:none;border:1px solid var(--border);padding:5px 13px;border-radius:8px;cursor:pointer}
-.topbar-logout:hover{color:var(--red);border-color:rgba(220,38,38,.25)}
-.theme-toggle-wrap{display:flex;align-items:center;gap:8px}
-.theme-label{font-size:10px;color:var(--text3);white-space:nowrap}
-
-/* ══ LAYOUT ══ */
-.layout{display:flex;flex:1;overflow:hidden}
-
-/* ══ SIDENAV ══ */
-.sidenav{width:224px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--border);padding:16px 10px;display:flex;flex-direction:column;gap:2px;box-shadow:var(--shadow)}
-.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;cursor:pointer;font-size:13px;color:var(--text2);transition:all .15s;border:none;background:none;width:100%;text-align:left}
-.nav-item:hover{background:var(--fog2);color:var(--text1)}
-.nav-item.active{background:var(--accent-fg);color:var(--accent);font-weight:500}
-[data-theme="dark"] .nav-item.active{background:rgba(74,222,128,0.1);color:#4ade80}
-.nav-item-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0}
-.nav-sep{height:1px;background:var(--border);margin:8px 0}
-
-/* ══ CONTENT ══ */
-.content{flex:1;overflow-y:auto;padding:28px;background:var(--bg2)}
-.content::-webkit-scrollbar{width:3px}
-.content::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
-.page{display:none}.page.active{display:block}
-.page-title{font-family:var(--font-display);letter-spacing:-.02em;font-size:24px;color:var(--text1);font-weight:600;margin-bottom:4px}
-.page-sub{font-size:12px;color:var(--text3);margin-bottom:26px;line-height:1.6}
-
-/* ══ STAT CARDS ══ */
-.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px}
-.stat-card{background:var(--panel);border:1px solid var(--border);border-radius:var(--rl);padding:18px;box-shadow:var(--shadow)}
-.stat-val{font-family:var(--font-display);letter-spacing:-.02em;font-size:34px;color:var(--gold2);font-weight:500;line-height:1}
-[data-theme="dark"] .stat-val{color:var(--accent)}
-.stat-label{font-size:10px;color:var(--text3);margin-top:5px}
-
-/* ══ SECTION TITLE ══ */
-.section-title{font-size:9.5px;color:var(--text3);font-weight:500;margin-bottom:12px}
-
-/* ══ TABLE ══ */
-.table-wrap{background:var(--panel);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;margin-bottom:26px;box-shadow:var(--shadow)}
-.table-header{padding:13px 17px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--fog)}
-.table-header-title{font-size:12.5px;color:var(--text2);font-weight:500}
-table{width:100%;border-collapse:collapse}
-th{padding:9px 15px;text-align:left;font-size:9.5px;color:var(--text3);border-bottom:1px solid var(--border);font-weight:500;white-space:nowrap;background:var(--fog)}
-td{padding:11px 15px;font-size:12.5px;color:var(--text1);border-bottom:1px solid rgba(0,0,0,0.04)}
-[data-theme="dark"] td{border-bottom:1px solid rgba(255,255,255,0.04)}
-tr:last-child td{border:none}
-tr:hover td{background:var(--fog2)}
-.td-num{font-family:var(--font-display);letter-spacing:-.02em;font-size:16px;color:var(--gold2)}
-[data-theme="dark"] .td-num{color:var(--accent)}
-.td-badge{display:inline-flex;align-items:center;font-size:10px;padding:2px 9px;border-radius:10px;font-weight:500;border:1px solid}
+/* ══ REGISTRES (tableaux) ══ */
+.table-wrap{background:var(--surface);border:1px solid var(--line);margin-bottom:30px;overflow:hidden}
+.table-header{padding:16px 20px;border-bottom:1px solid var(--line2);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.table-header-title{font-family:var(--font-display);font-size:20px;color:var(--ink)}
+.table-wrap>div[style*="overflow"]{scrollbar-color:var(--line2) transparent}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums lining-nums}
+th{padding:10px 16px;text-align:left;font-size:13px;font-weight:600;color:var(--ink3);font-variant-caps:all-small-caps;letter-spacing:.05em;white-space:nowrap;border-bottom:1px solid var(--line2);background:var(--surface);position:sticky;top:0}
+td{padding:11px 16px;font-size:14px;color:var(--ink);border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:var(--fog2)}
+.td-num{font-family:var(--font-display);font-size:18px;color:var(--gold-text)}
+.td-badge{display:inline-flex;align-items:center;font-size:12px;font-weight:600;padding:2px 8px;border-radius:var(--r);border:1px solid;white-space:nowrap}
 .td-badge.green{background:var(--badge-green-bg);color:var(--badge-green-color);border-color:var(--badge-green-border)}
 .td-badge.red{background:var(--badge-red-bg);color:var(--badge-red-color);border-color:var(--badge-red-border)}
 .td-badge.gold{background:var(--badge-gold-bg);color:var(--badge-gold-color);border-color:var(--badge-gold-border)}
+.user-avatar{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;margin-right:10px;border:1px solid var(--line2);border-radius:var(--r);font-family:var(--font-display);font-size:13px;color:var(--gold-text);background:var(--gold-tint)}
 
-/* ══ PERIOD SELECTOR ══ */
-.period-tabs{display:flex;gap:3px;background:var(--bg4);padding:3px;border-radius:9px;border:1px solid var(--border);margin-bottom:22px;width:fit-content}
-.period-tab{padding:5px 15px;border-radius:7px;font-size:11px;cursor:pointer;color:var(--text3);border:none;background:none}
-.period-tab.active{background:var(--panel);color:var(--accent);box-shadow:var(--shadow);font-weight:500}
+/* ══ PÉRIODE ══ */
+.period-tabs{display:flex;gap:4px;margin-bottom:24px;border-bottom:1px solid var(--line2);width:fit-content}
+.period-tab{position:relative;padding:8px 14px;font-size:14px;color:var(--ink3);border:none;background:none;cursor:pointer}
+.period-tab:hover{color:var(--ink)}
+.period-tab.active{color:var(--ink);font-weight:600}
+.period-tab.active::after{content:'';position:absolute;left:10px;right:10px;bottom:-1px;height:2px;background:var(--gold)}
 
-/* ══ BUTTONS ══ */
-.stock-actions{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}
-.btn{height:35px;padding:0 15px;border-radius:9px;font-family:var(--font-ui);font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;border:none;white-space:nowrap;font-weight:500}
-.btn-primary{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(45,107,38,.2)}
+/* ══ BOUTONS ══ */
+.stock-actions{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:0 16px;border-radius:var(--r);font-size:14px;font-weight:600;letter-spacing:.01em;cursor:pointer;white-space:nowrap;border:1px solid transparent;transition:background-color .15s,border-color .15s,color .15s}
+.btn-primary{background:var(--action);color:var(--action-ink)}
+.btn-primary:hover{background:var(--action-hover)}
+.btn-secondary{background:transparent;color:var(--ink);border-color:var(--line2)}
+.btn-secondary:hover{border-color:var(--gold);color:var(--gold-text)}
+.btn-gold{background:var(--gold-tint);color:var(--gold-text);border-color:var(--line2)}
+.btn-gold:hover{border-color:var(--gold)}
+.btn-danger{background:transparent;color:var(--red);border-color:var(--outstock-border)}
+.btn-danger:hover{background:var(--red-tint)}
+.btn:disabled{opacity:.5;cursor:default}
 
-.btn-primary:hover{opacity:.88}
-.btn-secondary{background:var(--panel);color:var(--text2);border:1px solid var(--border)}
-.btn-secondary:hover{border-color:var(--border2);color:var(--text1)}
-.btn-gold{background:var(--goldfog2);color:var(--gold2);border:1px solid var(--bordergold)}
-.btn-gold:hover{opacity:.88}
-.btn-danger{background:var(--redfog);color:var(--red);border:1px solid rgba(220,38,38,.18)}
-.btn-danger:hover{background:rgba(220,38,38,.12)}
-
-/* ══ STOCK TABLE ══ */
-.stock-input{background:transparent;border:none;color:var(--text1);font-family:var(--font-ui);font-size:12.5px;width:100%;outline:none;padding:2px 4px;border-radius:5px}
-.stock-input:focus{background:var(--bg4);border:1px solid rgba(45,107,38,.25)}
-[data-theme="dark"] .stock-input:focus{background:var(--bg3);border-color:rgba(74,222,128,.2)}
-.margin-cell{font-weight:500}
+/* ══ STOCK (saisie dans le tableau) ══ */
+.stock-input{width:100%;padding:4px 6px;border:1px solid transparent;border-radius:var(--r);background:transparent;color:var(--ink);font-size:14px;outline:none}
+.stock-input:hover{border-color:var(--line)}
+.stock-input:focus{background:var(--sunken);border-color:var(--gold)}
+.margin-cell{font-weight:600}
 .margin-pos{color:var(--margin-pos)}
 .margin-neg{color:var(--margin-neg)}
 
-/* ══ CHART ══ */
-.chart-wrap{background:var(--panel);border:1px solid var(--border);border-radius:var(--rl);padding:18px;margin-bottom:22px;box-shadow:var(--shadow)}
-.bar-chart{display:flex;flex-direction:column;gap:9px;margin-top:12px}
-.bar-row{display:flex;align-items:center;gap:10px}
-.bar-label{font-size:12px;color:var(--text2);min-width:148px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.bar-track{flex:1;height:22px;background:var(--fog2);border-radius:5px;overflow:hidden}
-.bar-fill{height:22px;border-radius:5px;background:var(--bar-fill);display:flex;align-items:center;padding-left:9px;min-width:28px}
-.bar-count{font-size:10px;color:rgba(255,255,255,.85);font-weight:500}
-.bar-val{font-size:11px;color:var(--text3);min-width:44px;text-align:right}
-
-/* ══ USERS ══ */
-.user-avatar{width:30px;height:30px;border-radius:50%;background:var(--accent-fg);border:1px solid;border-color:rgba(45,107,38,.15);display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:var(--accent);font-weight:600;margin-right:8px}
-[data-theme="dark"] .user-avatar{border-color:rgba(74,222,128,.15);color:#4ade80}
+/* ══ GRAPHIQUES EN BARRES ══ */
+.chart-wrap{background:var(--surface);border:1px solid var(--line);padding:20px 22px;margin-bottom:24px}
+.bar-chart{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.bar-row{display:flex;align-items:center;gap:12px}
+.bar-label{min-width:160px;max-width:220px;font-size:14px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-track{flex:1;height:20px;background:var(--fog2);overflow:hidden}
+.bar-fill{height:20px;min-width:30px;background:var(--bar-fill);display:flex;align-items:center;padding-left:8px}
+.bar-count{font-size:12px;font-weight:600;color:#171614;font-variant-numeric:tabular-nums}
+.bar-val{min-width:52px;text-align:right;font-size:13px;color:var(--ink3);font-variant-numeric:tabular-nums}
 
 /* ══ TOAST ══ */
-.toast{position:fixed;bottom:20px;right:20px;z-index:400;background:var(--panel);color:var(--text1);padding:10px 16px;border-radius:10px;font-size:12.5px;box-shadow:var(--shadow2);animation:toastIn .22s ease;border:1px solid var(--border2);border-left:3px solid var(--gold2);max-width:270px}
-@keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.toast{position:fixed;bottom:22px;right:22px;z-index:400;max-width:340px;background:var(--surface);color:var(--ink);padding:12px 16px 12px;font-size:14px;border:1px solid var(--line2);border-top:none;box-shadow:var(--shadow2);animation:toastIn .3s cubic-bezier(.16,1,.3,1)}
+.toast::before{content:'';position:absolute;left:0;right:0;top:0;height:5px;border-top:2px solid var(--rule);border-bottom:1px solid var(--rule)}
+@keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 
-/* ══ EMPTY STATE ══ */
-.empty-state{text-align:center;padding:44px 20px;color:var(--text3);font-size:13px;line-height:1.7}
-.empty-icon{font-size:38px;opacity:.2;margin-bottom:10px}
+/* ══ ÉTATS VIDES ══ */
+.empty-state{text-align:center;padding:46px 20px;color:var(--ink3);font-size:14px;line-height:1.7}
+.empty-icon{width:46px;height:46px;margin:0 auto 12px;font-size:0;color:transparent;background-color:var(--ink3);opacity:.6;
+  -webkit-mask:url(assets/illustrations/graine.svg) center/contain no-repeat;mask:url(assets/illustrations/graine.svg) center/contain no-repeat}
 
-/* ══ BASE DE VARIÉTÉS ══ */
-.vdb-body{padding:18px 20px;display:flex;flex-direction:column;gap:12px}
-.vdb-info{font-size:12px;color:var(--text2);line-height:1.7}
-.vdb-info b{color:var(--text1);font-weight:500}
+/* ══ BASE DE VARIÉTÉS, CATALOGUE, QUALITÉ, RÉGLAGES ══ */
+.vdb-body{padding:20px 22px;display:flex;flex-direction:column;gap:14px}
+.vdb-info{font-size:14px;color:var(--ink2);line-height:1.65}
+.vdb-info b{color:var(--ink);font-weight:600}
 .vdb-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.vdb-select{height:32px;padding:0 10px;border:1px solid var(--border2);border-radius:8px;background:var(--bg4);color:var(--text1);font-family:var(--font-ui);font-size:12px;outline:none;max-width:260px}
-.vdb-select:focus{border-color:var(--accent)}
+.vdb-select,.vdb-search{height:38px;padding:0 12px;border:1px solid var(--line2);border-radius:var(--r);background:var(--sunken);color:var(--ink);font-size:14px;outline:none}
+.vdb-select{max-width:280px}
+.vdb-search{width:260px}
+.vdb-select:hover,.vdb-search:hover{border-color:var(--rule)}
+.vdb-select:focus,.vdb-search:focus{border-color:var(--gold);box-shadow:var(--focus)}
 .vdb-select:disabled{opacity:.55}
-.vdb-select.auto{border-color:var(--badge-green-border);box-shadow:0 0 0 1px var(--badge-green-border)}
-.vdb-select.saved{border-color:var(--bordergold);box-shadow:0 0 0 1px var(--bordergold)}
-.vdb-check{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text2);cursor:pointer}
-.vdb-check input{accent-color:var(--accent)}
-.vdb-foot{padding:13px 17px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:var(--fog)}
-.vdb-note{font-size:11px;color:var(--text3);line-height:1.6}
-.vdb-ex{max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text2);font-size:12px}
-.vdb-fill{display:inline-block;width:46px;height:5px;border-radius:3px;background:var(--fog2);vertical-align:middle;margin-right:6px;overflow:hidden}
+.vdb-select.auto{border-color:var(--badge-green-border);box-shadow:inset 0 0 0 1px var(--badge-green-border)}
+.vdb-select.saved{border-color:var(--gold);box-shadow:inset 0 0 0 1px var(--line2)}
+.vdb-check{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink2);cursor:pointer}
+.vdb-check input{width:16px;height:16px;accent-color:var(--gold)}
+.vdb-foot{padding:14px 20px;border-top:1px solid var(--line2);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.vdb-note{font-size:13px;color:var(--ink3);line-height:1.6}
+.vdb-ex{max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink2);font-size:13px}
+.vdb-fill{display:inline-block;width:52px;height:5px;background:var(--fog2);vertical-align:middle;margin-right:8px;overflow:hidden}
 .vdb-fill i{display:block;height:5px;background:var(--bar-fill)}
-.vdb-null{color:var(--text3);font-style:italic}
-.vdb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
-.vdb-grid .stat-card{padding:14px}
-.vdb-grid .stat-val{font-size:28px}
-.vdb-list{font-size:12px;color:var(--text2);line-height:1.75;max-height:260px;overflow-y:auto;padding:4px 0}
+.vdb-null{color:var(--ink3);font-style:italic}
+.vdb-list{font-size:14px;color:var(--ink2);line-height:1.75;max-height:280px;overflow-y:auto;padding:4px 0}
 .vdb-list li{margin-left:18px}
-.vdb-progress{height:8px;border-radius:5px;background:var(--fog2);overflow:hidden}
-.vdb-progress i{display:block;height:8px;width:0;background:var(--bar-fill);transition:width .2s}
-.vdb-detail{padding:12px 15px;background:var(--fog);font-size:12px;color:var(--text2);line-height:1.75}
-.vdb-detail b{color:var(--text1);font-weight:500}
-.vdb-detail a{color:var(--accent)}
-.vdb-search{height:32px;padding:0 12px;border:1px solid var(--border2);border-radius:8px;background:var(--bg4);color:var(--text1);font-family:var(--font-ui);font-size:12px;outline:none;width:240px}
-.vdb-search:focus{border-color:var(--accent)}
-.vdb-sub{font-size:12px;color:var(--text1);font-weight:500;margin-top:4px}
-.btn:disabled{opacity:.5;cursor:default}
-.page-sub code,.vdb-note code,.vdb-info code{font-size:11px;background:var(--fog2);padding:1px 5px;border-radius:4px}
+.vdb-list li::marker{color:var(--gold)}
+.vdb-progress{height:6px;background:var(--fog2);overflow:hidden;border-bottom:1px solid var(--line)}
+.vdb-progress i{display:block;height:6px;width:0;background:var(--gold);transition:width .25s cubic-bezier(.16,1,.3,1)}
+.vdb-detail{padding:14px 18px;background:var(--sunken);font-size:14px;color:var(--ink2);line-height:1.75;border-top:1px solid var(--line)}
+.vdb-detail b{color:var(--ink);font-weight:600}
+.vdb-sub{font-family:var(--font-display);font-size:19px;color:var(--ink);margin-top:6px}
+textarea{border-radius:var(--r)!important;border-color:var(--line2)!important;background:var(--sunken)!important;color:var(--ink)!important}
+textarea:focus{border-color:var(--gold)!important;box-shadow:var(--focus);outline:none}
+select,input[type="number"],input[type="text"],input[type="search"]{accent-color:var(--gold)}
 
-/* ══ IDENTITÉ STRAINSAGE (alignée sur l'app client) ══ */
-html,body{font-family:var(--font-ui);-webkit-font-smoothing:antialiased}
-:focus-visible{outline:none;box-shadow:var(--focus)!important}
-.login-box{border-radius:24px;position:relative;overflow:hidden}
-.login-box::before{content:'';position:absolute;left:0;right:0;top:0;height:8px;background:linear-gradient(90deg,#4a3486 0 33.3%,#0b5f73 33.3% 66.6%,#9a5f00 66.6%)}
-.login-mark,.topbar-mark{display:none}
-.login-box h1{font-size:38px;font-weight:800;letter-spacing:-.04em}
-.login-box h1 em,.topbar-name em{font-style:normal;color:var(--red-brand)}
-.login-sub{font-size:13px;margin-top:4px}
-.login-btn{background:var(--ink);color:var(--bg3);border-radius:99px;box-shadow:none;font-weight:600}
-.field-label{font-size:13px;font-weight:600;color:var(--text1)}
-.field-input{border-radius:12px;font-size:14px}
-.topbar-name{font-size:23px;font-weight:800;letter-spacing:-.03em}
-.topbar-badge{font-size:11px}
-.nav-item{font-size:14px;border-radius:10px}
-.nav-item.active,[data-theme="dark"] .nav-item.active{background:var(--ink);color:var(--bg3);font-weight:600}
-.page-title{font-size:30px;font-weight:800;letter-spacing:-.035em}
-.page-sub{font-size:14px;color:var(--text2)}
-.section-title{font-size:14px;color:var(--text1);font-weight:600}
-.stat-val,[data-theme="dark"] .stat-val{color:var(--text1);font-weight:700;letter-spacing:-.03em}
-.stat-label{font-size:13px}
-th{font-size:12px;color:var(--text2);font-weight:600}
-td{font-size:13.5px}
-.td-num,[data-theme="dark"] .td-num{color:var(--text1);font-weight:600}
-.btn{height:38px;border-radius:99px;font-size:13px;padding:0 16px}
-.btn-primary,[data-theme="dark"] .btn-primary{background:var(--ink);color:var(--bg3);box-shadow:none}
-.btn-gold{background:var(--goldfog);color:var(--gold2)}
-.period-tab{font-size:13px}
-.toast{border-radius:12px;font-size:14px}
-.vdb-sub{font-size:14px}
-.table-header-title{font-size:14px;color:var(--text1);font-weight:600}
-
-/* ══ RESPONSIVE ══ */
+/* ══ ADAPTATION ══ */
+@media(max-width:1100px){.content{padding:26px 24px 50px}.stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.stat-card:nth-child(3){border-left:none;padding-left:0}.stat-card:nth-child(n+3){border-top:1px solid var(--line)}}
 @media(max-width:768px){
-  .stat-grid{grid-template-columns:1fr 1fr}
   .sidenav{display:none}
-  .content{padding:16px}
+  .content{padding:18px 16px 40px}
+  .topbar{padding:0 16px;gap:12px}
+  #adminDate,.topbar-shop{display:none}
+  .page-title{font-size:30px}
+  .bar-label{min-width:110px}
 }
-
-/* ══ LOGO : « strainsage », le point du i est une jeune pousse ══ */
-.sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-.logo-wm{font-family:'Bricolage Grotesque','Figtree',system-ui,sans-serif;font-weight:800;letter-spacing:-.05em;line-height:1;color:var(var(--text1));display:inline-block;white-space:nowrap}
-.logo-i{position:relative;display:inline-block}
-.logo-sprout{position:absolute;left:50%;top:-.23em;width:.86em;height:.69em;transform:translateX(-50%);overflow:visible}
-.lf1{fill:#00703c}.lf2{fill:#2f9a5f}.lst{stroke:#00703c;stroke-width:2.6;stroke-linecap:round;fill:none}
-.lmr{stroke:var(--panel);stroke-width:1.4;stroke-linecap:round;fill:none}
-[data-theme="dark"] .lf1,[data-theme="dark"] .lst{fill:#4cc38a}[data-theme="dark"] .lst{fill:none;stroke:#4cc38a}[data-theme="dark"] .lf2{fill:#8fe0b4}
 </style>
 </head>
 <body>
@@ -287,10 +231,13 @@ td{font-size:13.5px}
 <!-- LOGIN -->
 <div class="login-wrap" id="loginWrap">
   <div class="login-box">
+    <figure class="login-photo photo-etalonnee"><img src="assets/photos/trichomes-givre-800.webp" alt="Trichomes givrés en gros plan" width="800" height="1000" decoding="async"><figcaption>Photo : Premium Cultivars, Unsplash</figcaption></figure>
+    <div class="login-form">
     <div class="login-logo">
-      <div class="login-mark">🌿</div>
-      <div><h1><span class="logo-wm"><span class="sr-only">StrainSage</span><span aria-hidden="true">stra<span class="logo-i">ı<svg class="logo-sprout" viewBox="0 0 30 24" aria-hidden="true"><path class="lst" d="M15 24V17.6"/><path class="lf1" d="M14.6 18.8C9.6 19.8 2.6 16.8.8 7.6 8.4 6.2 13.8 10.8 14.6 18.8Z"/><path class="lf1" d="M15.4 18.8C16.2 10.8 21.6 6.2 29.2 7.6 27.4 16.8 20.4 19.8 15.4 18.8Z"/><path class="lf2" d="M15 17.8C12.4 13.8 12.6 5.8 15 1 17.4 5.8 17.6 13.8 15 17.8Z"/><path class="lmr" d="M13.6 17.8C10.6 15.2 7 12.2 3.6 9.2M16.4 17.8C19.4 15.2 23 12.2 26.4 9.2M15 15.6V5"/></svg></span>nsage</span></span></h1><span class="login-sub">Administration de la boutique</span></div>
+      <div class="login-mark"></div>
+      <div><h1><span class="logo-wm"><span class="sr-only">StrainSage</span><span aria-hidden="true">stra<span class="logo-i">ı<span class="logo-sprout"></span></span>nsage</span></span></h1><span class="login-sub">Administration de la boutique</span></div>
     </div>
+    <div class="double-filet" aria-hidden="true"></div>
     <p>Connectez-vous avec vos identifiants administrateur pour accéder au dashboard.</p>
     <div class="login-err" id="loginErr">Identifiants incorrects.</div>
     <label class="field-label">Nom du magasin</label>
@@ -298,6 +245,7 @@ td{font-size:13.5px}
     <label class="field-label">Mot de passe admin</label>
     <input class="field-input" type="password" id="loginPass" placeholder="••••••••"/>
     <button class="login-btn" onclick="doLogin()">Accéder au dashboard →</button>
+    </div>
   </div>
 </div>
 
@@ -305,15 +253,15 @@ td{font-size:13.5px}
 <div class="app" id="adminApp">
   <div class="topbar">
     <div class="topbar-logo">
-      <div class="topbar-mark">🌿</div>
-      <div class="topbar-name"><span class="logo-wm"><span class="sr-only">StrainSage</span><span aria-hidden="true">stra<span class="logo-i">ı<svg class="logo-sprout" viewBox="0 0 30 24" aria-hidden="true"><path class="lst" d="M15 24V17.6"/><path class="lf1" d="M14.6 18.8C9.6 19.8 2.6 16.8.8 7.6 8.4 6.2 13.8 10.8 14.6 18.8Z"/><path class="lf1" d="M15.4 18.8C16.2 10.8 21.6 6.2 29.2 7.6 27.4 16.8 20.4 19.8 15.4 18.8Z"/><path class="lf2" d="M15 17.8C12.4 13.8 12.6 5.8 15 1 17.4 5.8 17.6 13.8 15 17.8Z"/><path class="lmr" d="M13.6 17.8C10.6 15.2 7 12.2 3.6 9.2M16.4 17.8C19.4 15.2 23 12.2 26.4 9.2M15 15.6V5"/></svg></span>nsage</span></span></div>
+      <div class="topbar-mark"></div>
+      <div class="topbar-name"><button type="button" class="logo-home" aria-label="Revenir au tableau de bord" title="Revenir au tableau de bord" onclick="if(document.getElementById('adminApp').classList.contains('visible'))showPage('dashboard')"><span class="logo-wm"><span class="sr-only">StrainSage</span><span aria-hidden="true">stra<span class="logo-i">ı<span class="logo-sprout"></span></span>nsage</span></span></button></div>
       <span class="topbar-badge">ADMIN</span>
     </div>
     <div class="topbar-shop" id="shopName">—</div>
     <div class="topbar-right">
-      <span style="font-size:11px;color:var(--text3)" id="adminDate"></span>
+      <span style="font-size:13px;color:var(--text3)" id="adminDate"></span>
       <div class="theme-toggle-wrap">
-        <span class="theme-label" id="themeLabel">☀️ Clair</span>
+        <span class="theme-label" id="themeLabel">Clair</span>
         <div class="theme-toggle" id="themeToggle" onclick="toggleTheme()"></div>
       </div>
       <button class="topbar-logout" onclick="doLogout()">Déconnexion</button>
@@ -323,27 +271,28 @@ td{font-size:13.5px}
   <div class="layout">
     <div class="sidenav">
       <button class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard">
-        <span class="nav-item-icon">📊</span>Dashboard
+        <span class="nav-item-icon"></span>Dashboard
       </button>
       <button class="nav-item" onclick="showPage('stock')" id="nav-stock">
-        <span class="nav-item-icon">📦</span>Gestion stock
+        <span class="nav-item-icon"></span>Gestion stock
       </button>
       <button class="nav-item" onclick="showPage('stats')" id="nav-stats">
-        <span class="nav-item-icon">📈</span>Statistiques
+        <span class="nav-item-icon"></span>Statistiques
       </button>
       <button class="nav-item" onclick="showPage('users')" id="nav-users">
-        <span class="nav-item-icon">👥</span>Clients
+        <span class="nav-item-icon"></span>Clients
       </button>
       <button class="nav-item" onclick="showPage('gst')" id="nav-gst">
-        <span class="nav-item-icon">🛒</span>Catalogue Garden Seeds
+        <span class="nav-item-icon"></span>Catalogue Garden Seeds
       </button>
       <button class="nav-item" onclick="showPage('varietes')" id="nav-varietes">
-        <span class="nav-item-icon">🌿</span>Base de variétés
+        <span class="nav-item-icon"></span>Base de variétés
       </button>
       <div class="nav-sep"></div>
       <button class="nav-item" onclick="showPage('settings')" id="nav-settings">
-        <span class="nav-item-icon">⚙️</span>Paramètres
+        <span class="nav-item-icon"></span>Paramètres
       </button>
+      <div class="nav-foot" aria-hidden="true"><span class="illu illu-semis"></span></div>
     </div>
 
     <div class="content">
@@ -360,11 +309,11 @@ td{font-size:13.5px}
         </div>
         <div class="section-title">Top variétés recherchées</div>
         <div class="chart-wrap">
-          <div class="bar-chart" id="topChart"><div class="empty-state"><div class="empty-icon">📊</div>Les données apparaîtront au fil des recherches</div></div>
+          <div class="bar-chart" id="topChart"><div class="empty-state"><div class="empty-icon"></div>Les données apparaîtront au fil des recherches</div></div>
         </div>
         <div class="section-title">Variétés les plus mises en favoris</div>
         <div class="chart-wrap">
-          <div class="bar-chart" id="favChart"><div class="empty-state"><div class="empty-icon">⭐</div>Aucun favori enregistré pour le moment</div></div>
+          <div class="bar-chart" id="favChart"><div class="empty-state"><div class="empty-icon"></div>Aucun favori enregistré pour le moment</div></div>
         </div>
       </div>
 
@@ -373,17 +322,17 @@ td{font-size:13.5px}
         <div class="page-title">Gestion du stock</div>
         <div class="page-sub">Importez votre catalogue, gérez les prix d'achat et de vente, suivez les marges.</div>
         <div class="stock-actions">
-          <button class="btn btn-primary" onclick="document.getElementById('stockFile').click()">📥 Importer CSV/Excel</button>
-          <button class="btn btn-gold" onclick="exportStock()">📤 Exporter</button>
+          <button class="btn btn-primary" onclick="document.getElementById('stockFile').click()">Importer CSV/Excel</button>
+          <button class="btn btn-gold" onclick="exportStock()">Exporter</button>
           <button class="btn btn-secondary" onclick="addStockRow()">+ Ajouter une ligne</button>
-          <button class="btn btn-secondary" onclick="saveStockToFirebase()">💾 Sauvegarder</button>
-          <button class="btn btn-danger" onclick="clearStock()">🗑 Vider</button>
+          <button class="btn btn-secondary" onclick="saveStockToFirebase()">Sauvegarder</button>
+          <button class="btn btn-danger" onclick="clearStock()">Vider</button>
         </div>
         <input type="file" id="stockFile" accept=".csv,.xlsx,.xls" style="display:none" onchange="importStockFile(this)">
         <div class="table-wrap">
           <div class="table-header">
             <span class="table-header-title" id="stockCount">0 variété</span>
-            <span style="font-size:10px;color:var(--text3)">Cliquez sur une cellule pour modifier</span>
+            <span style="font-size:12px;color:var(--text3)">Cliquez sur une cellule pour modifier</span>
           </div>
           <div style="overflow-x:auto">
             <table>
@@ -412,8 +361,8 @@ td{font-size:13.5px}
           </table>
         </div>
         <div style="display:flex;gap:10px;margin-top:8px">
-          <button class="btn btn-gold" onclick="exportStats()">📤 Exporter CSV</button>
-          <button class="btn btn-secondary" onclick="exportStatsXLSX()">📊 Exporter Excel</button>
+          <button class="btn btn-gold" onclick="exportStats()">Exporter CSV</button>
+          <button class="btn btn-secondary" onclick="exportStatsXLSX()">Exporter Excel</button>
         </div>
       </div>
 
@@ -423,13 +372,13 @@ td{font-size:13.5px}
         <div class="page-sub">Créez des comptes clients et consultez leur activité.</div>
         <div class="stock-actions">
           <button class="btn btn-primary" onclick="generateUserCode()">+ Générer un code client</button>
-          <button class="btn btn-secondary" onclick="loadUsers()">🔄 Actualiser</button>
+          <button class="btn btn-secondary" onclick="loadUsers()">Actualiser</button>
         </div>
         <div id="newCodeBox" style="display:none;background:var(--goldfog2);border:1px solid var(--bordergold);border-radius:var(--r);padding:18px;margin-bottom:18px;text-align:center">
-          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Nouveau code client</div>
+          <div style="font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Nouveau code client</div>
           <div style="font-family:'Cormorant Garamond',serif;font-size:30px;color:var(--gold2);letter-spacing:4px" id="newCodeDisplay">—</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:6px">Mot de passe : <strong style="color:var(--gold2)" id="shopCodeDisplay">cultureindooranglet</strong></div>
-          <div style="font-size:10.5px;color:var(--text3);margin-top:4px">Donnez ces identifiants à votre client</div>
+          <div style="font-size:13px;color:var(--text3);margin-top:6px">Mot de passe : <strong style="color:var(--gold2)" id="shopCodeDisplay">cultureindooranglet</strong></div>
+          <div style="font-size:13px;color:var(--text3);margin-top:4px">Donnez ces identifiants à votre client</div>
         </div>
         <div class="table-wrap">
           <table>
@@ -448,7 +397,7 @@ td{font-size:13.5px}
         <div class="table-wrap">
           <div class="vdb-body">
             <div class="vdb-row">
-              <button class="btn btn-primary" onclick="vdbPickFile()">📥 Choisir un fichier CSV</button>
+              <button class="btn btn-primary" onclick="vdbPickFile()">Choisir un fichier CSV</button>
               <input type="file" id="vdbFile" accept=".csv,.txt,text/csv" style="display:none" onchange="vdbOnFile(this)"/>
               <span id="vdbParseOpts" style="display:none" class="vdb-row">
                 <label class="vdb-note" for="vdbEnc">Encodage</label>
@@ -488,7 +437,7 @@ td{font-size:13.5px}
             <div style="overflow-x:auto"><table><thead><tr><th>Nom</th><th>Alias</th><th>Type</th><th>THC %</th><th>CBD %</th><th>Floraison (sem.)</th><th>Parents</th><th>Banques</th><th>Sources</th><th></th></tr></thead><tbody id="vdbPreviewBody"></tbody></table></div>
             <div class="vdb-foot">
               <span class="vdb-note">Une fiche déjà présente dans la base est mise à jour, jamais dupliquée.</span>
-              <div class="vdb-row"><button class="btn btn-secondary" id="vdbBtnTest" onclick="vdbImport(true)">🧪 Importer 20 fiches (test)</button><button class="btn btn-primary" id="vdbBtnAll" onclick="vdbImport(false)">💾 Tout importer</button></div>
+              <div class="vdb-row"><button class="btn btn-secondary" id="vdbBtnTest" onclick="vdbImport(true)">Importer 20 fiches (test)</button><button class="btn btn-primary" id="vdbBtnAll" onclick="vdbImport(false)">Tout importer</button></div>
             </div>
           </div>
         </div>
@@ -502,9 +451,9 @@ td{font-size:13.5px}
         <div class="table-wrap">
           <div class="table-header">
             <span class="table-header-title" id="vdbListCount">—</span>
-            <div class="vdb-row"><input class="vdb-search" id="vdbSearch" placeholder="Rechercher un nom ou un alias…" oninput="vdbSearch()"/><button class="btn btn-secondary" title="Recharger" onclick="vdbOpen(true)">🔄</button><button class="btn btn-secondary" id="vdbBtnRebuild" onclick="vdbRebuild()" title="Relit toutes les fiches et recrée l'index utilisé par le chat (noms, alias et critères)">⟳ Reconstruire l'index</button><button class="btn btn-danger" id="vdbBtnClear" onclick="vdbClear()">🗑 Vider la base</button></div>
+            <div class="vdb-row"><input class="vdb-search" id="vdbSearch" placeholder="Rechercher un nom ou un alias…" oninput="vdbSearch()"/><button class="btn btn-secondary" title="Recharger" onclick="vdbOpen(true)"></button><button class="btn btn-secondary" id="vdbBtnRebuild" onclick="vdbRebuild()" title="Relit toutes les fiches et recrée l'index utilisé par le chat (noms, alias et critères)">⟳ Reconstruire l'index</button><button class="btn btn-danger" id="vdbBtnClear" onclick="vdbClear()">Vider la base</button></div>
           </div>
-          <div style="overflow-x:auto"><table><thead><tr><th>Nom</th><th>Alias</th><th>Type</th><th>THC %</th><th>Floraison (sem.)</th><th>Banques</th><th>Sources</th><th></th></tr></thead><tbody id="vdbListBody"><tr><td colspan="8"><div class="empty-state"><div class="empty-icon">🌿</div>Aucune fiche pour le moment</div></td></tr></tbody></table></div>
+          <div style="overflow-x:auto"><table><thead><tr><th>Nom</th><th>Alias</th><th>Type</th><th>THC %</th><th>Floraison (sem.)</th><th>Banques</th><th>Sources</th><th></th></tr></thead><tbody id="vdbListBody"><tr><td colspan="8"><div class="empty-state"><div class="empty-icon"></div>Aucune fiche pour le moment</div></td></tr></tbody></table></div>
         </div>
       </div>
 
@@ -514,7 +463,7 @@ td{font-size:13.5px}
         <div class="page-sub">Le chat ne recommande que les graines disponibles chez Garden Seeds Trading. Synchronise le catalogue pour mettre à jour les variétés, les prix et la disponibilité.<br>Lecture seule : aucune commande ne peut partir de l'app.</div>
         <div class="table-wrap">
           <div class="vdb-body">
-            <div class="vdb-row"><button class="btn btn-primary" id="gstBtn" onclick="gstSync()">🔄 Synchroniser le catalogue Garden Seeds</button><button class="btn btn-secondary" id="gstResumeBtn" style="display:none" onclick="gstResume()">⏯ Reprendre la synchro</button><span class="vdb-note" id="gstLast">—</span></div>
+            <div class="vdb-row"><button class="btn btn-primary" id="gstBtn" onclick="gstSync()">Synchroniser le catalogue Garden Seeds</button><button class="btn btn-secondary" id="gstResumeBtn" style="display:none" onclick="gstResume()">⏯ Reprendre la synchro</button><span class="vdb-note" id="gstLast">—</span></div>
             <div id="gstProgress" style="display:none"><div class="vdb-info" id="gstProgTxt"></div><div class="vdb-progress"><i id="gstProg"></i></div><div class="vdb-info" id="gstWait" role="status" aria-live="polite" style="display:none;color:var(--badge-gold-color)"></div></div>
             <div id="gstReport"></div>
           </div>
@@ -523,11 +472,11 @@ td{font-size:13.5px}
         <div class="table-wrap">
           <div class="vdb-body">
             <div class="vdb-info">Analyse en lecture seule de l'index du catalogue : compare ce que voit le chat (stocké) à ce que donnerait le parseur actuel sur les mêmes noms bruts. Aucune écriture, aucun appel à Garden Seeds.</div>
-            <div class="vdb-row"><button class="btn btn-primary" onclick="gstAudit()">🔍 Lancer l'audit</button><button class="btn btn-secondary" onclick="gstAudit(true)">Analyser depuis les documents</button><button class="btn btn-secondary" onclick="gstAuditCopy()">📋 Copier le résultat</button><button class="btn btn-gold" onclick="gstReparse()">⟳ Réappliquer le découpage des noms</button></div>
+            <div class="vdb-row"><button class="btn btn-primary" onclick="gstAudit()">Lancer l'audit</button><button class="btn btn-secondary" onclick="gstAudit(true)">Analyser depuis les documents</button><button class="btn btn-secondary" onclick="gstAuditCopy()">Copier le résultat</button><button class="btn btn-gold" onclick="gstReparse()">⟳ Réappliquer le découpage des noms</button></div>
             <div id="gstAuditOut"></div>
             <div class="vdb-row" style="margin-top:10px"><input class="vdb-search" id="gstInspectQ" placeholder="Inspecter une variété (ex. sad)" onkeydown="if(event.key==='Enter')gstInspect()"/><button class="btn btn-secondary" onclick="gstInspect()">Inspecter</button></div>
             <div id="gstInspectOut"></div>
-            <textarea class="field-input" id="gstAuditText" rows="8" style="display:none;font-family:monospace;font-size:11px"></textarea>
+            <textarea class="field-input" id="gstAuditText" rows="8" style="display:none;font-family:monospace;font-size:13px"></textarea>
           </div>
         </div>
         <div class="section-title">Réglages du catalogue</div>
@@ -545,13 +494,13 @@ td{font-size:13.5px}
             <label class="field-label">Assortiments (collections, mix : pas de nombre de graines attendu)</label><input class="field-input" id="gstRuleAssort"/>
             <label class="field-label">Déclinaisons : une par ligne, « mot = libellé », suivi de (début) ou (fin) pour limiter sa position ; sinon début et fin</label><textarea class="field-input" id="gstRuleDecl" rows="7" style="font-family:monospace;font-size:12px;resize:vertical"></textarea>
             <div class="vdb-row"><button class="btn btn-secondary" onclick="gstRulesDefault()">Rétablir les règles par défaut</button></div>
-            <div class="vdb-row"><button class="btn btn-secondary" onclick="gstSaveSettings()">💾 Enregistrer les réglages</button><span class="vdb-note" id="gstSettingsNote"></span></div>
+            <div class="vdb-row"><button class="btn btn-secondary" onclick="gstSaveSettings()">Enregistrer les réglages</button><span class="vdb-note" id="gstSettingsNote"></span></div>
           </div>
         </div>
         <div class="section-title">Rapprochement avec la base StrainSage</div>
         <div class="table-wrap">
           <div class="vdb-body">
-            <div class="vdb-row"><button class="btn btn-secondary" id="gstMatchBtn" onclick="gstRematch()">⟳ Recalculer le rapprochement</button><button class="btn btn-secondary" onclick="gstSimMatch()">🧪 Simuler les corrections</button><span class="vdb-note">Sans appel à Garden Seeds : utilise le catalogue déjà synchronisé, ta base et tes décisions. N'écrit que les articles dont le résultat change. La simulation n'écrit rien.</span></div>
+            <div class="vdb-row"><button class="btn btn-secondary" id="gstMatchBtn" onclick="gstRematch()">⟳ Recalculer le rapprochement</button><button class="btn btn-secondary" onclick="gstSimMatch()">Simuler les corrections</button><span class="vdb-note">Sans appel à Garden Seeds : utilise le catalogue déjà synchronisé, ta base et tes décisions. N'écrit que les articles dont le résultat change. La simulation n'écrit rien.</span></div>
             <div id="gstMatchMsg"></div>
             <div id="gstMatchStats"></div>
           </div>
@@ -587,11 +536,11 @@ td{font-size:13.5px}
             <div>
               <div class="field-label" style="margin-bottom:6px">Code de connexion clients</div>
               <input class="field-input" id="settingShopCode" value="cultureindooranglet" style="margin:0"/>
-              <div style="font-size:10px;color:var(--text3);margin-top:4px">Code que vos clients utilisent comme mot de passe</div>
+              <div style="font-size:12px;color:var(--text3);margin-top:4px">Code que vos clients utilisent comme mot de passe</div>
             </div>
-            <button class="btn btn-primary" style="width:fit-content" onclick="saveSettings()">💾 Enregistrer</button>
-            <div style="margin-top:16px;padding-top:18px;border-top:1px solid var(--border);font-size:11px;color:var(--text3)">
-              🔑 La clé API Anthropic n'est jamais enregistrée ici : elle vit uniquement dans les secrets du Worker Cloudflare (ANTHROPIC_API_KEY).
+            <button class="btn btn-primary" style="width:fit-content" onclick="saveSettings()">Enregistrer</button>
+            <div style="margin-top:16px;padding-top:18px;border-top:1px solid var(--border);font-size:13px;color:var(--text3)">
+              La clé API Anthropic n'est jamais enregistrée ici : elle vit uniquement dans les secrets du Worker Cloudflare (ANTHROPIC_API_KEY).
             </div>
           </div>
         </div>
@@ -609,13 +558,13 @@ td{font-size:13.5px}
 
 /* ══ THÈME ══ */
 (function(){
-  var t=localStorage.getItem('ss_theme')||'light';
+  var t=localStorage.getItem('ss_theme')||'dark';
   document.documentElement.setAttribute('data-theme',t);
   updateThemeLabel(t);
 })();
 function updateThemeLabel(t){
   var l=document.getElementById('themeLabel');
-  if(l)l.textContent=t==='dark'?'🌙 Sombre':'☀️ Clair';
+  if(l)l.textContent=t==='dark'?'Sombre':'Clair';
 }
 window.toggleTheme=function(){
   var cur=document.documentElement.getAttribute('data-theme');
@@ -682,7 +631,7 @@ function showPage(name){
 function toast(msg,type){
   const t=document.createElement('div');t.className='toast';
   t.style.borderLeftColor=type==='error'?'var(--red)':type==='info'?'var(--accent)':'var(--gold2)';
-  t.textContent=msg;
+  t.textContent=String(msg).replace(/^(?:[\u2600-\u27BF\u2B50\u2705]|[\uD83C-\uD83E][\uDC00-\uDFFF])[\uFE0F\u200D]*\s*/,'');
   document.body.appendChild(t);
   setTimeout(()=>{t.style.opacity='0';t.style.transform='translateY(8px)';t.style.transition='all .3s';setTimeout(()=>t.remove(),300);},2500);
 }
@@ -1076,7 +1025,7 @@ function parseAndAnalyse(manual){
   $('vdbFileInfo').innerHTML='<b>'+esc(S.file.name)+'</b> · '+(S.file.size/1024).toFixed(0)+' Ko · '+S.rows.length+' lignes · '+S.headers.length+' colonnes<br>'+
     'Encodage '+(manual?'choisi':'détecté')+' : <b>'+esc(S.enc)+'</b> · séparateur : <b>'+(S.sep===';'?'point-virgule':S.sep===','?'virgule':'tabulation')+'</b>'+
     (S.parseErrors?' · <span style="color:var(--red)">'+S.parseErrors+' ligne(s) mal formée(s) (guillemets ou nombre de colonnes)</span>':'')+
-    ((bad||mojibake)?'<br><span style="color:var(--red)">⚠️ Des caractères semblent mal décodés ('+(bad+mojibake)+'). Essaie un autre encodage.</span><br><span style="font-size:11px;color:var(--text3)">'+badEx.map(esc).join('<br>')+'</span>':'');
+    ((bad||mojibake)?'<br><span style="color:var(--red)">⚠️ Des caractères semblent mal décodés ('+(bad+mojibake)+'). Essaie un autre encodage.</span><br><span style="font-size:13px;color:var(--text3)">'+badEx.map(esc).join('<br>')+'</span>':'');
   loadSavedMapping().then(function(){autoMap();renderAnalysis();renderMapping();show('vdbStepAnalyse',true);show('vdbStepMap',true);show('vdbStepPreview',false);show('vdbStepReport',false);});
 }
 

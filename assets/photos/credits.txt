@@ -1,0 +1,19 @@
+StrainSage - Crédits photo
+==========================
+
+Toutes les photos proviennent d'Unsplash, sous licence Unsplash
+(https://unsplash.com/license : usage commercial autorisé, attribution
+non obligatoire mais appréciée). Reprises du site OG's Farm
+(ogs-farm/public/images), redimensionnées avec Pillow pour StrainSage.
+Chaque fichier dérivé a son fichier <fichier>.json de provenance à côté.
+
+graines-chanvre | Behnam Norouzi | https://unsplash.com/photos/brown-hemp-seeds-in-pile-ro6XD0Rd6rI | Unsplash License
+  -> graines-chanvre-1600.webp, graines-chanvre-800.webp, graines-chanvre-bandeau.webp
+trichomes-givre | Premium Cultivars | https://unsplash.com/photos/a-close-up-of-a-plant-with-drops-of-water-on-it-bru1dHmbBBc | Unsplash License
+  -> trichomes-givre-1600.webp, trichomes-givre-800.webp, trichomes-givre-bandeau.webp
+fleur-trichomes | Jack H | https://unsplash.com/photos/green-kush-HGr6lcn5Lvc | Unsplash License
+  -> fleur-trichomes-1600.webp, fleur-trichomes-800.webp
+trichomes-pistils | Premium Cultivars | https://unsplash.com/photos/a-close-up-of-a-plant-with-water-droplets-on-it-xqHZBXXC6lU | Unsplash License
+  -> trichomes-pistils-1600.webp, trichomes-pistils-800.webp
+bouton-fond-noir | GB The Green Brand | https://unsplash.com/photos/cannabis-plant-bud-and-leaves-against-a-dark-background-YWYigTAMBd4 | Unsplash License
+  -> bouton-fond-noir-1600.webp, bouton-fond-noir-800.webp (ajout StrainSage, absent d'OG's Farm)

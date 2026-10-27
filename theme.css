@@ -1,0 +1,138 @@
+/* ══════════════════════════════════════════════════════════════
+   StrainSage Pro — couleurs, polices et surfaces du navigateur, communes au chat et à l'admin.
+   Monde visuel inspiré d'OG's Farm (noir, or, cuivre, vert sapin ; Bodoni Moda + Hanken Grotesk).
+   Sombre par défaut ; le clair (ivoire et encre) reste disponible. Les anciens noms de variables
+   lus par le code (stats, toasts, admin, cartes) sont gardés comme alias.
+══════════════════════════════════════════════════════════════ */
+:root,[data-theme="dark"]{
+  color-scheme:dark;
+  /* fonds */
+  --paper:#171614;          /* fond de page (noir) */
+  --surface:#201f1c;        /* panneaux, cartes (noir élevé) */
+  --sunken:#121211;         /* champs, zones en retrait (noir profond) */
+  --raised:#2a2824;         /* survol, ligne active */
+  /* encre */
+  --ink:#f2eee3;            /* ivoire */
+  --ink2:#cbc5b8;
+  --ink3:#a39e93;           /* discret, ≥ 6:1 sur le fond */
+  --line:rgba(212,175,55,.16);   /* filet or fin */
+  --line2:rgba(212,175,55,.34);
+  --rule:#d4af37;           /* filet or plein (double filet, soulignements) */
+  /* couleurs de la maison */
+  --gold:#d4af37;           /* action principale, focus, titres de section */
+  --gold-pale:#e6cf86;
+  --gold-text:#e0bd52;      /* or pour du texte courant */
+  --gold-tint:rgba(212,175,55,.12);
+  --copper:#d08a4a;         /* prix */
+  --copper-tint:rgba(208,138,74,.14);
+  --sapin:#2d5016;
+  --green:#8bb86a;          /* en stock, validation (texte) */
+  --green-tint:rgba(139,184,106,.14);
+  --red:#e8836f;            /* rupture, erreur (texte) */
+  --red-tint:rgba(232,131,111,.14);
+  --ocean:#8fb3c0;          /* infos chimiques (CBD) */
+  --ocean-tint:rgba(143,179,192,.13);
+  --ochre:#e0bd52;
+  --ochre-tint:rgba(212,175,55,.12);
+  --action:#d4af37;         /* fond des boutons principaux */
+  --action-hover:#e6cf86;
+  --action-ink:#171614;     /* texte sur bouton or (≥ 8:1) */
+  /* types de variété (bandeau des cartes, texte ivoire ≥ 7:1) */
+  --t-indica:#4b2f5e;
+  --t-sativa:#8a4f1c;
+  --t-hybride:#2d5016;
+  --t-unknown:#3a3833;
+  /* relief et formes */
+  --focus:0 0 0 2px var(--paper),0 0 0 4px #d4af37;
+  --shadow:0 1px 2px rgba(0,0,0,.35),0 6px 16px -6px rgba(0,0,0,.5);
+  --shadow2:0 2px 6px rgba(0,0,0,.35),0 18px 40px -12px rgba(0,0,0,.6);
+  --r:2px;--rl:3px;--rxl:4px;
+  --font-ui:'Hanken Grotesk','Helvetica Neue',Arial,sans-serif;
+  --font-display:'Bodoni Moda','Didot',Georgia,serif;
+  --photo-filter:saturate(.82) contrast(1.08) brightness(.78) sepia(.12);
+  --modal-bg:rgba(18,18,17,.94);
+
+  /* alias historiques (chat, admin, cartes) */
+  --bg:var(--paper);--bg2:var(--paper);--bg3:var(--surface);--bg4:var(--sunken);--panel:var(--surface);--card-bg:var(--surface);
+  --accent:var(--gold-text);--accent2:var(--gold-pale);--accent3:var(--gold);--accent-fg:var(--gold-tint);
+  --gold2:var(--gold-text);--gold3:var(--gold);--goldfog:var(--gold-tint);--goldfog2:var(--gold-tint);--bordergold:var(--line2);
+  --text1:var(--ink);--text2:var(--ink2);--text3:var(--ink3);--border:var(--line);--border2:var(--line2);
+  --fog:rgba(242,238,227,.03);--fog2:rgba(242,238,227,.06);
+  --red-brand:var(--red);--redfog:var(--red-tint);
+  --pill-thc-bg:var(--gold-tint);--pill-thc-border:var(--line2);--pill-thc-color:var(--gold-text);
+  --pill-cbd-bg:var(--ocean-tint);--pill-cbd-border:rgba(143,179,192,.35);--pill-cbd-color:var(--ocean);
+  --pill-flower-bg:rgba(150,110,170,.16);--pill-flower-border:rgba(150,110,170,.4);--pill-flower-color:#c9a9dc;
+  --pill-yield-bg:var(--green-tint);--pill-yield-border:rgba(139,184,106,.35);--pill-yield-color:var(--green);
+  --instock-bg:var(--green-tint);--instock-border:rgba(139,184,106,.35);--instock-color:var(--green);
+  --outstock-bg:var(--red-tint);--outstock-border:rgba(232,131,111,.4);--outstock-color:var(--red);
+  --badge-green-bg:var(--green-tint);--badge-green-color:var(--green);--badge-green-border:rgba(139,184,106,.35);
+  --badge-red-bg:var(--red-tint);--badge-red-color:var(--red);--badge-red-border:rgba(232,131,111,.4);
+  --badge-gold-bg:var(--gold-tint);--badge-gold-color:var(--gold-text);--badge-gold-border:var(--line2);
+  --margin-pos:var(--green);--margin-neg:var(--red);
+  --bar-fill:var(--gold);
+}
+[data-theme="light"]{
+  color-scheme:light;
+  --paper:#f2eee3;          /* ivoire */
+  --surface:#faf8f2;
+  --sunken:#e8e3d5;
+  --raised:#ece7da;
+  --ink:#1a1a1a;
+  --ink2:#3d3a34;
+  --ink3:#5f5a50;           /* ≥ 6:1 sur l'ivoire */
+  --line:rgba(122,92,14,.2);
+  --line2:rgba(122,92,14,.4);
+  --rule:#b8952a;
+  --gold:#d4af37;
+  --gold-pale:#e6cf86;
+  --gold-text:#7a5c0e;      /* or lisible sur ivoire (≥ 5:1) */
+  --gold-tint:rgba(212,175,55,.18);
+  --copper:#9a5524;
+  --copper-tint:rgba(154,85,36,.1);
+  --sapin:#2d5016;
+  --green:#2d5016;
+  --green-tint:rgba(45,80,22,.1);
+  --red:#a3321f;
+  --red-tint:rgba(163,50,31,.1);
+  --ocean:#2f5f6e;
+  --ocean-tint:rgba(47,95,110,.1);
+  --ochre:#7a5c0e;
+  --ochre-tint:rgba(212,175,55,.18);
+  --action:#1a1a1a;         /* sur ivoire, l'action principale est à l'encre, filet or */
+  --action-hover:#2d5016;
+  --action-ink:#f2eee3;
+  --t-indica:#4b2f5e;
+  --t-sativa:#8a4f1c;
+  --t-hybride:#2d5016;
+  --t-unknown:#46433c;
+  --focus:0 0 0 2px var(--paper),0 0 0 4px #b8952a;
+  --shadow:0 1px 2px rgba(26,26,26,.08),0 6px 16px -8px rgba(26,26,26,.18);
+  --shadow2:0 2px 6px rgba(26,26,26,.1),0 18px 40px -14px rgba(26,26,26,.28);
+  --photo-filter:saturate(.85) contrast(1.05) brightness(.92) sepia(.1);
+  --modal-bg:rgba(242,238,227,.95);
+  --fog:rgba(26,26,26,.025);--fog2:rgba(26,26,26,.05);
+  --pill-cbd-border:rgba(47,95,110,.3);
+  --pill-flower-bg:rgba(75,47,94,.08);--pill-flower-border:rgba(75,47,94,.3);--pill-flower-color:#4b2f5e;
+  --pill-yield-border:rgba(45,80,22,.3);
+  --instock-border:rgba(45,80,22,.3);--outstock-border:rgba(163,50,31,.3);
+  --badge-green-border:rgba(45,80,22,.3);--badge-red-border:rgba(163,50,31,.3);
+}
+
+/* ── surfaces du navigateur : elles aussi portent la maison ── */
+html{caret-color:var(--gold);scrollbar-color:var(--line2) transparent;accent-color:var(--gold)}
+::selection{background:var(--gold);color:#171614}
+:focus-visible{outline:none;box-shadow:var(--focus)}
+.chiffres,.tnum{font-variant-numeric:tabular-nums lining-nums}
+.petites-capitales{font-variant-caps:all-small-caps;letter-spacing:.04em}
+/* double filet de catalogue : un trait épais, un trait fin */
+.double-filet{height:5px;border-top:2px solid var(--rule);border-bottom:1px solid var(--rule)}
+/* étalonnage commun des photos : tirées vers le noir et l'ambre, grain léger */
+.photo-etalonnee{position:relative;overflow:hidden;background:var(--sunken)}
+.photo-etalonnee img{filter:var(--photo-filter);display:block;width:100%;height:100%;object-fit:cover}
+.photo-etalonnee::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.14;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E")}
+/* ligne de catalogue (geste signature) : nom … pointillés … prix cuivre */
+.cat-line{display:flex;align-items:baseline;gap:8px}
+.cat-line .cat-dots{flex:1;min-width:12px;border-bottom:1px dotted var(--line2);transform:translateY(-4px)}
+.cat-line .cat-price{color:var(--copper);font-family:var(--font-display);font-variant-numeric:tabular-nums lining-nums;white-space:nowrap}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}

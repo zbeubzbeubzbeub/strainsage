@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Aperçu des illustrations</title>
+<style>
+body{margin:0;font:14px system-ui,sans-serif;background:#171614;color:#f2eee3}
+.row{display:flex;gap:24px;align-items:flex-end;padding:16px;flex-wrap:wrap}
+.light{background:#f2eee3;color:#1a1a1a}
+.i{-webkit-mask:var(--u) center/contain no-repeat;mask:var(--u) center/contain no-repeat}
+.dark .i{background:#d4af37}.light .i{background:#1a1a1a}
+figure{margin:0;text-align:center}figcaption{font-size:11px;opacity:.7}
+</style></head><body>
+<div class="row dark" id="d"></div><div class="row light" id="l"></div>
+<script>
+var f=['graine','trichome','feuille','pousse','graines-semis'],z=[24,64,240];
+['d','l'].forEach(function(id){var h='';f.forEach(function(n){z.forEach(function(s){var w=n==='graines-semis'?s*5:s;h+='<figure><div class="i" style="--u:url('+n+'.svg);width:'+w+'px;height:'+s+'px"></div><figcaption>'+n+' '+s+'</figcaption></figure>';});});document.getElementById(id).innerHTML=h;});
+</script></body></html>
