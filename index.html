@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#171614">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="StrainSage">
 <title>StrainSage Pro</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2048%2048%22%3E%3Crect%20x%3D%222%22%20y%3D%222%22%20width%3D%2244%22%20height%3D%2244%22%20rx%3D%222%22%20fill%3D%22%23171614%22%20stroke%3D%22%23d4af37%22%20stroke-width%3D%221.5%22/%3E%3Cg%20transform%3D%22translate%289%209%29%20scale%281%29%22%3E%3Cpath%20d%3D%22M15%2030V17.6%22%20stroke%3D%22%23d4af37%22%20stroke-width%3D%222.4%22%20stroke-linecap%3D%22round%22/%3E%3Cpath%20d%3D%22M14.6%2018.8C9.6%2019.8%202.6%2016.8.8%207.6%208.4%206.2%2013.8%2010.8%2014.6%2018.8Z%22%20fill%3D%22%23d4af37%22/%3E%3Cpath%20d%3D%22M15.4%2018.8C16.2%2010.8%2021.6%206.2%2029.2%207.6%2027.4%2016.8%2020.4%2019.8%2015.4%2018.8Z%22%20fill%3D%22%23d4af37%22/%3E%3Cpath%20d%3D%22M15%2017.8C12.4%2013.8%2012.6%205.8%2015%201%2017.4%205.8%2017.6%2013.8%2015%2017.8Z%22%20fill%3D%22%23e6cf86%22/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -155,7 +161,7 @@ p{text-wrap:pretty}
 
 /* ══ ZONE PRINCIPALE ══ */
 .main{flex:1;display:flex;flex-direction:column;background:var(--paper);overflow:hidden;min-width:0}
-.topbar{padding:0 28px;height:62px;display:flex;align-items:stretch;gap:18px;border-bottom:1px solid var(--line);background:var(--paper);flex-shrink:0}
+.topbar{padding:env(safe-area-inset-top) 28px 0;height:calc(62px + env(safe-area-inset-top));display:flex;align-items:stretch;gap:18px;border-bottom:1px solid var(--line);background:var(--paper);flex-shrink:0}
 .topbar>*{align-self:center}
 .topbar-title{font-family:var(--font-display);font-size:19px;color:var(--ink);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .topbar-modes{display:flex;gap:2px;align-self:stretch}
@@ -434,7 +440,7 @@ button.lt-pill:hover{border-color:var(--gold);color:var(--gold-text)}
 .stats-panel .sb-empty::before{width:56px;height:56px;-webkit-mask-image:url(assets/illustrations/trichome.svg);mask-image:url(assets/illustrations/trichome.svg)}
 
 /* ══ SAISIE ══ */
-.input-area{padding:12px 28px 18px;flex-shrink:0;background:var(--paper);border-top:1px solid var(--line)}
+.input-area{padding:12px 28px 18px;padding-bottom:max(18px,env(safe-area-inset-bottom));flex-shrink:0;background:var(--paper);border-top:1px solid var(--line)}
 .quick-row{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 10px;max-width:var(--col);margin:0 auto;scrollbar-width:none}
 .quick-row::-webkit-scrollbar{display:none}
 .main:has(#welcome) .quick-row{display:none}
@@ -463,7 +469,7 @@ button.lt-pill:hover{border-color:var(--gold);color:var(--gold-text)}
 .hamburger:hover{border-color:var(--gold);color:var(--gold-text)}
 @media(max-width:860px){
   .sdot-wrap{display:none}
-  .topbar{gap:12px;padding:0 18px}
+  .topbar{gap:12px;padding:env(safe-area-inset-top) 18px 0}
   .tmode{padding:0 10px}
   .tmode::after{left:10px;right:10px}
 }
@@ -485,7 +491,7 @@ button.lt-pill:hover{border-color:var(--gold);color:var(--gold-text)}
   .input-hint,.mode-badge{display:none}
   .input-box{padding:7px 7px 7px 13px}
   #sbtn{padding:0 16px}
-  .topbar{padding:0 12px;height:56px;gap:8px}
+  .topbar{padding:env(safe-area-inset-top) 12px 0;height:calc(56px + env(safe-area-inset-top));gap:8px}
   .topbar-title,.topbar .theme-toggle-wrap{display:none}
   .topbar-modes{flex:1;justify-content:space-between;gap:0}
   .tmode{padding:0 4px;font-size:14px;flex:1}
@@ -522,6 +528,15 @@ button.lt-pill:hover{border-color:var(--gold);color:var(--gold-text)}
   .terp-note{display:none}
   .toast{left:12px;right:12px;bottom:12px;max-width:none}
 }
+/* ══ PWA : encoche iPhone en plein écran (env() vaut 0 ailleurs) et encart d'installation ══ */
+.sidebar{padding-top:env(safe-area-inset-top)}
+.install-bar{display:flex;align-items:center;gap:12px;margin:0 auto;width:min(760px,calc(100% - 24px));padding:8px 8px 8px 14px;background:var(--surface);border:1px solid var(--line2);border-radius:var(--r);font-size:14px;color:var(--ink2);flex-shrink:0}
+.install-bar[hidden]{display:none}
+.install-bar p{flex:1;margin:0}
+.install-btn{min-height:36px;padding:0 14px;border:none;border-radius:var(--r);background:var(--action);color:var(--action-ink);font-weight:600;cursor:pointer}
+.install-btn[hidden]{display:none}
+.install-x{width:36px;height:36px;border:none;background:none;color:var(--ink3);font-size:22px;line-height:1;cursor:pointer;border-radius:var(--r)}
+.install-x:hover{color:var(--ink)}
 </style>
 </head>
 <body>
@@ -652,6 +667,7 @@ button.lt-pill:hover{border-color:var(--gold);color:var(--gold-text)}
       <span id="stockStatusText">Stock chargé</span>
     </div>
     <div class="chat-panel" id="chatPanel" aria-label="Conversation"></div>
+    <div class="install-bar" id="installBar" role="region" aria-label="Installer l'application" hidden><p id="installTxt"></p><button type="button" class="install-btn" id="installBtn" hidden>Installer l'app</button><button type="button" class="install-x" id="installClose" aria-label="Fermer">×</button></div>
     <div class="input-area" id="inputArea">
       <div class="quick-row" role="group" aria-label="Ajouter un critère"><button type="button" class="quick-chip" onclick="addQuick(this.textContent)">relaxante</button><button type="button" class="quick-chip" onclick="addQuick(this.textContent)">pour dormir</button><button type="button" class="quick-chip" onclick="addQuick(this.textContent)">énergisante</button><button type="button" class="quick-chip" onclick="addQuick(this.textContent)">goût fruité</button><button type="button" class="quick-chip" onclick="addQuick(this.textContent)">agrumes</button><button type="button" class="quick-chip" onclick="addQuick(this.textContent)">diesel</button><button type="button" class="quick-chip" onclick="addQuick(this.textContent)">autofloraison</button><button type="button" class="quick-chip" onclick="addQuick(this.textContent)">facile pour débutant</button><button type="button" class="quick-chip" onclick="addQuick(this.textContent)">floraison courte</button><button type="button" class="quick-chip" onclick="addQuick(this.textContent)">riche en CBD</button><button type="button" class="quick-chip" onclick="addQuick(this.textContent)">puissante</button><button type="button" class="quick-chip" onclick="addQuick(this.textContent)">douce</button></div>
       <div class="input-box">
@@ -1721,6 +1737,26 @@ window.send=async function(){
 Object.assign(window,{loginUser,logout,toggleSidebar,setMode,newChat,toggleFav,removeFav,rateStar,quickSend});
 
 }); // fin DOMContentLoaded
+</script>
+<script>
+/* ══ PWA : aide à l'installation et service worker ══ */
+(function(){
+  var KEY='ss_install_ferme',bar=document.getElementById('installBar'),txt=document.getElementById('installTxt'),btn=document.getElementById('installBtn'),deferred=null;
+  function ferme(){try{return localStorage.getItem(KEY)==='1';}catch(e){return false;}}
+  function montre(t,bouton){if(ferme())return;txt.textContent=t;btn.hidden=!bouton;bar.hidden=false;}
+  document.getElementById('installClose').addEventListener('click',function(){bar.hidden=true;try{localStorage.setItem(KEY,'1');}catch(e){}});
+  var installee=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+  if(!installee){
+    // Android / Chrome : le navigateur propose l'installation, on la déclenche depuis notre bouton
+    window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferred=e;montre('Installe StrainSage sur ton téléphone.',true);});
+    btn.addEventListener('click',function(){if(!deferred)return;bar.hidden=true;deferred.prompt();deferred.userChoice.finally(function(){deferred=null;});});
+    window.addEventListener('appinstalled',function(){bar.hidden=true;});
+    // iPhone / iPad (Safari n'a pas d'installation automatique)
+    var ios=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+    if(ios)montre('Ajoute StrainSage à ton écran d\'accueil : Partager → Sur l\'écran d\'accueil',false);
+  }
+  if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js');});}
+})();
 </script>
 </body>
 </html>
