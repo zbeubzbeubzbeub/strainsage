@@ -3,7 +3,7 @@
    pour que les téléphones abandonnent l'ancien cache.
    Seules les requêtes GET du même domaine passent par ici : Worker Cloudflare, Firebase, Anthropic,
    streaming SSE et toute autre origine vont directement au réseau, sans cache. */
-const CACHE = 'strainsage-v2';
+const CACHE = 'strainsage-v3';
 const PRECACHE = ['/', '/index.html', '/manifest.json', '/icons/icon-192.png'];
 
 self.addEventListener('install', e => {

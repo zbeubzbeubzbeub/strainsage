@@ -545,6 +545,28 @@
     });}catch(err){}
     return {named:order.map(function(b){return found[b];}),ficheAbsent:ficheAbsent};
   }
+  /* fragment de nom (« gmo », « og kush », « zkittlez ») : déclinaisons dont le nom contient ces mots, dans TOUT le catalogue.
+     Fenêtres de 4 à 1 mots, la plus longue gagne ; mots vides et mots de type (auto, fem, fast…) exclus, « kush », « haze » gardés.
+     En stock d'abord, puis le type demandé, puis le nom le plus court ; FRAG_MAX déclinaisons au plus. */
+  var FRAG_MAX=15,FRAG_SKIP=' auto autos fem cbd thc xl xxl fast ';
+  function fragOk(t){return !isFrStop(t)&&FRAG_SKIP.indexOf(' '+t+' ')<0;}
+  function proposable(it){return gstMeta.showGranel||(it.packs||[it]).some(function(p){return !p.granel;});}
+  function findFragments(txt,wantType){
+    if(!gst)return [];
+    var toks=keyMsg(txt).split(' ').filter(Boolean),used={},bases=Object.keys(gstByBase),seen={},out=[];
+    for(var n=Math.min(4,toks.length);n>=1;n--){
+      for(var i=0;i+n<=toks.length;i++){
+        var w=toks.slice(i,i+n);
+        if(w.some(function(t,j){return used[i+j]||!fragOk(t);})||w.every(function(t){return /^\d+$/.test(t);})||(n===1&&w[0].length<2))continue;
+        var q=w.join(' '),f=' '+q+' ',hits=bases.filter(function(b){return (' '+b+' ').indexOf(f)>-1;});
+        if(!hits.length)continue;
+        for(var j=i;j<i+n;j++)used[j]=1;
+        hits.forEach(function(b){oneByVariety(gstByBase[b]).filter(proposable).map(repOf).forEach(function(it){if(!seen[it.gk]){seen[it.gk]=1;out.push({it:it,q:q});}});});
+      }
+    }
+    var rank=function(x){return (packsOf(x.it).length?4:0)+(wantType&&(wantType==='notauto'?x.it.type!=='auto':x.it.type===wantType)?2:0);};
+    return out.sort(function(a,b){return rank(b)-rank(a)||a.it.base.length-b.it.base.length||nrm(a.it.variete).localeCompare(nrm(b.it.variete));});
+  }
   /* marque citée dans la question : fenêtres de 1 à 4 mots comparées aux clés de breeder du catalogue
      (« Fast Buds », « fastbuds », « 420 Fastbuds » → fastbuds). Un breeder dont la clé est un mot courant
      (« Sweet » pour Sweet Seeds) n'est reconnu qu'avec son nom complet (« Sweet Seeds »).
@@ -664,9 +686,15 @@
     var asked=named.length?'':askedName(raw),absent=(asked?[asked]:[]).concat(fn.ficheAbsent.filter(function(n){return !asked||nrm(n)!==nrm(asked);}));
     if(br.missing&&br.missing.length)blocks.push('[MARQUE ABSENTE DU CATALOGUE DU GROSSISTE] '+br.missing.map(function(a){return '« '+a+' »';}).join(', ')+' : aucun article de ce breeder chez le grossiste. Dis-le clairement, puis propose des variétés disponibles proches de la demande parmi celles ci-dessous.');
     if(absent.length)blocks.push('[ABSENTES DU CATALOGUE DU GROSSISTE] '+absent.map(function(a){return '« '+a+' »';}).join(', ')+' : aucun article correspondant chez le grossiste (ni en stock, ni en rupture). Dis-le clairement et sans hésiter, puis propose la variété disponible la plus proche parmi celles ci-dessous.');
+    // 2b. famille de noms (« la gmo » → GMO Fast, Super Lemon Haze x GMO…) ; un nom demandé et absent n'est pas découpé en mots
+    var frag=findFragments(txt,wantType).filter(function(x){return !seenG[x.it.gk]&&(!asked||x.q===asked);}).slice(0,FRAG_MAX);
+    frag.forEach(function(x){seenG[x.it.gk]=1;});
+    if(frag.length)blocks.push('[VARIÉTÉS DONT LE NOM CONTIENT '+frag.map(function(x){return x.q;}).filter(function(q,i,a){return a.indexOf(q)===i;}).map(function(q){return '« '+q+' »';}).join(', ')+
+      ' — trouvées dans tout le catalogue du grossiste] Le client demande cette famille : présente toutes ces variétés avec celles citées ci-dessus, les 3 ou 4 plus intéressantes en détail et les autres en liste courte.\n'+
+      frag.map(function(x){return gstLine(x.it,fct(x.it))+stTxt(x.it);}).join('\n'));
     // 3. autres variétés disponibles, chacune avec toutes ses déclinaisons : 4 quand le client cite une variété précise,
     //    8 sinon (au lieu de 15 : contexte divisé par deux, sans perte mesurée sur le banc)
-    var maxOthers=named.length?4:(brandKeys.length?10:8);
+    var maxOthers=named.length||frag.length?4:(brandKeys.length?10:8);
     var top=[],varieties=[],seenV={};
     (matching.length?matching:picked).forEach(function(it){
       if(varieties.length>=maxOthers||seenG[it.gk])return;
@@ -695,8 +723,8 @@
       '\n- Prix, conditionnements et déclinaisons : cite uniquement ceux indiqués ci-dessus, à l\'identique. N\'invente jamais de format « habituel » ni de taille de pack ; si une déclinaison n\'a aucun pack commandable, dis qu\'elle est en rupture chez le fournisseur, sans proposer de vrac à la place. Les cartes font foi.'+
       '\n- Ne parle jamais de « liste », « candidates », « classement », « contexte », « données », « base » ni du fonctionnement de l\'application : parle comme un vendeur qui connaît son catalogue.'+
       '\n- Si rien ne correspond vraiment, dis-le franchement et propose la variété disponible la plus proche.';
-    console.info('[GST] '+remembered.length+' déjà présentées, '+named.length+' citée(s) ('+namedCount+' déclinaisons), '+absent.length+' absente(s), '+varieties.length+' autres variétés ('+top.length+' déclinaisons) ; '+availV+' variétés disponibles');
-    return {ctx:ctx,info:{available:availV,articles:avail.length,count:top.length+namedCount+remembered.length,matching:matching.length,named:named.map(function(n){return n.query;}),absent:absent,remembered:remembered.length,
+    console.info('[GST] '+remembered.length+' déjà présentées, '+named.length+' citée(s) ('+namedCount+' déclinaisons), '+absent.length+' absente(s), '+frag.length+' par fragment de nom, '+varieties.length+' autres variétés ('+top.length+' déclinaisons) ; '+availV+' variétés disponibles');
+    return {ctx:ctx,info:{available:availV,articles:avail.length,count:top.length+namedCount+frag.length+remembered.length,fragments:frag.length,matching:matching.length,named:named.map(function(n){return n.query;}),absent:absent,remembered:remembered.length,
       brands:br.brands.map(function(b){return b.label;}),brandCount:brandV,missingBrands:br.missing||[],budget:maxBudget?{max:maxBudget,src:budgetSrc}:null}};
   }
 

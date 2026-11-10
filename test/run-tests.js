@@ -119,7 +119,11 @@ const CAT=[
   // même breeder sous deux écritures, autos de 9 à 10 semaines (graine → récolte)
   art({code:'F1',v:'Gorilla Cookies Auto',b:'FAST BUDS',t:'a',nb:3,pvp:36,flo:'9',base:'gorilla cookies'}),
   art({code:'F2',v:'Blackberry Auto',b:'FastBuds Seeds',t:'a',nb:3,pvp:36,flo:'10',base:'blackberry'}),
-  art({code:'F3',v:'Original Auto Amnesia',b:'FastBuds Seeds',t:'a',nb:1,pvp:13,flo:'9',base:'original amnesia'})
+  art({code:'F3',v:'Original Auto Amnesia',b:'FastBuds Seeds',t:'a',nb:1,pvp:13,flo:'9',base:'original amnesia'}),
+  // famille « gmo » : nom exact + nom qui contient le mot
+  art({code:'G1',v:'GMO Fast',b:'Dutch Passion',nb:1,pvp:12,base:'gmo'}),
+  art({code:'G2',v:'Super Lemon Haze x GMO',b:'Green House',nb:3,pvp:30,base:'super lemon haze x gmo'}),
+  art({code:'P1',v:'Purple Haze',b:'Original Sensible',nb:3,pvp:25,base:'purple haze'})
 ];
 const VIDX=['sad-s1|S.A.D. Sweet Afgani Delicious S1','critical-auto|Critical Auto','gg4|Gorilla Glue #4|GG4','purple-haze|Purple Haze','zkittlez|Zkittlez'];
 // facettes : id|type|dom|thcMin|thcMax|cbdMax|floMin|floMax|auto|diff|haut|rend|env|mold|nProd|eff|neg|gouts|terps
@@ -170,6 +174,11 @@ function loadClient(){
   await ta('contexte : demande auto + budget 30 € → autos ≤ 30 €',async()=>{
     const r=await V.catalogueContext('une auto fruitée pour débutant, budget 30 €',{raw:'une auto fruitée pour débutant, budget 30 €'});
     ok(/Critical Auto/.test(r.ctx),'Critical Auto');ok(/budget ≤ 30 €/.test(r.ctx),'budget');ok(!/Gorilla Glue/.test(r.ctx),'pas de photopériode hors budget');});
+  await ta('famille de noms : « la gmo » → GMO Fast cité + Super Lemon Haze x GMO par fragment',async()=>{const r=await V.catalogueContext('parle moi de la gmo',{raw:'parle moi de la gmo'});
+    ok(/CITÉES PAR LE CLIENT[\s\S]*GMO Fast/.test(r.ctx),'GMO Fast cité');ok(/CONTIENT « gmo »[^\n]*\n- Super Lemon Haze x GMO/.test(r.ctx),'fragment');eq(r.info.fragments,1);});
+  await ta('famille de noms : « haze » (mot générique) trouvé seul',async()=>{const r=await V.catalogueContext('tu as des haze ?',{raw:'tu as des haze ?'});ok(/CONTIENT « haze »[\s\S]*Purple Haze[\s\S]*Super Lemon Haze x GMO/.test(r.ctx),r.ctx.slice(0,300));});
+  await ta('famille de noms : un nom absent n\'est pas découpé (Purple Unicornio Haze)',async()=>{const r=await V.catalogueContext('vous avez de la Purple Unicornio Haze ?',{raw:'vous avez de la Purple Unicornio Haze ?'});ok(!/CONTIENT/.test(r.ctx));});
+  await ta('famille de noms : rien pour une demande par critères',async()=>{const r=await V.catalogueContext('une auto fruitée pour débutant, budget 30 €',{raw:'une auto fruitée pour débutant, budget 30 €'});ok(!/CONTIENT/.test(r.ctx));eq(r.info.fragments,0);});
   await ta('nom exact du catalogue : pas d\'acronyme parasite',async()=>{eq(V.findNamed('parle-moi de la SAD').named.length,1);});
   await ta('auto : pas de floraison prise sur une fiche photopériode',async()=>{const r=await V.catalogueContext('parle-moi de la SAD',{raw:'parle-moi de la SAD'});ok(/Auto SAD \[code 5\][^\n]*flo 9 sem\./.test(r.ctx));});
   await ta('variété déjà présentée : même nom chez un autre breeder aussi réinjecté',async()=>{const r=await V.catalogueContext('et sinon ?',{raw:'et sinon ?',remember:[{name:'SAD',gst:'1'}]});ok(/DÉJÀ PRÉSENTÉES[\s\S]*1\. SAD /.test(r.ctx)&&/n\'est PAS pour autant absente/.test(r.ctx));});
