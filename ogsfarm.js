@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════
-   Boutique OG's Farm : boutons « Voir sur OG's Farm » sous les variétés recommandées (chat) et bloc d'info (admin).
+   Boutique OG's Farm : boutons « Commander sur OG's Farm » sous les variétés recommandées (chat) et bloc d'info (admin).
    Le catalogue (une entrée par fiche : variété × breeder × type) est lu directement depuis le navigateur ;
    les liens viennent UNIQUEMENT de ce catalogue, jamais de la réponse de l'IA.
    Si le catalogue ne répond pas, l'app fonctionne comme avant, sans bouton ni message d'erreur.
@@ -76,7 +76,7 @@
           '<span class="ogs-txt"><b>'+esc(String(p.name).split(/\s+[—–-]\s+/)[0])+'</b>'+
           '<small>'+esc([p.breeder,TYPES[p.type]].filter(Boolean).join(' · '))+'</small>'+
           '<span class="ogs-meta"><span class="ogs-price">'+(p.price!=null?'dès '+prix(p.price):'')+'</span><span class="ogs-badge">'+(p.inStock?'En stock':'Rupture')+'</span></span>'+
-          '<span class="ogs-cta">'+(p.inStock?"Voir sur OG's Farm":'Voir le produit')+' ↗</span></span></a>';
+          '<span class="ogs-cta">'+(p.inStock?"Commander sur OG's Farm":'Voir le produit')+' <span aria-hidden="true">↗</span></span></span></a>';
       }).join('')+'</div>';
       conteneur.appendChild(bloc);
     });
