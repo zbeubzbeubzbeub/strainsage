@@ -1778,14 +1778,15 @@ async function countdown(sec,prefix){
   while(Date.now()<end){el.style.display='';el.textContent='⏳ '+prefix+Math.ceil((end-Date.now())/1000)+' s';await sleep(Math.min(1000,end-Date.now()));}
   el.style.display='none';el.textContent='';
 }
-// liste paginée (groupes, familles) : per_page=100, arrêt à la dernière page ou si l'API renvoie la même page
+// liste paginée (groupes, familles) : per_page=50 (au-delà, /grupos répond 422), arrêt à la dernière page ou si l'API renvoie la même page
+var LIST_PER_PAGE=50;
 async function fetchList(path,label){
   var all=[],seen={};
   for(var page=1;page<=MAX_PAGES;page++){
-    var j=await gstGetRetry(path,{per_page:PER_PAGE,page:page},label+' p.'+page);
+    var j=await gstGetRetry(path,{per_page:LIST_PER_PAGE,page:page},label+' p.'+page);
     var arr=listOf(j),fresh=arr.filter(x=>{var k=JSON.stringify(x);if(seen[k])return false;seen[k]=1;return true;});
     all=all.concat(fresh);var last=lastPage(j);
-    if(!fresh.length||(last?page>=last:arr.length<PER_PAGE))break;
+    if(!fresh.length||(last?page>=last:arr.length<LIST_PER_PAGE))break;
   }
   return all;
 }
@@ -2038,7 +2039,7 @@ async function runSync(resume){
     rep.cost=FSG.summary();
     progress((complete?'Synchronisation terminée':'Synchronisation partielle : '+failedKeys.length+' famille(s) à reprendre')+' · '+rep.cost,100);
     console.info('[GST] synchro :',rep);
-  }catch(e){rep.fatal=e&&e.code==='paused'?e.message:FSG.why(e);rep.cost=FSG.summary();if(st)saveState(st);console.error('[GST] synchro interrompue',e);progress('Synchro interrompue · '+rep.cost);}
+  }catch(e){rep.fatal=e&&e.code==='paused'?e.message:(e&&e.status!=null&&!e.code?'Erreur de l\'API Garden Seeds : '+e.message+'. Clique sur « Reprendre ».':FSG.why(e));rep.cost=FSG.summary();if(st)saveState(st);console.error('[GST] synchro interrompue',e);progress('Synchro interrompue · '+rep.cost);}
   G.busy=false;$('gstBtn').disabled=false;$('gstWait').style.display='none';
   renderReport(rep);
   await loadIndex().catch(()=>{});renderLast();renderList();renderResume();renderMatch();
