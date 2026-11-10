@@ -74,6 +74,30 @@ t('absente : non trouvé',()=>{eq(mv('Purple Unicornio Zzz','')[0],'n');});
 t('décision manuelle prioritaire',()=>{const D={};D[C.decisionKey('sad','Sweet Seeds')]={valide:'f1-fast'};const r=C.matchVariety(M,D,'SAD','Sweet Seeds','','f');eq([r.statut,r.niveau,r.candidat],['r','m','f1-fast']);});
 t('alias manuel des réglages',()=>{const M2=matcher(BASE,BR,{alias:[{alias:'GG',nom:'Gorilla Glue #4'}]});const r=C.matchVariety(M2,{},'GG','GG Strains','','f');eq([r.statut,r.candidat,r.via],['r','gg4','alias']);});
 
+/* ══ 1b. BOUTIQUE OG'S FARM (ogsfarm.js) : normalisation et rapprochement, catalogue simulé ══ */
+{
+  const OGS={products:[
+    {name:'Gorilla Glue #4 — GG Strains',url:'https://ogsfarm.fr/graines/gg4/gg',price:9,inStock:true,breeder:'GG Strains',type:'fem',image:'https://x/gg4.jpg'},
+    {name:'Auto Gorilla Glue #4 — Fast Buds',url:'https://ogsfarm.fr/graines/gg4/fb-auto',price:8,inStock:false,breeder:'Fast Buds',type:'auto'},
+    {name:'Amnesia Haze — Royal Queen',url:'https://ogsfarm.fr/graines/amnesia-haze/rq',price:7,inStock:true,breeder:'Royal Queen',type:'fem'},
+    {name:'Super Amnesia Haze — Dinafem',url:'https://ogsfarm.fr/graines/super-amnesia-haze/d',price:6,inStock:true,breeder:'Dinafem',type:'fem'}]};
+  const ctx={console:{info(){},warn(){},log(){}},setTimeout,Promise,JSON,RegExp,location:{hostname:'localhost'},sessionStorage:{getItem(){return null;},setItem(){}},
+    fetch:()=>Promise.resolve({ok:true,json:()=>Promise.resolve(OGS)})};ctx.window=ctx;
+  vm.createContext(ctx);vm.runInContext(fs.readFileSync(path.join(ROOT,'ogsfarm.js'),'utf8'),ctx);
+  const O=ctx.OGSFarm;
+  t('normalizeStrain : « Gorilla Glue #4 »',()=>eq(O.normalizeStrain('Gorilla Glue #4'),'gorilla glue 4'));
+  t('normalizeStrain : « Gorilla Glue 4 Feminisée »',()=>eq(O.normalizeStrain('Gorilla Glue 4 Feminisée'),'gorilla glue 4'));
+  t('normalizeStrain : « Amnesia Haze Auto »',()=>eq(O.normalizeStrain('Amnesia Haze Auto'),'amnesia haze'));
+  t('normalizeStrain : « Northern Lights x3 graines »',()=>eq(O.normalizeStrain('Northern Lights x3 graines'),'northern lights'));
+  var ogsPret=O.charger();
+  global.__ogsTests=ogsPret.then(()=>{
+    t('rapprochement : fem et auto trouvés, même breeder en tête',()=>eq(O.trouver('Gorilla Glue #4','Fast Buds','auto').map(p=>p.breeder),['Fast Buds','GG Strains']));
+    t('rapprochement : correspondance exacte avant inclusion',()=>eq(O.trouver('Amnesia Haze').map(p=>p.breeder),['Royal Queen']));
+    t('rapprochement : inclusion quand rien d\'exact',()=>eq(O.trouver('Super Amnesia').map(p=>p.breeder),['Dinafem']));
+    t('lien avec suivi utm',()=>ok(/\?utm_source=strainsage&utm_medium=app&utm_campaign=reco$/.test(O.lien(OGS.products[0]))));
+  });
+}
+
 /* ══ 2. CHAT (varietes.js) AVEC FIRESTORE SIMULÉ ══ */
 function fakeDb(docs){
   return {collection(c){return {doc(id){return {get(){const d=docs[c+'/'+id];return Promise.resolve({exists:!!d,data(){return d;}});}};}};}};
@@ -115,6 +139,7 @@ function loadClient(){
 }
 
 (async function(){
+  await global.__ogsTests;
   const V=loadClient();
   await V.load();await V.loadCatalogue();
   await ta('index de la base chargé',async()=>{eq(V.size(),5);});

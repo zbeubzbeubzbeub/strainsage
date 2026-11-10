@@ -460,6 +460,14 @@ select,input[type="number"],input[type="text"],input[type="search"]{accent-color
       <!-- CATALOGUE GARDEN SEEDS -->
       <div class="page" id="page-gst">
         <div class="page-title">Catalogue Garden Seeds</div>
+        <div class="table-wrap">
+          <div class="table-header"><div class="table-header-title">Catalogue OG's Farm</div><span class="vdb-note">Boutons « Voir sur OG's Farm » sous les recommandations du chat</span></div>
+          <div class="vdb-body">
+            <div class="vdb-info" id="ogsInfo" role="status">Chargement du catalogue…</div>
+            <div class="vdb-row"><input class="vdb-search" id="ogsQ" placeholder="Nom de variété (ex. Gorilla Glue #4)" aria-label="Nom de variété à rapprocher" onkeydown="if(event.key==='Enter')ogsTester()"><button class="btn btn-secondary" onclick="ogsTester()">Tester le rapprochement</button></div>
+            <div id="ogsRes"></div>
+          </div>
+        </div>
         <div class="page-sub">Le chat ne recommande que les graines disponibles chez Garden Seeds Trading. Synchronise le catalogue pour mettre à jour les variétés, les prix et la disponibilité.<br>Lecture seule : aucune commande ne peut partir de l'app.</div>
         <div class="table-wrap">
           <div class="vdb-body">
@@ -554,6 +562,7 @@ select,input[type="number"],input[type="text"],input[type="search"]{accent-color
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="gst-core.js?v=20261021"></script>
 <script src="lightbox.js?v=20261022"></script>
+<script src="ogsfarm.js?v=20261110"></script>
 <script>
 
 /* ══ THÈME ══ */
@@ -2521,6 +2530,25 @@ window.gstSaveSettings=async function(){
 window.gstOpen=async function(){try{await loadIndex();}catch(e){console.warn('[GST] index illisible',e&&e.message);}try{await loadSettings();renderSettings();}catch(e){}renderLast();renderList();renderResume();renderMatch();};
 window.__gst={breederKey:breederKey,initials2:initials2,buildMatcher:buildMatcher,diagnoseMatch:diagnoseMatch,compileRules:compileRules,findPack:findPack,reparseLine:reparseLine,auditOf:auditOf,viewsOf:viewsOf,parseNombre:parseNombre,dtuple:dtuple,mtuple:mtuple,parseDesc:parseDesc,stripHtml:stripHtml,cleanName:cleanName,matchVariety:matchVariety,similar:similar,loadMatcher:loadMatcher,matchStats:matchStats,applyMatch:applyMatch,G:G};
 })();
+</script>
+<script>
+/* ══ CATALOGUE OG'S FARM (lecture seule) ══ */
+function ogsInfo(e){
+  var el=document.getElementById('ogsInfo');if(!el)return;
+  if(!e){el.textContent="Catalogue indisponible ("+OGSFarm.URL+") : le chat fonctionne sans boutons d'achat.";return;}
+  var n=e.produits.length,s=e.produits.filter(function(p){return p.inStock;}).length;
+  el.innerHTML='<b>'+n+'</b> produits chargés · <b>'+s+'</b> en stock · mis à jour '+(e.updated?esc(new Date(e.updated).toLocaleString('fr-FR')):'—');
+}
+window.ogsTester=async function(){
+  var q=document.getElementById('ogsQ').value.trim(),out=document.getElementById('ogsRes');if(!q)return;
+  var e=await OGSFarm.charger();ogsInfo(e);
+  if(!e){out.innerHTML='';return;}
+  var l=OGSFarm.trouver(q);
+  out.innerHTML='<div class="vdb-note">Nom normalisé : <code>'+esc(OGSFarm.normalizeStrain(q))+'</code> · '+l.length+' produit'+(l.length>1?'s':'')+'</div>'+
+    (l.length?'<table><thead><tr><th>Produit</th><th>Breeder</th><th>Type</th><th>Prix</th><th>Stock</th></tr></thead><tbody>'+l.slice(0,20).map(function(p){
+      return '<tr><td><a href="'+esc(OGSFarm.lien(p)).replace(/"/g,'&quot;')+'" target="_blank" rel="noopener">'+esc(p.name)+'</a></td><td>'+esc(p.breeder||'—')+'</td><td>'+esc(p.type||'—')+'</td><td>'+(p.price!=null?esc(String(p.price).replace('.',','))+' €':'—')+'</td><td>'+(p.inStock?'<span class="td-badge green">En stock</span>':'<span class="td-badge red">Rupture</span>')+'</td></tr>';}).join('')+'</tbody></table>':'');
+};
+OGSFarm.charger().then(ogsInfo);
 </script>
 </body>
 </html>

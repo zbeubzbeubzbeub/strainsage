@@ -537,6 +537,23 @@ button.lt-pill:hover{border-color:var(--gold);color:var(--gold-text)}
 .install-btn[hidden]{display:none}
 .install-x{width:36px;height:36px;border:none;background:none;color:var(--ink3);font-size:22px;line-height:1;cursor:pointer;border-radius:var(--r)}
 .install-x:hover{color:var(--ink)}
+/* ══ BOUTIQUE OG'S FARM : cartes produit sous la réponse ══ */
+.ogs-strip{margin:14px 0 4px;max-width:100%}
+.ogs-head{font-family:var(--font-display);font-style:italic;font-size:17px;color:var(--gold-text);margin:0 0 8px}
+.ogs-row{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x mandatory}
+.ogs-card{flex:0 0 260px;scroll-snap-align:start;display:flex;gap:12px;align-items:flex-start;padding:10px;background:var(--surface);border:1px solid var(--line2);border-radius:var(--r);color:var(--ink);text-decoration:none;transition:border-color .15s}
+.ogs-card:hover{border-color:var(--gold)}
+.ogs-card img{width:64px;height:64px;object-fit:cover;border-radius:var(--r);flex-shrink:0;background:var(--sunken)}
+.ogs-txt{display:flex;flex-direction:column;gap:3px;min-width:0}
+.ogs-txt b{font-family:var(--font-display);font-weight:500;font-size:17px;line-height:1.1}
+.ogs-txt small{font-size:12.5px;color:var(--ink3)}
+.ogs-meta{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.ogs-price{color:var(--copper);font-family:var(--font-display);font-variant-numeric:tabular-nums lining-nums}
+.ogs-badge{font-size:12px;font-weight:600;padding:0 6px;border:1px solid var(--instock-border);color:var(--instock-color);border-radius:var(--r)}
+.ogs-cta{font-size:13.5px;font-weight:600;color:var(--gold-text)}
+.ogs-card.out{opacity:.62}
+.ogs-card.out .ogs-badge{border-color:var(--outstock-border);color:var(--outstock-color)}
+@media(max-width:520px){.ogs-card{flex-basis:78%}}
 </style>
 </head>
 <body>
@@ -688,6 +705,7 @@ button.lt-pill:hover{border-color:var(--gold);color:var(--gold-text)}
 <script src="gst-core.js?v=20261021"></script>
 <script src="lightbox.js?v=20261027"></script>
 <script src="varietes.js?v=20261024b"></script>
+<script src="ogsfarm.js?v=20261110"></script>
 <script>
 /* ══ THÈME ══ */
 function updateThemeLabel(t){
@@ -1209,7 +1227,7 @@ function buildCard(s){
   else if(ref&&ref.url)acts+='<a class="sc-action" href="'+escA(ref.url)+'" target="_blank" rel="noopener">GrowDiaries ↗</a>';
   var tags=(s.match_tags||[]).map(t=>'<span class="mtag">'+esc(t)+'</span>').join('');
   // photo : celle de la fiche (importée depuis le CSV) ; si elle ne charge pas, la carte reste propre
-  var photo=(g&&g.photo)||(fiche&&fiche.photos&&fiche.photos.length?fiche.photos[0]:'');
+  var photo=(g&&g.photo)||(fiche&&fiche.photos&&fiche.photos.length?fiche.photos[0]:'')||(window.OGSFarm?OGSFarm.imagePour(s.name,g&&g.breeder,g&&g.type):'');
   var zoomAttr=g&&g.photo&&photo===g.photo?' data-zoom="" data-gst="'+escA(g.codigo)+'"':' data-zoom="'+escA(photo)+'"';
   var photoHtml=photo?'<div class="sc-photo-win"><img src="'+escA(photo)+'"'+zoomAttr+' alt="Photo de '+escA(s.name)+'" width="132" height="132" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="var b=this.closest(\'.sc-band\');if(b)b.classList.remove(\'has-photo\');this.parentElement.remove()"></div>':'';
   return '<article class="sc t-'+tk+'">'+
@@ -1702,6 +1720,7 @@ window.send=async function(){
     try{var mR=reply.match(/\[STRAINS_JSON\]([\s\S]*?)\[\/STRAINS_JSON\]/);if(mR&&window.VarDB){var lst=JSON.parse(mR[1].trim()),ids=lst.map(x=>{var g=VarDB.gstFor&&VarDB.gstFor(x.gst||x.name);return g&&g.varieteId;}).filter(Boolean);await VarDB.prefetch(lst.map(x=>x.name).concat(ids),1500);}}catch(e){}
     bubble.id='';
     bubble.innerHTML=strip+renderReply(reply);
+    try{var mO=reply.match(/\[STRAINS_JSON\]([\s\S]*?)\[\/STRAINS_JSON\]/);if(mO&&window.OGSFarm)OGSFarm.ajouterCartes(bubble,JSON.parse(mO[1].trim()).map(function(x){var g=window.VarDB&&VarDB.gstFor?VarDB.gstFor(x.gst||x.name):null;return {name:g?g.variete:x.name,breeder:g&&g.breeder,type:g&&g.type};}));}catch(e){}
     panel().scrollTop=panel().scrollHeight;
 
     history.push({role:'assistant',content:reply});
